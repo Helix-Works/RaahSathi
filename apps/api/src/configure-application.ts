@@ -23,4 +23,3 @@ export function configureApplication(app: INestApplication): void {
     origin: config.get<string>("WEB_ORIGIN", "http://localhost:3000"),
   });
 }
-
