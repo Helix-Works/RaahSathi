@@ -5,5 +5,10 @@ import nextTypeScript from "eslint-config-next/typescript";
 export default defineConfig([
   ...nextVitals,
   ...nextTypeScript,
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "error",
+    },
+  },
   globalIgnores([".next/**", "dist/**", "next-env.d.ts"]),
 ]);
