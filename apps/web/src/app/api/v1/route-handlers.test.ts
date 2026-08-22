@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import { GET as getUnknown } from "./[...path]/route";
 import { GET as getHealth } from "./health/route";
 import { createReadinessHandler } from "./health/ready/route";
+import { createRequestOtpHandler, POST as requestOtp } from "./auth/request-otp/route";
+import { createVerifyOtpHandler } from "./auth/verify-otp/route";
+import { createMeHandler } from "./me/route";
 
 describe("Route Handlers", () => {
   it("serves health with a correlation ID and no permissive CORS", async () => {
@@ -32,5 +35,62 @@ describe("Route Handlers", () => {
     const response = await getUnknown(new Request("http://localhost/api/v1/missing", { headers: { "x-request-id": "missing-route" } }));
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: { code: "RESOURCE_NOT_FOUND", messageKey: "errors.resourceNotFound", correlationId: "missing-route" } });
+  });
+
+  it("rejects cross-origin and malformed OTP requests before database work", async () => {
+    const crossOrigin = await requestOtp(new Request("http://localhost/api/v1/auth/request-otp", {
+      method: "POST",
+      headers: { origin: "https://attacker.invalid", "content-type": "application/json" },
+      body: JSON.stringify({ mobileNumber: "9000000000" }),
+    }));
+    expect(crossOrigin.status).toBe(403);
+
+    const malformed = await requestOtp(new Request("http://localhost/api/v1/auth/request-otp", {
+      method: "POST",
+      headers: { origin: "http://localhost", "content-type": "application/json" },
+      body: JSON.stringify({ mobileNumber: "9000000000", unexpected: true }),
+    }));
+    expect(malformed.status).toBe(400);
+    expect(await malformed.json()).toMatchObject({ error: { code: "VALIDATION_FAILED" } });
+  });
+
+  it("serves validated OTP, session cookie, and current-user contracts with controlled services", async () => {
+    const challengeId = "20000000-0000-4000-8000-000000000001";
+    const user = { id: "10000000-0000-4000-8000-000000000001", displayName: "RaahSathi Demo", preferredLocale: "en" as const };
+    const requestHandler = createRequestOtpHandler(async () => ({
+      challengeId,
+      maskedDestination: "••••••0000",
+      expiresAt: "2026-08-23T10:05:00.000Z",
+      resendAvailableAt: "2026-08-23T10:01:00.000Z",
+    }));
+    const challengeResponse = await requestHandler(new Request("http://localhost/api/v1/auth/request-otp", {
+      method: "POST",
+      headers: { origin: "http://localhost", "content-type": "application/json" },
+      body: JSON.stringify({ mobileNumber: "9000000000" }),
+    }));
+    expect(challengeResponse.status).toBe(202);
+    expect(await challengeResponse.json()).toMatchObject({ challengeId, maskedDestination: "••••••0000" });
+
+    const verifyHandler = createVerifyOtpHandler(async () => ({
+      summary: { user }, sessionToken: "opaque-session", csrfToken: "csrf-token",
+      absoluteExpiresAt: new Date("2026-08-23T18:00:00.000Z"),
+    }));
+    const verifyResponse = await verifyHandler(new Request("http://localhost/api/v1/auth/verify-otp", {
+      method: "POST",
+      headers: { origin: "http://localhost", "content-type": "application/json" },
+      body: JSON.stringify({ challengeId, otp: "123456", preferredLocale: "en" }),
+    }));
+    expect(verifyResponse.status).toBe(200);
+    const cookies = verifyResponse.headers.getSetCookie().join(";");
+    expect(cookies).toContain("raahsathi_session=opaque-session");
+    expect(cookies).toContain("HttpOnly");
+    expect(cookies).toContain("raahsathi_csrf=csrf-token");
+
+    const meHandler = createMeHandler(async () => ({
+      kind: "authenticated", context: { sessionId: "session", applicantId: user.id }, user, csrfSecretHash: "hash",
+    }));
+    const meResponse = await meHandler(new Request("http://localhost/api/v1/me"));
+    expect(await meResponse.json()).toEqual({ user });
+    expect(meResponse.headers.get("cache-control")).toBe("no-store");
   });
 });

@@ -14,6 +14,9 @@ const environmentSchema = z
     DATABASE_URL: postgresUrl,
     DIRECT_URL: postgresUrl.optional(),
     SHADOW_DATABASE_URL: postgresUrl.optional(),
+    AUTH_MOBILE_LOOKUP_PEPPER: z.string().min(32),
+    AUTH_OTP_PEPPER: z.string().min(32),
+    AUTH_DEMO_OTP: z.string().regex(/^[0-9]{6}$/),
   })
   .transform((environment, context) => {
     if (environment.NODE_ENV === "production") {
@@ -21,6 +24,11 @@ const environmentSchema = z
         const value = environment[key];
         if (value && !["require", "verify-full"].includes(new URL(value).searchParams.get("sslmode")?.toLowerCase() ?? "")) {
           context.addIssue({ code: "custom", message: `${key} must require TLS in production.` });
+        }
+      }
+      for (const key of ["AUTH_MOBILE_LOOKUP_PEPPER", "AUTH_OTP_PEPPER"] as const) {
+        if (/placeholder|change-me|development/i.test(environment[key])) {
+          context.addIssue({ code: "custom", message: `${key} must not use a placeholder in production.` });
         }
       }
     }
@@ -31,4 +39,11 @@ export type ServerEnvironment = z.infer<typeof environmentSchema>;
 
 export function parseEnvironment(environment: Record<string, string | undefined>): ServerEnvironment {
   return environmentSchema.parse(environment);
+}
+
+let cachedEnvironment: ServerEnvironment | undefined;
+
+export function getServerEnvironment(): ServerEnvironment {
+  cachedEnvironment ??= parseEnvironment(process.env);
+  return cachedEnvironment;
 }

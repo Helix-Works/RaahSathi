@@ -36,6 +36,8 @@ async function requestMockOtp(input: RequestOtpInput): Promise<OtpChallenge> {
   return {
     challengeId: "synthetic-otp-challenge",
     maskedDestination: `••••••${input.mobileNumber.slice(-4)}`,
+    expiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+    resendAvailableAt: new Date(Date.now() + 60_000).toISOString(),
   };
 }
 
@@ -68,7 +70,7 @@ async function verifyMockOtp(input: VerifyOtpInput): Promise<SessionSummary> {
       user: {
         id: "synthetic-citizen",
         displayName: "RaahSathi Demo",
-        preferredLocale: "en",
+        preferredLocale: input.preferredLocale,
       },
     };
   }

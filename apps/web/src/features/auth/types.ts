@@ -1,32 +1,10 @@
-import type { Locale } from "@/i18n";
+import type { CurrentUser, OtpChallenge, RequestOtpInput, SessionSummary, VerifyOtpInput } from "@raahsathi/contracts/auth";
 
 /**
  * Provisional frontend view types. Replace with generated OpenAPI contracts once
  * the backend auth/session endpoints and cookie contract are authoritative.
  */
-export type CurrentUser = Readonly<{
-  id: string;
-  displayName: string;
-  preferredLocale: Locale;
-}>;
-
-export type SessionSummary = Readonly<{
-  user: CurrentUser;
-}>;
-
-export type OtpChallenge = Readonly<{
-  challengeId: string;
-  maskedDestination: string;
-}>;
-
-export type RequestOtpInput = Readonly<{
-  mobileNumber: string;
-}>;
-
-export type VerifyOtpInput = Readonly<{
-  challengeId: string;
-  otp: string;
-}>;
+export type { CurrentUser, OtpChallenge, RequestOtpInput, SessionSummary, VerifyOtpInput };
 
 export type MockSessionScenario = "active" | "empty" | "appointment" | "expired";
 

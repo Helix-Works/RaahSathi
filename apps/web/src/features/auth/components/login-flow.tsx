@@ -21,12 +21,17 @@ import {
 } from "@/features/auth/schemas/login";
 import type { SafeReturnPath } from "@/features/auth/safe-return-path";
 import type { OtpChallenge } from "@/features/auth/types";
-import type { MessageDictionary } from "@/i18n";
+import type { Locale, MessageDictionary } from "@/i18n";
 
 type LoginFlowProps = Readonly<{
   messages: MessageDictionary;
   returnTo: SafeReturnPath;
+  locale: Locale;
 }>;
+
+function currentTimestamp(): number {
+  return Date.now();
+}
 
 function ApiErrorSummary({
   error,
@@ -56,9 +61,12 @@ function ApiErrorSummary({
   );
 }
 
-export function LoginFlow({ messages, returnTo }: LoginFlowProps) {
+export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
   const router = useRouter();
   const [challenge, setChallenge] = useState<OtpChallenge>();
+  const [requestedMobile, setRequestedMobile] = useState<string>();
+  const [clock, setClock] = useState(currentTimestamp);
+  const [isResending, setIsResending] = useState(false);
   const [apiError, setApiError] = useState<AuthErrorPresentation>();
   const requestForm = useForm<MobileFormValues>({
     resolver: zodResolver(mobileFormSchema),
@@ -74,6 +82,12 @@ export function LoginFlow({ messages, returnTo }: LoginFlowProps) {
       otpForm.setFocus("otp");
     }
   }, [challenge, otpForm]);
+
+  useEffect(() => {
+    if (!challenge) return;
+    const timer = window.setInterval(() => setClock(currentTimestamp()), 1_000);
+    return () => window.clearInterval(timer);
+  }, [challenge]);
 
   const authMessages = messages.auth;
   const mobileErrorCode = requestForm.formState.errors.mobileNumber?.message;
@@ -101,6 +115,8 @@ export function LoginFlow({ messages, returnTo }: LoginFlowProps) {
     try {
       const nextChallenge = await authApi.requestOtp(values);
       setChallenge(nextChallenge);
+      setRequestedMobile(values.mobileNumber);
+      setClock(currentTimestamp());
       otpForm.reset();
     } catch (error: unknown) {
       presentError(error);
@@ -118,6 +134,7 @@ export function LoginFlow({ messages, returnTo }: LoginFlowProps) {
       await authApi.verifyOtp({
         challengeId: challenge.challengeId,
         otp: values.otp,
+        preferredLocale: locale,
       });
       router.replace(returnTo);
       router.refresh();
@@ -130,6 +147,24 @@ export function LoginFlow({ messages, returnTo }: LoginFlowProps) {
     setChallenge(undefined);
     setApiError(undefined);
     otpForm.reset();
+  };
+  const resendSeconds = challenge
+    ? Math.max(0, Math.ceil((new Date(challenge.resendAvailableAt).getTime() - clock) / 1_000))
+    : 0;
+  const resend = async () => {
+    if (!requestedMobile || resendSeconds > 0 || isResending) return;
+    setIsResending(true);
+    setApiError(undefined);
+    try {
+      const nextChallenge = await authApi.requestOtp({ mobileNumber: requestedMobile });
+      setChallenge(nextChallenge);
+      setClock(currentTimestamp());
+      otpForm.reset();
+    } catch (error: unknown) {
+      presentError(error);
+    } finally {
+      setIsResending(false);
+    }
   };
 
   return (
@@ -230,7 +265,7 @@ export function LoginFlow({ messages, returnTo }: LoginFlowProps) {
               ) : null}
             </div>
 
-            <Button className="w-full" size="lg" type="submit" disabled={otpForm.formState.isSubmitting}>
+            <Button className="w-full" size="lg" type="submit" disabled={otpForm.formState.isSubmitting || isResending}>
               {otpForm.formState.isSubmitting ? (
                 <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
               ) : null}
@@ -240,10 +275,21 @@ export function LoginFlow({ messages, returnTo }: LoginFlowProps) {
             </Button>
             <Button
               className="w-full"
+              variant="secondary"
+              type="button"
+              onClick={resend}
+              disabled={otpForm.formState.isSubmitting || isResending || resendSeconds > 0}
+            >
+              {resendSeconds > 0
+                ? authMessages.resendAvailableIn.replace("{seconds}", String(resendSeconds))
+                : authMessages.resendOtp}
+            </Button>
+            <Button
+              className="w-full"
               variant="ghost"
               type="button"
               onClick={restart}
-              disabled={otpForm.formState.isSubmitting}
+              disabled={otpForm.formState.isSubmitting || isResending}
             >
               <ArrowLeft className="size-4" aria-hidden="true" />
               {authMessages.changeMobile}

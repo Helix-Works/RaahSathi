@@ -13,6 +13,7 @@
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck",
     "test": "pnpm -r --if-present test",
+    "test:db": "pnpm --filter @raahsathi/web test:db",
     "test:e2e": "pnpm --filter @raahsathi/e2e test:e2e",
     "prisma:generate": "pnpm --filter @raahsathi/web prisma:generate",
     "prisma:validate": "pnpm --filter @raahsathi/web prisma:validate",

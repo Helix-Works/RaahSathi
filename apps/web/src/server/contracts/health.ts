@@ -22,6 +22,8 @@ export const apiErrorSchema = z.strictObject({
     code: z.string(),
     messageKey: z.string(),
     correlationId: requestIdSchema,
+    retryable: z.boolean().optional(),
+    fieldErrors: z.record(z.string(), z.array(z.string())).optional(),
   }),
 });
 
@@ -58,7 +60,7 @@ export const readinessEndpointContract = {
   ],
 } as const satisfies EndpointContract;
 
-export const endpointContracts: readonly EndpointContract[] = [
+export const healthEndpointContracts: readonly EndpointContract[] = [
   healthEndpointContract,
   readinessEndpointContract,
 ];

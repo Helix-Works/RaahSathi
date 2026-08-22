@@ -40,9 +40,21 @@ export async function parseJsonBody<T>(request: Request, schema: z.ZodType<T>): 
 
   const text = await readBoundedText(request);
 
+  let value: unknown;
   try {
-    return schema.parse(JSON.parse(text));
+    value = JSON.parse(text);
   } catch {
     throw apiErrors.validation();
   }
+
+  const result = schema.safeParse(value);
+  if (!result.success) {
+    const fieldErrors: Record<string, string[]> = {};
+    for (const issue of result.error.issues) {
+      const field = issue.path.length > 0 ? issue.path.join(".") : "body";
+      (fieldErrors[field] ??= []).push(issue.code);
+    }
+    throw apiErrors.validation(fieldErrors);
+  }
+  return result.data;
 }
