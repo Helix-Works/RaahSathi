@@ -8,6 +8,7 @@ import { DashboardView } from "@/features/dashboard/components/dashboard-view";
 import type { DashboardSummary } from "@/features/dashboard/types";
 import { getDictionary } from "@/i18n";
 import { getRequestLocale } from "@/i18n/locale";
+import { ApiClientError } from "@/lib/api";
 
 export default async function DashboardPage() {
   const locale = await getRequestLocale();
@@ -23,10 +24,17 @@ export default async function DashboardPage() {
   }
 
   let summary: DashboardSummary | undefined;
+  let correlationId: string | undefined;
 
   try {
-    summary = await getDashboardSummary(session.dashboardScenario);
-  } catch {
+    summary = await getDashboardSummary();
+  } catch (error: unknown) {
+    if (error instanceof ApiClientError && error.status === 401) {
+      return <SessionExpiredState messages={messages} />;
+    }
+
+    correlationId =
+      error instanceof ApiClientError ? error.correlationId : undefined;
     summary = undefined;
   }
 
@@ -36,8 +44,10 @@ export default async function DashboardPage() {
         <ErrorState
           title={messages.dashboard.dataUnavailableTitle}
           description={messages.dashboard.dataUnavailableDescription}
-          retryLabel={messages.auth.reauthenticate}
-          retryHref="/login?returnTo=/dashboard"
+          retryLabel={messages.common.retry}
+          retryHref="/dashboard"
+          correlationId={correlationId}
+          correlationLabel={messages.errors.correlationLabel}
           headingLevel={1}
         />
       </div>

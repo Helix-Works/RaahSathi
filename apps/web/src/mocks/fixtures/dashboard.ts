@@ -1,5 +1,11 @@
 import type { DashboardSummary } from "@/features/dashboard/types";
 
+const millisecondsPerHour = 60 * 60 * 1_000;
+
+function relativeIsoDate(hoursFromNow: number): string {
+  return new Date(Date.now() + hoursFromNow * millisecondsPerHour).toISOString();
+}
+
 export const activeDashboardFixture = {
   application: {
     id: "app_synthetic_permanent_dl",
@@ -8,12 +14,12 @@ export const activeDashboardFixture = {
     progressPercent: 68,
     nextActionCode: "REVIEW_OFFER",
     blockingReasonCode: "NO_SUITABLE_SLOT",
-    updatedAt: "2026-08-23T09:30:00+05:30",
+    updatedAt: relativeIsoDate(-1),
   },
   offer: {
     id: "offer_synthetic_rohini",
     rtoCode: "SYNTHETIC_ROHINI",
-    expiresAt: "2026-08-23T18:30:00+05:30",
+    expiresAt: relativeIsoDate(2),
   },
   licence: {
     labelCode: "SYNTHETIC_LEARNER_CONTEXT",
@@ -30,12 +36,12 @@ export const appointmentDashboardFixture = {
     statusCode: "APPOINTMENT_BOOKED",
     progressPercent: 76,
     nextActionCode: "NONE",
-    updatedAt: "2026-08-23T10:00:00+05:30",
+    updatedAt: relativeIsoDate(-1),
   },
   appointment: {
     id: "appointment_synthetic_rohini",
     rtoCode: "SYNTHETIC_ROHINI",
-    startsAt: "2026-08-25T09:30:00+05:30",
+    startsAt: relativeIsoDate(48),
   },
   licence: {
     labelCode: "SYNTHETIC_LEARNER_CONTEXT",

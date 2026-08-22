@@ -15,7 +15,7 @@ import { otpChallengeSchema, sessionSummarySchema } from "./wire";
  * can be declared complete.
  */
 async function requestRealOtp(input: RequestOtpInput): Promise<OtpChallenge> {
-  const payload = await apiRequest<unknown>("/auth/request-otp", {
+  const payload = await apiRequest("/auth/request-otp", {
     method: "POST",
     json: input,
   });
@@ -24,7 +24,7 @@ async function requestRealOtp(input: RequestOtpInput): Promise<OtpChallenge> {
 }
 
 async function verifyRealOtp(input: VerifyOtpInput): Promise<SessionSummary> {
-  const payload = await apiRequest<unknown>("/auth/verify-otp", {
+  const payload = await apiRequest("/auth/verify-otp", {
     method: "POST",
     json: input,
   });
@@ -33,11 +33,14 @@ async function verifyRealOtp(input: VerifyOtpInput): Promise<SessionSummary> {
 }
 
 async function logoutRealSession(): Promise<void> {
-  await apiRequest<void>("/auth/logout", { method: "POST" });
+  await apiRequest("/auth/logout", { method: "POST" });
 }
 
-export async function getRealCurrentUser(): Promise<SessionSummary> {
-  const payload = await apiRequest<unknown>("/me", { cache: "no-store" });
+export async function getRealCurrentUser(cookieHeader: string): Promise<SessionSummary> {
+  const payload = await apiRequest("/me", {
+    cache: "no-store",
+    headers: { Cookie: cookieHeader },
+  });
   return sessionSummarySchema.parse(payload);
 }
 

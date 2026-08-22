@@ -179,13 +179,17 @@ export const hiMessages = {
     appointmentTitle: "आगामी अपॉइंटमेंट",
     appointmentStatus: "पुष्ट",
     appointmentDescription: "{rto} में {time} को कृत्रिम अपॉइंटमेंट।",
-    syntheticRohiniRto: "कृत्रिम रोहिणी आरटीओ",
+    rtoNames: {
+      SYNTHETIC_ROHINI: "कृत्रिम रोहिणी आरटीओ",
+    },
     licenceTitle: "कृत्रिम लाइसेंस संदर्भ",
     licenceDescription: "लर्नर संदर्भ · वाहन वर्ग {vehicleClass}",
-    vehicleClassLmv: "हल्का मोटर वाहन (LMV)",
+    vehicleClassNames: {
+      LMV: "हल्का मोटर वाहन (LMV)",
+    },
     dataUnavailableTitle: "डैशबोर्ड की जानकारी उपलब्ध नहीं है",
     dataUnavailableDescription:
-      "फिर साइन इन करें या बाद में कोशिश करें। अनधिकृत उत्तर के बाद निजी जानकारी स्क्रीन पर नहीं रखी जाती।",
+      "बाद में फिर कोशिश करें। डैशबोर्ड सेवा से सुरक्षित उत्तर न मिलने पर निजी जानकारी स्क्रीन पर नहीं रखी जाती।",
   },
   footer: {
     tagline: "स्पष्ट स्थिति। सुरक्षित प्रगति। सही अगला कदम।",

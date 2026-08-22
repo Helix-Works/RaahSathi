@@ -183,13 +183,17 @@ export const enMessages = {
     appointmentTitle: "Upcoming appointment",
     appointmentStatus: "Confirmed",
     appointmentDescription: "Synthetic appointment at {rto} on {time}.",
-    syntheticRohiniRto: "Synthetic Rohini RTO",
+    rtoNames: {
+      SYNTHETIC_ROHINI: "Synthetic Rohini RTO",
+    },
     licenceTitle: "Synthetic licence context",
     licenceDescription: "Learner context · Vehicle class {vehicleClass}",
-    vehicleClassLmv: "Light Motor Vehicle (LMV)",
+    vehicleClassNames: {
+      LMV: "Light Motor Vehicle (LMV)",
+    },
     dataUnavailableTitle: "Dashboard information is unavailable",
     dataUnavailableDescription:
-      "Sign in again or try later. Private information is not kept on screen after an unauthorized response.",
+      "Try again later. Private information is not kept on screen when the dashboard service cannot return a safe response.",
   },
   footer: {
     tagline: "Clear status. Safe progress. Honest next steps.",

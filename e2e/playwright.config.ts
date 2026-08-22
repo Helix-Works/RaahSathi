@@ -26,7 +26,7 @@ export default defineConfig({
       NEXT_PUBLIC_DATA_SOURCE: "mock",
     },
     url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });

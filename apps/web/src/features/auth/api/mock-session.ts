@@ -59,11 +59,20 @@ export async function readMockSession(): Promise<ShellSession> {
 
   return {
     kind: "authenticated",
-    dashboardScenario: value,
     user: {
       id: "synthetic-citizen",
       displayName: "RaahSathi Demo",
       preferredLocale: "en",
     },
   };
+}
+
+export async function readMockDashboardScenario(): Promise<
+  Exclude<MockSessionScenario, "expired"> | undefined
+> {
+  assertMockMode();
+  const cookieStore = await cookies();
+  const value = cookieStore.get(mockSessionCookieName)?.value;
+
+  return isAuthenticatedMockScenario(value) ? value : undefined;
 }

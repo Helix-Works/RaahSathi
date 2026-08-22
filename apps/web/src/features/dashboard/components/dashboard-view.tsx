@@ -90,9 +90,24 @@ function replaceDashboardTokens(
   );
 }
 
+function localizedCodeLabel(
+  labels: Readonly<Record<string, string>>,
+  code: string,
+  fallback: string,
+): string {
+  return labels[code] ?? fallback;
+}
+
 export function DashboardView({ locale, messages, summary }: DashboardViewProps) {
   const dashboard = messages.dashboard;
   const application = summary.application;
+  const applicationStatus = statusPresentation(
+    application?.statusCode ?? "",
+    dashboard,
+  );
+  const applicationProgress = application
+    ? Math.min(100, Math.max(0, application.progressPercent))
+    : 0;
 
   return (
     <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
@@ -127,8 +142,8 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
             <CardHeader className="gap-4 border-b border-border">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="eyebrow">{dashboard.activeApplicationTitle}</p>
-                <StatusBadge tone={statusPresentation(application.statusCode, dashboard).tone}>
-                  {statusPresentation(application.statusCode, dashboard).label}
+                <StatusBadge tone={applicationStatus.tone}>
+                  {applicationStatus.label}
                 </StatusBadge>
               </div>
               <div className="space-y-2">
@@ -146,7 +161,7 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                   <span>{dashboard.progressLabel}</span>
                   <span>
                     {new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(
-                      Math.min(100, Math.max(0, application.progressPercent)),
+                      applicationProgress,
                     )}
                     %
                   </span>
@@ -157,12 +172,12 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                   aria-label={dashboard.progressLabel}
                   aria-valuemin={0}
                   aria-valuemax={100}
-                  aria-valuenow={Math.min(100, Math.max(0, application.progressPercent))}
+                  aria-valuenow={applicationProgress}
                 >
                   <div
                     className="h-full rounded-full bg-primary"
                     style={{
-                      width: `${Math.min(100, Math.max(0, application.progressPercent))}%`,
+                      width: `${applicationProgress}%`,
                     }}
                   />
                 </div>
@@ -209,10 +224,11 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                     <h3 className="text-xl font-extrabold">{dashboard.offerTitle}</h3>
                     <p className="leading-7 text-muted-foreground">
                       {replaceDashboardTokens(dashboard.offerDescription, {
-                        rto:
-                          summary.offer.rtoCode === "SYNTHETIC_ROHINI"
-                            ? dashboard.syntheticRohiniRto
-                            : messages.status.unavailable,
+                        rto: localizedCodeLabel(
+                          dashboard.rtoNames,
+                          summary.offer.rtoCode,
+                          messages.status.unavailable,
+                        ),
                         time: formatDateTime(
                           summary.offer.expiresAt,
                           locale,
@@ -236,10 +252,11 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                     <h3 className="text-xl font-extrabold">{dashboard.appointmentTitle}</h3>
                     <p className="leading-7 text-muted-foreground">
                       {replaceDashboardTokens(dashboard.appointmentDescription, {
-                        rto:
-                          summary.appointment.rtoCode === "SYNTHETIC_ROHINI"
-                            ? dashboard.syntheticRohiniRto
-                            : messages.status.unavailable,
+                        rto: localizedCodeLabel(
+                          dashboard.rtoNames,
+                          summary.appointment.rtoCode,
+                          messages.status.unavailable,
+                        ),
                         time: formatDateTime(
                           summary.appointment.startsAt,
                           locale,
@@ -263,9 +280,11 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                     <p className="leading-7 text-muted-foreground">
                       {dashboard.licenceDescription.replace(
                         "{vehicleClass}",
-                        summary.licence.vehicleClassCode === "LMV"
-                          ? dashboard.vehicleClassLmv
-                          : messages.status.unavailable,
+                        localizedCodeLabel(
+                          dashboard.vehicleClassNames,
+                          summary.licence.vehicleClassCode,
+                          messages.status.unavailable,
+                        ),
                       )}
                     </p>
                   </div>

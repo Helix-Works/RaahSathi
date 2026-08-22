@@ -238,7 +238,13 @@ export function LoginFlow({ messages, returnTo }: LoginFlowProps) {
                 ? authMessages.verifyingOtp
                 : authMessages.verifyOtp}
             </Button>
-            <Button className="w-full" variant="ghost" type="button" onClick={restart}>
+            <Button
+              className="w-full"
+              variant="ghost"
+              type="button"
+              onClick={restart}
+              disabled={otpForm.formState.isSubmitting}
+            >
               <ArrowLeft className="size-4" aria-hidden="true" />
               {authMessages.changeMobile}
             </Button>

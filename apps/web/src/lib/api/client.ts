@@ -45,10 +45,10 @@ async function parseJsonSafely(response: Response): Promise<unknown> {
   }
 }
 
-export async function apiRequest<T>(
+export async function apiRequest(
   path: string,
   options: ApiRequestOptions = {},
-): Promise<T> {
+): Promise<unknown> {
   const { headers: initialHeaders, json, ...init } = options;
   const headers = new Headers(initialHeaders);
   // Caller-supplied headers are the seam for the backend-approved CSRF transport.
@@ -89,5 +89,5 @@ export async function apiRequest<T>(
     );
   }
 
-  return payload as T;
+  return payload;
 }

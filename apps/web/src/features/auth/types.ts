@@ -36,7 +36,6 @@ export type ShellSession =
   | Readonly<{
       kind: "authenticated";
       user: CurrentUser;
-      dashboardScenario: Exclude<MockSessionScenario, "expired">;
     }>;
 
 export type AuthApi = Readonly<{
