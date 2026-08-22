@@ -5,6 +5,19 @@ import {
 } from "./errors";
 
 const apiBaseUrl = "/api/v1";
+const csrfCookieName = "raahsathi_csrf";
+const safeMethods = new Set(["GET", "HEAD", "OPTIONS"]);
+
+function readBrowserCookie(name: string): string | undefined {
+  if (typeof document === "undefined") return undefined;
+  const item = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
+  if (!item) return undefined;
+  try {
+    return decodeURIComponent(item.slice(name.length + 1));
+  } catch {
+    return undefined;
+  }
+}
 
 export type ApiRequestOptions = Omit<
   RequestInit,
@@ -52,6 +65,11 @@ export async function apiRequest(
   // Caller-supplied headers are the seam for the backend-approved CSRF transport.
   // No CSRF header/cookie name is assumed until that contract is agreed.
   headers.set("Accept", "application/json");
+  const method = (init.method ?? "GET").toUpperCase();
+  if (!safeMethods.has(method)) {
+    const csrfToken = readBrowserCookie(csrfCookieName);
+    if (csrfToken) headers.set("x-csrf-token", csrfToken);
+  }
 
   if (json !== undefined) {
     headers.set("Content-Type", "application/json");

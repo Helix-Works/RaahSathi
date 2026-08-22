@@ -33,7 +33,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           description={messages.auth.description}
         />
       </div>
-      <LoginFlow messages={messages} returnTo={returnTo} />
+      <LoginFlow messages={messages} returnTo={returnTo} locale={locale} />
     </div>
   );
 }

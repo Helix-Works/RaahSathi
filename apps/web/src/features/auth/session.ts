@@ -1,29 +1,16 @@
 import { cookies } from "next/headers";
 
-import { getRealCurrentUser } from "@/features/auth/api/real";
-import { ApiClientError } from "@/lib/api";
 import { selectDataSource } from "@/lib/data-source";
+import { resolveSessionFromCookie } from "@/server/auth/session-service";
 
 import { readMockSession } from "./api/mock-session";
 import type { ShellSession } from "./types";
 
 async function getRealSession(): Promise<ShellSession> {
   const cookieHeader = (await cookies()).toString();
-
-  if (!cookieHeader) {
-    return { kind: "anonymous" };
-  }
-
-  try {
-    const session = await getRealCurrentUser(cookieHeader);
-    return { kind: "authenticated", user: session.user };
-  } catch (error: unknown) {
-    if (error instanceof ApiClientError && error.status === 401) {
-      return { kind: "anonymous" };
-    }
-
-    throw error;
-  }
+  const session = await resolveSessionFromCookie(cookieHeader, { touch: true });
+  if (session.kind === "authenticated") return { kind: "authenticated", user: session.user };
+  return session;
 }
 
 export const getShellSession = selectDataSource({

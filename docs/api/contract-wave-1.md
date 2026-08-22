@@ -24,20 +24,20 @@ Strict Zod schemas registered by Person B are authoritative. `docs/api/openapi.j
 
 The UI must not display raw exceptions. Every citizen-visible code requires English and Hindi presentation.
 
-## Foundation routes
+## Implemented routes
 
 ```text
 GET /api/v1/health
 GET /api/v1/health/ready
+POST /api/v1/auth/request-otp
+POST /api/v1/auth/verify-otp
+POST /api/v1/auth/logout
+GET  /api/v1/me
 ```
 
 ## Next contract slice
 
 ```text
-POST /api/v1/auth/request-otp
-POST /api/v1/auth/verify-otp
-POST /api/v1/auth/logout
-GET  /api/v1/me
 GET  /api/v1/services
 POST /api/v1/applications
 GET  /api/v1/applications
