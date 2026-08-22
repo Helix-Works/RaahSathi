@@ -23,6 +23,8 @@ describe("database test safety", () => {
     const testDatabaseUrl = "postgresql://test:secret@db.example/app_test?sslmode=require";
     const primaryDatabaseUrl = "postgresql://prod:other@DB.EXAMPLE/app_test?sslmode=disable";
     expect(isDisposableDatabaseApproved({ testDatabaseUrl, primaryDatabaseUrl, confirmation: disposableDatabaseConfirmation })).toBe(false);
+    expect(isDisposableDatabaseApproved({ testDatabaseUrl, primaryDatabaseUrl: undefined, confirmation: disposableDatabaseConfirmation })).toBe(false);
+    expect(isDisposableDatabaseApproved({ testDatabaseUrl, primaryDatabaseUrl: "not-a-url", confirmation: disposableDatabaseConfirmation })).toBe(false);
     expect(isDisposableDatabaseApproved({ testDatabaseUrl, primaryDatabaseUrl: "postgresql://prod@db.example/app", confirmation: "yes" })).toBe(false);
     expect(isDisposableDatabaseApproved({ testDatabaseUrl, primaryDatabaseUrl: "postgresql://prod@db.example/app", confirmation: disposableDatabaseConfirmation })).toBe(true);
   });

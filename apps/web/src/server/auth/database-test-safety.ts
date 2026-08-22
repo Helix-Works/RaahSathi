@@ -21,5 +21,6 @@ export function isDisposableDatabaseApproved(input: Readonly<{
   const primaryIdentity = databaseIdentity(input.primaryDatabaseUrl);
   return input.confirmation === disposableDatabaseConfirmation
     && testIdentity !== undefined
+    && primaryIdentity !== undefined
     && testIdentity !== primaryIdentity;
 }
