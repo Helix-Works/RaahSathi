@@ -237,6 +237,43 @@ Backend-for-frontend:
 - strict Zod request/response validation
 - server-only services under `apps/web/src/server`
 
+### TypeScript type-safety rules
+
+Explicit `any` is prohibited by default across both frontend and backend.
+
+Prefer:
+
+- concrete interfaces/types for known data;
+- `unknown` for untrusted or genuinely unknown values;
+- type guards/narrowing before using `unknown`;
+- generics for reusable strongly typed utilities;
+- inferred types where TypeScript can determine them safely.
+
+`any` is never permitted in:
+
+- REST request/response contracts;
+- Route Handler Zod request/response schemas;
+- shared/OpenAPI-generated contracts;
+- authentication/session/authorization logic;
+- Prisma/database-facing application code;
+- application workflow state;
+- payment logic;
+- appointment/capacity logic;
+- waitlist/FIFO/offer logic;
+- React Hook Form values and Zod-backed form data;
+- frontend API response/error handling.
+
+An explicit `any` exception is allowed only when:
+
+1. a third-party library or external boundary genuinely forces it;
+2. `unknown`, generics, or a concrete type cannot reasonably model the value;
+3. the `any` is isolated to the smallest possible boundary;
+4. a nearby comment explains why the exception is necessary.
+
+Do not use `any` merely to silence a TypeScript error or make implementation faster.
+
+The repository should enforce `@typescript-eslint/no-explicit-any` as an error wherever the existing ESLint setup supports it.
+
 Database:
 - PostgreSQL on Neon
 - Prisma

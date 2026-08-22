@@ -2,12 +2,40 @@
 
 :root {
   color-scheme: light;
-  --ink: #17201b;
-  --muted: #59645e;
-  --paper: #fffdf7;
-  --line: #dce3dd;
-  --accent: #176b45;
-  --accent-soft: #e7f3ec;
+  --background: #f1f5f1;
+  --foreground: #17201b;
+  --card: #fffdf7;
+  --card-foreground: #17201b;
+  --muted: #edf1ed;
+  --muted-foreground: #59645e;
+  --border: #dce3dd;
+  --primary: #176b45;
+  --primary-foreground: #ffffff;
+  --secondary: #e7f3ec;
+  --secondary-foreground: #114d33;
+  --success: #18794e;
+  --warning: #a15c00;
+  --error: #b42318;
+  --focus: #176b45;
+  --background-accent: #dcecdf;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-focus: var(--focus);
 }
 
 * {
@@ -16,122 +44,79 @@
 
 html {
   min-width: 320px;
-  background: #f1f5f1;
+  overflow-x: hidden;
+  scroll-padding-top: 5.5rem;
+  background: var(--background);
 }
 
 body {
+  min-height: 100vh;
   margin: 0;
-  color: var(--ink);
+  overflow-x: hidden;
+  color: var(--foreground);
   background:
-    radial-gradient(circle at top left, #dcecdf 0, transparent 34rem),
-    #f1f5f1;
+    radial-gradient(circle at top left, var(--background-accent) 0, transparent 34rem),
+    var(--background);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-.page-shell {
-  min-height: 100vh;
-  display: grid;
-  place-items: center;
-  padding: 2rem 1rem;
+a {
+  color: inherit;
+  text-decoration: none;
 }
 
-.intro-card {
-  width: min(100%, 44rem);
-  padding: clamp(1.5rem, 5vw, 3.5rem);
-  border: 1px solid var(--line);
-  border-radius: 1.5rem;
-  background: color-mix(in srgb, var(--paper) 94%, transparent);
-  box-shadow: 0 1.5rem 4rem rgb(23 32 27 / 10%);
+button,
+input {
+  font: inherit;
 }
 
-.mark {
-  width: 3rem;
-  height: 3rem;
-  display: grid;
-  place-items: center;
-  margin-bottom: 2rem;
-  border-radius: 0.9rem;
-  color: white;
-  background: var(--accent);
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 0.75rem;
+  left: 0.75rem;
+  transform: translateY(-150%);
+  border-radius: 0.75rem;
+  color: var(--primary-foreground);
+  background: var(--primary);
+  padding: 0.75rem 1rem;
   font-weight: 800;
-  letter-spacing: -0.04em;
+  transition: transform 150ms ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
 }
 
 .eyebrow {
-  margin: 0 0 0.6rem;
-  color: var(--accent);
+  margin: 0;
+  color: var(--primary);
   font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  font-weight: 800;
+  letter-spacing: 0.075em;
   text-transform: uppercase;
 }
 
 h1,
 h2,
+h3,
 p {
-  text-wrap: balance;
-}
-
-h1 {
   margin: 0;
-  font-size: clamp(2.8rem, 10vw, 5.5rem);
-  line-height: 0.96;
-  letter-spacing: -0.07em;
+  overflow-wrap: anywhere;
 }
 
-h2 {
-  margin: 0 0 0.5rem;
-  font-size: 1.5rem;
-}
-
-.lede {
-  max-width: 34rem;
-  margin: 1.25rem 0 0;
-  color: var(--muted);
-  font-size: clamp(1.1rem, 3vw, 1.35rem);
-  line-height: 1.55;
-}
-
-.notice {
-  margin-top: 2.5rem;
-  padding: 1rem 1.1rem;
-  border-left: 0.25rem solid var(--accent);
-  border-radius: 0.35rem;
-  background: var(--accent-soft);
-  font-size: 0.92rem;
-  line-height: 1.5;
-}
-
-.notice p {
-  margin: 0;
-}
-
-.notice p + p {
-  margin-top: 0.2rem;
-  font-weight: 700;
-}
-
-.hindi-copy {
-  margin-top: 2.5rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--line);
-  line-height: 1.6;
-}
-
-.hindi-copy > p:not(.eyebrow) {
-  margin: 0;
-  color: var(--muted);
-}
-
-.hindi-copy .hindi-notice {
-  margin-top: 0.75rem;
-  font-size: 0.9rem;
+:focus-visible {
+  outline: 0.2rem solid var(--focus);
+  outline-offset: 0.2rem;
 }
 
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

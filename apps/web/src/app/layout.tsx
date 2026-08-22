@@ -1,17 +1,64 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
+import { AppShell } from "@/components/shared/app-shell";
+import type { NavigationItem } from "@/components/shared/app-navigation";
+import type { AccountPresentation } from "@/features/auth/components/logout-button";
+import { getShellSession } from "@/features/auth/session";
+import { getDictionary } from "@/i18n";
+import { getRequestLocale } from "@/i18n/locale";
+
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "RaahSathi",
-  description: "An independent driving-licence service hackathon prototype.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getRequestLocale();
+  const messages = getDictionary(locale);
 
-export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
+  return {
+    title: messages.landing.name,
+    description: messages.landing.tagline,
+  };
+}
+
+export default async function RootLayout({
+  children,
+}: Readonly<{ children: ReactNode }>) {
+  const locale = await getRequestLocale();
+  const messages = getDictionary(locale);
+  const session = await getShellSession();
+  const navigation =
+    session.kind === "authenticated"
+      ? ([
+          { href: "/dashboard", label: messages.navigation.dashboard },
+          { href: "/services", label: messages.navigation.services },
+        ] satisfies readonly NavigationItem[])
+      : ([
+          { href: "/", label: messages.navigation.home },
+          { href: "/services", label: messages.navigation.services },
+          { href: "/login", label: messages.common.logIn },
+        ] satisfies readonly NavigationItem[]);
+  const account =
+    session.kind === "authenticated"
+      ? ({
+          label: messages.account.label,
+          logoutLabel: messages.account.logout,
+          loggingOutLabel: messages.account.loggingOut,
+          logoutFailedLabel: messages.account.logoutFailed,
+        } satisfies AccountPresentation)
+      : undefined;
+
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang={locale}>
+      <body>
+        <AppShell
+          locale={locale}
+          messages={messages}
+          navigation={navigation}
+          account={account}
+        >
+          {children}
+        </AppShell>
+      </body>
     </html>
   );
 }

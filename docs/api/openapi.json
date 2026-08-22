@@ -12,7 +12,12 @@
         "summary": "Check application liveness",
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Application is live.",
+            "headers": {
+              "x-request-id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -22,7 +27,12 @@
             }
           },
           "500": {
-            "description": "Sanitized server error",
+            "description": "Sanitized server error.",
+            "headers": {
+              "x-request-id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -40,7 +50,12 @@
         "summary": "Check application and database readiness",
         "responses": {
           "200": {
-            "description": "Successful response",
+            "description": "Application and database are ready.",
+            "headers": {
+              "x-request-id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -50,7 +65,12 @@
             }
           },
           "500": {
-            "description": "Sanitized server error",
+            "description": "Sanitized server error.",
+            "headers": {
+              "x-request-id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -60,7 +80,12 @@
             }
           },
           "503": {
-            "description": "Database dependency unavailable",
+            "description": "Database dependency unavailable.",
+            "headers": {
+              "x-request-id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
             "content": {
               "application/json": {
                 "schema": {
@@ -74,6 +99,15 @@
     }
   },
   "components": {
+    "headers": {
+      "RequestId": {
+        "description": "Safe caller-provided request ID or a generated UUID used for correlation.",
+        "schema": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
+        }
+      }
+    },
     "schemas": {
       "ApiError": {
         "type": "object",
@@ -88,7 +122,8 @@
                 "type": "string"
               },
               "correlationId": {
-                "type": "string"
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$"
               }
             },
             "required": [

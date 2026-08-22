@@ -1,19 +1,11 @@
 import { z } from "zod";
 
-import { apiErrorSchema, healthResponseSchema, readinessResponseSchema } from "../contracts/health";
-
-interface EndpointDefinition {
-  method: "get";
-  path: string;
-  operationId: string;
-  summary: string;
-  successSchema: "HealthResponse" | "ReadinessResponse";
-}
-
-const endpoints: EndpointDefinition[] = [
-  { method: "get", path: "/api/v1/health", operationId: "getHealth", summary: "Check application liveness", successSchema: "HealthResponse" },
-  { method: "get", path: "/api/v1/health/ready", operationId: "getReadiness", summary: "Check application and database readiness", successSchema: "ReadinessResponse" },
-];
+import {
+  apiErrorSchema,
+  endpointContracts,
+  requestIdHeaderContract,
+} from "../contracts/health";
+import type { JsonResponseContract } from "../contracts/endpoint";
 
 function schemaFor(schema: z.ZodType): Record<string, unknown> {
   const generated = z.toJSONSchema(schema, { target: "draft-2020-12" }) as Record<string, unknown>;
@@ -22,43 +14,69 @@ function schemaFor(schema: z.ZodType): Record<string, unknown> {
   return openApiSchema;
 }
 
+function responseHeaders(response: JsonResponseContract): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(response.headers).map(([name, header]) => [
+      name,
+      { $ref: `#/components/headers/${header.componentName}` },
+    ]),
+  );
+}
+
 export function createOpenApiDocument(): Record<string, unknown> {
   const paths: Record<string, unknown> = {};
-  for (const endpoint of endpoints) {
+  const successSchemas: Record<string, unknown> = {};
+
+  for (const endpoint of endpointContracts) {
+    successSchemas[endpoint.success.schemaName] = schemaFor(endpoint.success.schema);
+    const headers = responseHeaders(endpoint.success);
+    const responses: Record<string, unknown> = {
+      [endpoint.success.status]: {
+        description: endpoint.success.description,
+        headers,
+        content: {
+          "application/json": {
+            schema: { $ref: `#/components/schemas/${endpoint.success.schemaName}` },
+          },
+        },
+      },
+    };
+
+    for (const error of endpoint.errors) {
+      responses[error.status] = {
+        description: error.description,
+        headers,
+        content: {
+          "application/json": { schema: { $ref: "#/components/schemas/ApiError" } },
+        },
+      };
+    }
+
     paths[endpoint.path] = {
       [endpoint.method]: {
         operationId: endpoint.operationId,
         summary: endpoint.summary,
-        responses: {
-          "200": {
-            description: "Successful response",
-            content: { "application/json": { schema: { $ref: `#/components/schemas/${endpoint.successSchema}` } } },
-          },
-          "500": {
-            description: "Sanitized server error",
-            content: { "application/json": { schema: { $ref: "#/components/schemas/ApiError" } } },
-          },
-          ...(endpoint.successSchema === "ReadinessResponse" ? {
-            "503": {
-              description: "Database dependency unavailable",
-              content: { "application/json": { schema: { $ref: "#/components/schemas/ApiError" } } },
-            },
-          } : {}),
-        },
+        responses,
       },
     };
   }
 
   return {
     openapi: "3.1.0",
-    info: { title: "RaahSathi API", version: "0.1.0", description: "Same-origin Next.js Route Handler API for the RaahSathi synthetic-data prototype." },
+    info: {
+      title: "RaahSathi API",
+      version: "0.1.0",
+      description: "Same-origin Next.js Route Handler API for the RaahSathi synthetic-data prototype.",
+    },
     paths,
     components: {
-      schemas: {
-        ApiError: schemaFor(apiErrorSchema),
-        HealthResponse: schemaFor(healthResponseSchema),
-        ReadinessResponse: schemaFor(readinessResponseSchema),
+      headers: {
+        [requestIdHeaderContract.componentName]: {
+          description: requestIdHeaderContract.description,
+          schema: schemaFor(requestIdHeaderContract.schema),
+        },
       },
+      schemas: { ApiError: schemaFor(apiErrorSchema), ...successSchemas },
     },
   };
 }

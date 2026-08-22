@@ -44,6 +44,32 @@ describe("HTTP foundation", () => {
     await expect(parseJsonBody(oversized, strictPayload)).rejects.toMatchObject({ status: 413 });
   });
 
+  it("stops an oversized stream without trusting Content-Length", async () => {
+    const chunk = new Uint8Array(16 * 1024).fill(0x20);
+    let chunksProduced = 0;
+    let cancelled = false;
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        chunksProduced += 1;
+        controller.enqueue(chunk);
+        if (chunksProduced === 16) controller.close();
+      },
+      cancel() {
+        cancelled = true;
+      },
+    });
+    const request = new Request("http://localhost/api", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+      duplex: "half",
+    } as RequestInit & { duplex: "half" });
+
+    await expect(parseJsonBody(request, strictPayload)).rejects.toMatchObject({ status: 413 });
+    expect(cancelled).toBe(true);
+    expect(chunksProduced).toBeLessThan(16);
+  });
+
   it("requires same-origin browser mutations", () => {
     expect(() => assertSameOriginMutation(new Request("https://app.example/api", { method: "POST", headers: { origin: "https://app.example" } }))).not.toThrow();
     expect(() => assertSameOriginMutation(new Request("https://app.example/api", { method: "POST", headers: { origin: "https://attacker.invalid" } }))).toThrow(ApiError);
