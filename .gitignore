@@ -10,6 +10,7 @@ node_modules/
 
 # Framework and build output
 .next/
+apps/web/next-env.d.ts
 dist/
 coverage/
 *.tsbuildinfo
@@ -24,3 +25,4 @@ test-results/
 Thumbs.db
 .idea/
 .vscode/
+docs/frontend/

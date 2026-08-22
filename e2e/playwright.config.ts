@@ -12,14 +12,21 @@ export default defineConfig({
   },
   projects: [
     {
-      name: "chromium",
+      name: "desktop-chromium",
       use: { ...devices["Desktop Chrome"] },
+    },
+    {
+      name: "mobile-chromium",
+      use: { ...devices["Pixel 7"] },
     },
   ],
   webServer: {
     command: "pnpm --filter @raahsathi/web dev",
+    env: {
+      NEXT_PUBLIC_DATA_SOURCE: "mock",
+    },
     url: "http://localhost:3000",
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false,
     timeout: 120_000,
   },
 });
