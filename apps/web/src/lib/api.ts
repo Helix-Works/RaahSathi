@@ -1,7 +1,11 @@
-const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1";
+const apiBasePath = "/api/v1";
 
 export async function apiFetch(path: string, init: RequestInit = {}) {
-  return fetch(`${apiBaseUrl}${path}`, {
+  if (!path.startsWith("/") || path.startsWith("//")) {
+    throw new Error("API paths must be same-origin paths beginning with one slash.");
+  }
+
+  return fetch(`${apiBasePath}${path}`, {
     ...init,
     credentials: "include",
     headers: {

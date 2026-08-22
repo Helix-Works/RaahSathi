@@ -6,50 +6,54 @@ This repository uses synthetic data only. It is not an official Government of In
 
 ## Technology
 
-- Web: Next.js, React, TypeScript, Tailwind CSS, shadcn/ui foundation, React Hook Form, and Zod
-- API: NestJS, TypeScript, REST under `/api/v1`, Swagger/OpenAPI, Prisma, and PostgreSQL
-- Tests: Jest/Supertest and Playwright
+- Application: Next.js 16, React, TypeScript, and same-origin Route Handlers under `/api/v1`
+- UI: Tailwind CSS, shadcn/ui foundation, React Hook Form, and Zod
+- Server: server-only TypeScript services, Zod contracts, Prisma, and PostgreSQL on Neon
+- Tests: Vitest and Playwright
 - Workspace: pnpm workspaces
 
 ## Repository layout
 
 ```text
-apps/web/           Next.js citizen-facing application
-apps/api/           NestJS API and server-only Prisma code
-packages/contracts/ Minimal shared wire-contract package
-e2e/                Cross-application Playwright tests
-docs/               Architecture, API, decision, and demo notes
+apps/web/                 Next.js citizen UI, Route Handlers, and server services
+apps/web/prisma/          Prisma schema, migrations, and synthetic seed
+apps/web/src/app/api/v1/  Public REST Route Handlers
+apps/web/src/server/      Server-only domain, HTTP, database, and contract code
+packages/contracts/       Generated or genuinely shared wire-contract artifacts
+e2e/                      Cross-application Playwright tests
+docs/                     Architecture, API, decision, and demo notes
 ```
 
-`AGENTS.md` and `PLAN.md` are the authoritative project instructions. Read both before making changes; do not edit them without explicit approval.
+`AGENTS.md` and `PLAN.md` are authoritative. Read both before making changes.
 
 ## Prerequisites
 
 - Node.js 22 or newer
-- pnpm 11
-- PostgreSQL only when database-backed features are introduced in a later phase
+- pnpm 11 (use `corepack pnpm` if the pnpm shim is not installed)
+- PostgreSQL when exercising readiness or database-backed features
 
-## Install
+## Install and configure
 
 ```bash
 pnpm install
 ```
 
-Copy the relevant `.env.example` files to local, ignored environment files when configuration is needed. Never commit secrets.
+Copy `apps/web/.env.example` to `apps/web/.env.local` and use synthetic development database credentials. Never commit secrets.
 
 ## Develop
 
 ```bash
-pnpm dev:web     # web at http://localhost:3000
-pnpm dev:api     # API at http://localhost:3001/api/v1
-pnpm dev         # both applications
+pnpm dev
 ```
 
-In development, Swagger UI is available at `http://localhost:3001/api/docs`. The health endpoint is `GET http://localhost:3001/api/v1/health`.
+The UI runs at `http://localhost:3000`. Health is `GET http://localhost:3000/api/v1/health`; readiness is `GET http://localhost:3000/api/v1/health/ready`.
 
 ## Quality checks
 
 ```bash
+pnpm prisma:generate
+pnpm prisma:validate
+pnpm openapi:check
 pnpm lint
 pnpm typecheck
 pnpm test
@@ -57,4 +61,4 @@ pnpm build
 pnpm test:e2e
 ```
 
-Frontend work belongs in `apps/web`, backend and database work in `apps/api`, and only genuinely shared API contracts belong in `packages/contracts`.
+Browser code must never import `apps/web/src/server`. Server Components should call server services directly, while browser clients use same-origin `/api/v1` requests.
