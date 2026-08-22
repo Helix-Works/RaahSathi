@@ -123,3 +123,13 @@ test("skip link reaches the main content", async ({ page }, testInfo) => {
   await page.keyboard.press("Enter");
   await expect(page.locator("#main-content")).toBeFocused();
 });
+
+test("serves the same-origin Route Handler health contract", async ({ request }) => {
+  const response = await request.get("/api/v1/health", {
+    headers: { "x-request-id": "playwright-health" },
+  });
+
+  expect(response.status()).toBe(200);
+  expect(response.headers()["x-request-id"]).toBe("playwright-health");
+  expect(await response.json()).toEqual({ status: "ok" });
+});

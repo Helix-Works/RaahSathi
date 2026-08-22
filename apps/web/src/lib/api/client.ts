@@ -4,9 +4,7 @@ import {
   normalizeApiError,
 } from "./errors";
 
-const apiBaseUrl = (
-  process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1"
-).replace(/\/+$/, "");
+const apiBaseUrl = "/api/v1";
 
 export type ApiRequestOptions = Omit<
   RequestInit,
@@ -85,7 +83,7 @@ export async function apiRequest(
   if (response.status !== 204 && payload === undefined) {
     throw createInvalidResponseError(
       response.status,
-      response.headers.get("x-correlation-id"),
+      response.headers.get("x-request-id"),
     );
   }
 

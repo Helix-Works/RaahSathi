@@ -21,7 +21,7 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm --filter @raahsathi/web dev",
+    command: "corepack pnpm --filter @raahsathi/web dev",
     env: {
       NEXT_PUBLIC_DATA_SOURCE: "mock",
     },

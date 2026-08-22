@@ -29,7 +29,7 @@ No Round 1 admin/operator UI.
 ## 2. Team split
 
 ### Person A — Frontend / Citizen UX
-Owns `apps/web/**`.
+Owns citizen UI code in `apps/web/**`, excluding `src/app/api/**`, `src/server/**`, and `prisma/**`.
 
 Primary deliverables:
 - Next.js;
@@ -49,15 +49,15 @@ Primary deliverables:
 - web deployment/demo.
 
 ### Person B — Backend / Security & Data
-Owns `apps/api/**` and Prisma.
+Owns `apps/web/src/app/api/**`, `apps/web/src/server/**`, and `apps/web/prisma/**`.
 
 Primary deliverables:
-- NestJS REST `/api/v1`;
+- Next.js Route Handlers serving REST `/api/v1`;
 - OpenAPI;
 - Neon/Postgres/Prisma;
 - migrations/seeds;
 - auth/sessions;
-- CSRF/CORS/rate limiting;
+- CSRF/Origin validation/rate limiting;
 - ownership authorization;
 - workflows/status derivation;
 - payments;
@@ -80,11 +80,9 @@ Primary deliverables:
 
 ```text
 Browser
-  ↓
-Next.js + TypeScript
-  ↓ credentialed HTTPS
-NestJS + TypeScript /api/v1
-  ↓
+  ↓ same-origin HTTPS
+Next.js + TypeScript UI and /api/v1 Route Handlers
+  ↓ server-only services
 Prisma
   ↓
 Neon PostgreSQL
@@ -98,7 +96,7 @@ Frontend:
 - Zod
 
 Testing:
-- Jest/Supertest backend
+- Vitest server and Route Handler integration tests
 - Playwright critical E2E
 
 Workspace:
@@ -111,8 +109,7 @@ No microservices/Redis/Kafka/Kubernetes/event sourcing/CQRS/general workflow eng
 ```text
 RaahSathi/
 ├── apps/
-│   ├── web/
-│   └── api/
+│   └── web/        # UI + Route Handlers + server services + Prisma
 ├── packages/
 │   └── contracts/
 ├── docs/
@@ -123,7 +120,9 @@ RaahSathi/
 └── pnpm-workspace.yaml
 ```
 
-Prefer `apps/api/prisma/` for Prisma schema/migrations.
+Prisma schema/migrations live in `apps/web/prisma/`.
+
+Route Handlers execute as bounded serverless functions. No workflow may depend on process memory, filesystem persistence, WebSockets, or a continuously running worker. PostgreSQL owns durable state; temporary offers use transactionally checked lazy expiry in Round 1.
 
 ## 5. Scope
 
@@ -241,25 +240,25 @@ POST /api/v1/legacy/reconciliation-requests
 GET  /api/v1/legacy/reconciliation-requests/:id
 ```
 
-NestJS OpenAPI is authoritative. Generate frontend types/contract artefacts rather than hand-maintaining duplicates where practical.
+Strict Zod schemas in the endpoint registry are authoritative. Generate OpenAPI 3.1 and frontend types/contract artefacts rather than hand-maintaining duplicates where practical.
 
 ## 8. Phase 0 — Foundation
 
 **Goal:** both apps start, DB connects, OpenAPI works, bilingual shell exists.
 
 ### Person B
-- scaffold NestJS;
+- establish Next.js `/api/v1` Route Handlers and server-only service boundaries;
 - strict TS/lint;
 - env validation;
 - Prisma + Neon;
 - first migration;
 - `/api/v1` prefix;
 - health endpoint;
-- global DTO validation;
+- shared strict Zod validation;
 - OpenAPI;
 - correlation/safe-error pattern;
-- CORS config;
-- Jest/Supertest setup.
+- same-origin and Origin-validation foundation;
+- Vitest Route Handler/service setup.
 
 ### Person A
 - scaffold Next.js;
@@ -288,7 +287,7 @@ NestJS OpenAPI is authoritative. Generate frontend types/contract artefacts rath
 - auth guard;
 - owner-authorization pattern;
 - CSRF token/session binding;
-- strict credentialed CORS;
+- same-origin mutation checks and CSRF protection;
 - auth rate limits;
 - safe auth errors/audit.
 
@@ -496,9 +495,9 @@ Security is implemented continuously; this phase is the final gate.
 Required backend checks:
 - no unscoped private resource endpoint;
 - CSRF on cookie-auth mutations;
-- exact CORS origins;
+- no permissive CORS responses and exact mutation Origin checks;
 - rate limits;
-- strict DTO validation;
+- strict Zod validation;
 - no stack/secret leakage;
 - secure production session cookie;
 - migrations clean;
@@ -527,8 +526,8 @@ Mandatory automated tests:
 10. offer expiry;
 11. identity failure/retry;
 12. CSRF;
-13. CORS;
-14. unexpected DTO fields;
+13. cross-origin mutation rejection;
+14. unexpected request fields;
 15. sanitized audit;
 16. Playwright hero journey English;
 17. Playwright hero journey Hindi.
@@ -539,16 +538,14 @@ No open P0 correctness/security failure at exit.
 
 ### Person B
 - provision/migrate/seed Neon;
-- deploy NestJS to managed Node host;
-- configure allowed web origin;
-- configure real-domain cookie + CSRF behavior;
+- deploy Route Handlers with the Next.js application to Vercel;
+- configure same-origin cookie + CSRF/Origin behavior;
 - production smoke/security check;
 - safe logs;
 - demo reset.
 
 ### Person A
-- deploy Next.js to Vercel;
-- configure API URL;
+- deploy the single Next.js application to Vercel;
 - production CSP/security headers;
 - verify cookie auth;
 - mobile/browser check;

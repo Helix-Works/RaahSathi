@@ -1,8 +1,7 @@
 export type ApiFieldErrors = Readonly<Record<string, readonly string[]>>;
 
 /**
- * Provisional frontend-normalized error shape. Replace its wire parsing when the
- * NestJS OpenAPI contract defines the authoritative public error envelope.
+ * Frontend-normalized view of the authoritative Route Handler error envelope.
  */
 export type ApiError = Readonly<{
   status: number;
@@ -71,21 +70,24 @@ export function normalizeApiError(
     payload && typeof payload === "object" && !Array.isArray(payload)
       ? (payload as Record<string, unknown>)
       : {};
-  const code = safeIdentifier(body.code) ?? `HTTP_${response.status}`;
-  const messageKey = safeIdentifier(body.messageKey) ?? "errors.requestFailed";
+  const error = body.error && typeof body.error === "object" && !Array.isArray(body.error)
+    ? (body.error as Record<string, unknown>)
+    : {};
+  const code = safeIdentifier(error.code) ?? `HTTP_${response.status}`;
+  const messageKey = safeIdentifier(error.messageKey) ?? "errors.requestFailed";
   const correlationId =
-    safeIdentifier(response.headers.get("x-correlation-id")) ??
-    safeIdentifier(body.correlationId);
+    safeIdentifier(response.headers.get("x-request-id")) ??
+    safeIdentifier(error.correlationId);
   const retryable =
-    typeof body.retryable === "boolean"
-      ? body.retryable
+    typeof error.retryable === "boolean"
+      ? error.retryable
       : response.status === 429 || response.status >= 500;
 
   return new ApiClientError({
     status: response.status,
     code,
     messageKey,
-    fieldErrors: readFieldErrors(body.fieldErrors),
+    fieldErrors: readFieldErrors(error.fieldErrors),
     correlationId,
     retryable,
   });

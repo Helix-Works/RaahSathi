@@ -1,5 +1,5 @@
 /**
- * Stable, shared wire vocabulary only. NestJS OpenAPI remains authoritative.
+ * Stable, shared wire vocabulary only. Registered Zod/OpenAPI contracts remain authoritative.
  * Add generated request/response shapes here once their backend contracts exist.
  */
 export type ServiceKey =

@@ -22,7 +22,7 @@ If implementation appears to require changing architecture, stack, security, own
 5. wait for approval.
 
 Always ask first before changing:
-- Next.js / NestJS / PostgreSQL / Prisma;
+- the single Next.js application, its Route Handler boundary, PostgreSQL, or Prisma;
 - frontend/backend ownership;
 - auth/session or authorization model;
 - REST `/api/v1` strategy;
@@ -163,7 +163,8 @@ Codex must not cut scope itself. If schedule pressure requires a cut, report it 
 Background: stronger Flutter/UI experience; learning React/Next.js.
 
 Owns:
-- `apps/web/**`
+- UI routes and layouts under `apps/web/src/app/**`, excluding `apps/web/src/app/api/**`;
+- `apps/web/src/components/**`, `features/**`, `hooks/**`, `i18n/**`, and browser-safe `lib/**`;
 - Next.js citizen app;
 - mobile-first UX;
 - Tailwind + shadcn/ui;
@@ -189,12 +190,14 @@ Frontend must never be authoritative for eligibility, payment success, capacity,
 Background: more familiar with JavaScript/backend development.
 
 Owns:
-- `apps/api/**`
-- NestJS;
+- `apps/web/src/app/api/**` Route Handlers;
+- `apps/web/src/server/**` server-only services;
+- `apps/web/prisma/**`;
+- Next.js backend-for-frontend behavior;
 - Prisma/PostgreSQL/Neon;
 - schema/migrations/seeds;
 - authentication/session infrastructure;
-- CSRF/CORS/rate limits;
+- CSRF/Origin checks/rate limits;
 - resource ownership authorization;
 - REST/OpenAPI;
 - workflows/status derivation;
@@ -204,8 +207,8 @@ Owns:
 - waitlist/offers;
 - licences/legacy;
 - audit/history;
-- Jest/Supertest/race tests;
-- API/database deployment.
+- Vitest Route Handler, service, database, and race tests;
+- Vercel server/database deployment integration.
 
 ### Shared
 - API contracts/OpenAPI generated types;
@@ -227,11 +230,12 @@ Frontend:
 - React Hook Form
 - Zod
 
-Backend:
-- NestJS + TypeScript
+Backend-for-frontend:
+- Next.js Route Handlers + TypeScript
 - REST `/api/v1`
-- NestJS Swagger/OpenAPI
-- strict NestJS DTO validation
+- Zod-owned OpenAPI 3.1 contracts
+- strict Zod request/response validation
+- server-only services under `apps/web/src/server`
 
 ### TypeScript type-safety rules
 
@@ -248,7 +252,7 @@ Prefer:
 `any` is never permitted in:
 
 - REST request/response contracts;
-- NestJS DTOs;
+- Route Handler Zod request/response schemas;
 - shared/OpenAPI-generated contracts;
 - authentication/session/authorization logic;
 - Prisma/database-facing application code;
@@ -282,12 +286,13 @@ Authentication:
 - no auth tokens in `localStorage`/`sessionStorage`.
 
 Deployment target:
-- Next.js: Vercel
-- NestJS: managed Node host such as Railway
+- Next.js UI and Route Handlers: one Vercel deployment
 - DB: Neon
 
 Trust path:
-`Browser -> HTTPS -> Next.js -> credentialed HTTPS -> NestJS -> server-only Prisma -> PostgreSQL`
+`Browser -> HTTPS -> Next.js UI/Route Handlers -> server-only services -> Prisma -> PostgreSQL`
+
+The deployment is same-origin. Do not restore a separate browser-to-API CORS boundary without permission. Route Handlers may run as bounded serverless invocations: never depend on process memory, local filesystem persistence, WebSockets, or a continuously running worker. Use PostgreSQL state and transactionally checked lazy expiry for Round 1 offers.
 
 Prefer same-site custom app/API subdomains when available. If separate hosting domains require cross-site cookies, preserve Secure cookie + CSRF + strict origin controls rather than weakening security.
 
@@ -298,8 +303,7 @@ Preferred shape:
 ```text
 RaahSathi/
 ├── apps/
-│   ├── web/        # Person A
-│   └── api/        # Person B
+│   └── web/        # Person A UI + Person B Route Handlers/server/Prisma
 ├── packages/
 │   └── contracts/  # generated/shared wire artefacts only if needed
 ├── docs/
@@ -310,13 +314,13 @@ RaahSathi/
 └── pnpm-workspace.yaml
 ```
 
-Use pnpm workspaces. Prisma should normally live under `apps/api/prisma/`.
+Use pnpm workspaces. Prisma lives under `apps/web/prisma/`.
 
 Do not recreate the old oversized package structure.
 
 ## 9. API and contract rules
 
-NestJS OpenAPI is the authoritative wire contract. Generate frontend TypeScript types where practical.
+Strict Zod schemas registered with the Route Handler endpoint registry are the authoritative wire contract. Generate OpenAPI 3.1 and frontend TypeScript types where practical; committed `docs/api/openapi.json` must pass the drift check.
 
 Representative endpoints:
 
@@ -357,7 +361,7 @@ GET  /api/v1/legacy/reconciliation-requests/:id
 
 Use stable machine-readable error/reason codes and localization keys. Never return raw stacks/SQL/provider secrets.
 
-## 10. Backend rules
+## 10. Server and Route Handler rules
 
 Suggested modules:
 `auth`, `applications`, `identity`, `payments`, `appointments`, `licences`, `legacy`, `audit`, `common`.
@@ -367,7 +371,7 @@ Do not build a universal workflow/rules engine for Round 1.
 ### Applications
 Persist coherent section drafts and immutable transition events.
 
-`status`, `nextAction` and `blockingReason` are backend-derived. Do not allow frontend or arbitrary controllers to independently set citizen presentation status.
+`status`, `nextAction` and `blockingReason` are server-derived. Do not allow client code or arbitrary Route Handlers to independently set citizen presentation status.
 
 ### Documents
 Synthetic metadata only. Do not accept/store arbitrary real identity documents.
@@ -401,19 +405,20 @@ Accepting expired/declined/consumed offers must fail safely. Lazy expiry or a ti
 
 ## 11. Security baseline
 
-Browser is untrusted. NestJS is the authoritative application boundary.
+Browser is untrusted. Next.js Route Handlers and their server-only services are the authoritative application boundary.
 
 Non-negotiable:
 - server-side ownership authorization;
 - secure HttpOnly session cookie;
 - no browser token storage;
 - CSRF protection on state-changing cookie-authenticated requests;
-- credentialed CORS with exact allowed origins, never `*`;
-- strict DTO validation/unknown-field rejection;
+- same-origin APIs with no permissive CORS response;
+- CSRF tokens plus exact Origin checks for cookie-authenticated mutations;
+- strict Zod validation/unknown-field rejection;
 - sensitive endpoint rate limits;
 - server-only secrets;
 - safe public errors;
-- appropriate Next.js/NestJS security headers;
+- appropriate Next.js security headers;
 - tested CSP that does not break Next.js;
 - database foreign keys/uniques/checks/transactions/indexes;
 - sanitized structured audit events;
@@ -454,7 +459,7 @@ shadcn/Tailwind are the accessible baseline.
 
 Do not chase arbitrary coverage percentages. Test the claims that would invalidate the project.
 
-Backend: Jest + NestJS/Supertest.  
+Server and Route Handlers: Vitest with Web `Request`/`Response` integration tests.
 Cross-app critical E2E: Playwright.
 
 Mandatory automated tests:
@@ -504,7 +509,7 @@ Never:
 ## 16. Round 1 definition of done
 
 Round 1 is ready only when:
-- public Next.js citizen UI, NestJS API and Neon DB are deployed;
+- public Next.js citizen UI and Route Handler API plus Neon DB are deployed;
 - secure synthetic login/session works;
 - English and Hindi work across all implemented citizen flows;
 - learner -> permanent journey is demonstrable;
