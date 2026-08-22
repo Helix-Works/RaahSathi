@@ -1,0 +1,19 @@
+{
+  "name": "raahsathi",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@11.22.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @raahsathi/web --filter @raahsathi/api dev",
+    "dev:web": "pnpm --filter @raahsathi/web dev",
+    "dev:api": "pnpm --filter @raahsathi/api dev",
+    "build": "pnpm -r --if-present build",
+    "lint": "pnpm -r --if-present lint",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "test:e2e": "pnpm --filter @raahsathi/e2e test:e2e"
+  }
+}
