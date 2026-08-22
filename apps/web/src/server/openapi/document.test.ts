@@ -7,12 +7,16 @@ import { readinessEndpointContract } from "../contracts/health";
 import { createOpenApiDocument, serializeOpenApiDocument } from "./document";
 
 describe("OpenAPI", () => {
-  it("documents health, readiness, and shared errors", () => {
+  it("documents health, readiness, authentication, and shared errors", () => {
     const document = createOpenApiDocument();
     expect(document).toMatchObject({
       openapi: "3.1.0",
       paths: {
         "/api/v1/health": {},
+        "/api/v1/auth/request-otp": { post: { responses: { 202: {}, 429: {} } } },
+        "/api/v1/auth/verify-otp": { post: { responses: { 200: {} } } },
+        "/api/v1/auth/logout": { post: { responses: { 204: {} }, security: [{ cookieAuth: [] }] } },
+        "/api/v1/me": { get: { responses: { 200: {}, 401: {} }, security: [{ cookieAuth: [] }] } },
         "/api/v1/health/ready": {
           get: {
             responses: {

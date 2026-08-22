@@ -2,10 +2,10 @@ import { z } from "zod";
 
 import {
   apiErrorSchema,
-  endpointContracts,
-  requestIdHeaderContract,
 } from "../contracts/health";
-import type { JsonResponseContract } from "../contracts/endpoint";
+import { healthEndpointContracts } from "../contracts/health";
+import { authEndpointContracts } from "../contracts/auth";
+import type { ResponseHeaderContract } from "../contracts/endpoint";
 
 function schemaFor(schema: z.ZodType): Record<string, unknown> {
   const generated = z.toJSONSchema(schema, { target: "draft-2020-12" }) as Record<string, unknown>;
@@ -14,7 +14,7 @@ function schemaFor(schema: z.ZodType): Record<string, unknown> {
   return openApiSchema;
 }
 
-function responseHeaders(response: JsonResponseContract): Record<string, unknown> {
+function responseHeaders(response: Readonly<{ headers: Record<string, ResponseHeaderContract> }>): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(response.headers).map(([name, header]) => [
       name,
@@ -24,41 +24,55 @@ function responseHeaders(response: JsonResponseContract): Record<string, unknown
 }
 
 export function createOpenApiDocument(): Record<string, unknown> {
+  const endpointContracts = [...healthEndpointContracts, ...authEndpointContracts];
   const paths: Record<string, unknown> = {};
   const successSchemas: Record<string, unknown> = {};
+  const requestSchemas: Record<string, unknown> = {};
+  const componentHeaders: Record<string, unknown> = {};
 
   for (const endpoint of endpointContracts) {
-    successSchemas[endpoint.success.schemaName] = schemaFor(endpoint.success.schema);
+    if ("schema" in endpoint.success) successSchemas[endpoint.success.schemaName] = schemaFor(endpoint.success.schema);
+    if (endpoint.request) requestSchemas[endpoint.request.schemaName] = schemaFor(endpoint.request.schema);
+    for (const header of [
+      ...Object.values(endpoint.success.headers),
+      ...endpoint.errors.flatMap((error) => Object.values(error.headers ?? {})),
+    ]) {
+      componentHeaders[header.componentName] = { description: header.description, schema: schemaFor(header.schema) };
+    }
     const headers = responseHeaders(endpoint.success);
     const responses: Record<string, unknown> = {
       [endpoint.success.status]: {
         description: endpoint.success.description,
         headers,
-        content: {
-          "application/json": {
-            schema: { $ref: `#/components/schemas/${endpoint.success.schemaName}` },
-          },
-        },
+        ...("schema" in endpoint.success ? { content: { "application/json": { schema: { $ref: `#/components/schemas/${endpoint.success.schemaName}` } } } } : {}),
       },
     };
 
     for (const error of endpoint.errors) {
       responses[error.status] = {
         description: error.description,
-        headers,
+        headers: responseHeaders({ ...endpoint.success, headers: error.headers ?? endpoint.success.headers }),
         content: {
           "application/json": { schema: { $ref: "#/components/schemas/ApiError" } },
         },
       };
     }
 
-    paths[endpoint.path] = {
-      [endpoint.method]: {
+    const operation: Record<string, unknown> = {
         operationId: endpoint.operationId,
         summary: endpoint.summary,
         responses,
-      },
     };
+    if (endpoint.request) {
+      operation.requestBody = { required: true, content: { "application/json": { schema: { $ref: `#/components/schemas/${endpoint.request.schemaName}` } } } };
+    }
+    if (endpoint.requestHeaders) {
+      operation.parameters = endpoint.requestHeaders.map((header) => ({
+        name: header.name, in: "header", required: header.required, description: header.description, schema: schemaFor(header.schema),
+      }));
+    }
+    if (endpoint.security) operation.security = endpoint.security.map((name) => ({ [name]: [] }));
+    paths[endpoint.path] = { ...(paths[endpoint.path] as Record<string, unknown> | undefined), [endpoint.method]: operation };
   }
 
   return {
@@ -71,12 +85,10 @@ export function createOpenApiDocument(): Record<string, unknown> {
     paths,
     components: {
       headers: {
-        [requestIdHeaderContract.componentName]: {
-          description: requestIdHeaderContract.description,
-          schema: schemaFor(requestIdHeaderContract.schema),
-        },
+        ...componentHeaders,
       },
-      schemas: { ApiError: schemaFor(apiErrorSchema), ...successSchemas },
+      securitySchemes: { cookieAuth: { type: "apiKey", in: "cookie", name: "raahsathi_session" } },
+      schemas: { ApiError: schemaFor(apiErrorSchema), ...requestSchemas, ...successSchemas },
     },
   };
 }

@@ -48,6 +48,8 @@ pnpm dev
 
 The UI runs at `http://localhost:3000`. Health is `GET http://localhost:3000/api/v1/health`; readiness is `GET http://localhost:3000/api/v1/health/ready`.
 
+After applying the committed migrations to a local disposable database, seed the synthetic Phase 1 applicants with `pnpm --filter @raahsathi/web prisma:seed`. The standard login is `9000000000` / `123456`; `9000000002` demonstrates provider unavailability. Never enter a real mobile number.
+
 ## Quality checks
 
 ```bash
@@ -57,6 +59,7 @@ pnpm openapi:check
 pnpm lint
 pnpm typecheck
 pnpm test
+pnpm test:db
 pnpm build
 pnpm test:e2e
 ```

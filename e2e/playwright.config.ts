@@ -1,5 +1,8 @@
 import { defineConfig, devices } from "@playwright/test";
 
+const port = process.env.E2E_PORT ?? "3000";
+const baseURL = `http://localhost:${port}`;
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
@@ -7,7 +10,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: "html",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     trace: "on-first-retry",
   },
   projects: [
@@ -21,11 +24,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "corepack pnpm --filter @raahsathi/web dev",
+    command: `corepack pnpm --filter @raahsathi/web exec next dev -p ${port}`,
     env: {
       NEXT_PUBLIC_DATA_SOURCE: "mock",
     },
-    url: "http://localhost:3000",
+    url: baseURL,
     reuseExistingServer: false,
     timeout: 120_000,
   },
