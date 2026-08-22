@@ -38,6 +38,8 @@ describe("Phase 1 authentication foundation", () => {
     expect(sessionCookieOptions(expires, true)).toMatchObject({ httpOnly: true, secure: true, sameSite: "lax", path: "/" });
     expect(csrfCookieOptions(expires, true)).toMatchObject({ httpOnly: false, secure: true });
     expect(readCookie("one=1; raahsathi_session=opaque%20token", "raahsathi_session")).toBe("opaque token");
+    expect(readCookie("raahsathi_session=%E0%A4", "raahsathi_session")).toBeUndefined();
+    expect(readCookie("raahsathi_csrf=%", "raahsathi_csrf")).toBeUndefined();
   });
 
   it("enforces owner-scoped access", () => {

@@ -3,15 +3,17 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
 
+import { isDisposableDatabaseApproved } from "./database-test-safety";
+
 const testUrl = process.env.TEST_DATABASE_URL;
-const safeTestUrl = (() => {
-  if (!testUrl) return false;
-  try {
-    return /test|ci|ephemeral/i.test(new URL(testUrl).pathname) && testUrl !== process.env.DATABASE_URL;
-  } catch {
-    return false;
-  }
-})();
+const safeTestUrl = isDisposableDatabaseApproved({
+  testDatabaseUrl: testUrl,
+  primaryDatabaseUrl: process.env.DATABASE_URL,
+  confirmation: process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION,
+});
+if (testUrl && process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION && !safeTestUrl) {
+  throw new Error("Refusing database tests: disposable database identity is invalid or matches DATABASE_URL.");
+}
 const database = safeTestUrl ? new PrismaClient({ datasourceUrl: testUrl }) : undefined;
 
 describe.skipIf(!database)("Phase 1 disposable PostgreSQL persistence", () => {
@@ -43,8 +45,11 @@ describe.skipIf(!database)("Phase 1 disposable PostgreSQL persistence", () => {
       },
     });
     const secondClient = new PrismaClient({ datasourceUrl: testUrl });
-    await secondClient.session.update({ where: { id: sessionId }, data: { revokedAt: new Date() } });
-    await secondClient.$disconnect();
+    try {
+      await secondClient.session.update({ where: { id: sessionId }, data: { revokedAt: new Date() } });
+    } finally {
+      await secondClient.$disconnect();
+    }
     expect((await database.session.findUniqueOrThrow({ where: { id: sessionId } })).revokedAt).toBeInstanceOf(Date);
   });
 });

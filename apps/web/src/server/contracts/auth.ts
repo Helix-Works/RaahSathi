@@ -25,6 +25,7 @@ export const requestOtpEndpointContract = {
   success: { status: 202, description: "Synthetic OTP challenge accepted.", schemaName: "OtpChallenge", schema: otpChallengeSchema, headers: responseHeaders },
   errors: [
     { status: 400, description: "Strict request validation failed." },
+    { status: 403, description: "Exact Origin validation failed." },
     { status: 413, description: "Request body exceeded the limit." },
     { status: 415, description: "Request body is not JSON." },
     { status: 429, description: "OTP request cooldown or window limit reached.", headers: { ...responseHeaders, "retry-after": retryAfterHeaderContract } },
@@ -42,6 +43,9 @@ export const verifyOtpEndpointContract = {
   success: { status: 200, description: "OTP verified and session created.", schemaName: "SessionSummary", schema: sessionSummarySchema, headers: responseHeaders },
   errors: [
     { status: 400, description: "OTP invalid, expired, or request invalid." },
+    { status: 403, description: "Exact Origin validation failed." },
+    { status: 413, description: "Request body exceeded the limit." },
+    { status: 415, description: "Request body is not JSON." },
     { status: 429, description: "OTP attempts exhausted." },
     { status: 500, description: "Sanitized server error." },
   ],

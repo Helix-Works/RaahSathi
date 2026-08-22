@@ -29,6 +29,10 @@ type LoginFlowProps = Readonly<{
   locale: Locale;
 }>;
 
+function currentTimestamp(): number {
+  return Date.now();
+}
+
 function ApiErrorSummary({
   error,
   title,
@@ -61,7 +65,8 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
   const router = useRouter();
   const [challenge, setChallenge] = useState<OtpChallenge>();
   const [requestedMobile, setRequestedMobile] = useState<string>();
-  const [clock, setClock] = useState(() => Date.now());
+  const [clock, setClock] = useState(currentTimestamp);
+  const [isResending, setIsResending] = useState(false);
   const [apiError, setApiError] = useState<AuthErrorPresentation>();
   const requestForm = useForm<MobileFormValues>({
     resolver: zodResolver(mobileFormSchema),
@@ -80,7 +85,7 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
 
   useEffect(() => {
     if (!challenge) return;
-    const timer = window.setInterval(() => setClock(Date.now()), 1_000);
+    const timer = window.setInterval(() => setClock(currentTimestamp()), 1_000);
     return () => window.clearInterval(timer);
   }, [challenge]);
 
@@ -111,7 +116,7 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
       const nextChallenge = await authApi.requestOtp(values);
       setChallenge(nextChallenge);
       setRequestedMobile(values.mobileNumber);
-      setClock(new Date(nextChallenge.resendAvailableAt).getTime() - 60_000);
+      setClock(currentTimestamp());
       otpForm.reset();
     } catch (error: unknown) {
       presentError(error);
@@ -147,15 +152,18 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
     ? Math.max(0, Math.ceil((new Date(challenge.resendAvailableAt).getTime() - clock) / 1_000))
     : 0;
   const resend = async () => {
-    if (!requestedMobile || resendSeconds > 0) return;
+    if (!requestedMobile || resendSeconds > 0 || isResending) return;
+    setIsResending(true);
     setApiError(undefined);
     try {
       const nextChallenge = await authApi.requestOtp({ mobileNumber: requestedMobile });
       setChallenge(nextChallenge);
-      setClock(new Date(nextChallenge.resendAvailableAt).getTime() - 60_000);
+      setClock(currentTimestamp());
       otpForm.reset();
     } catch (error: unknown) {
       presentError(error);
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -257,7 +265,7 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
               ) : null}
             </div>
 
-            <Button className="w-full" size="lg" type="submit" disabled={otpForm.formState.isSubmitting}>
+            <Button className="w-full" size="lg" type="submit" disabled={otpForm.formState.isSubmitting || isResending}>
               {otpForm.formState.isSubmitting ? (
                 <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
               ) : null}
@@ -270,7 +278,7 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
               variant="secondary"
               type="button"
               onClick={resend}
-              disabled={otpForm.formState.isSubmitting || resendSeconds > 0}
+              disabled={otpForm.formState.isSubmitting || isResending || resendSeconds > 0}
             >
               {resendSeconds > 0
                 ? authMessages.resendAvailableIn.replace("{seconds}", String(resendSeconds))
@@ -281,7 +289,7 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
               variant="ghost"
               type="button"
               onClick={restart}
-              disabled={otpForm.formState.isSubmitting}
+              disabled={otpForm.formState.isSubmitting || isResending}
             >
               <ArrowLeft className="size-4" aria-hidden="true" />
               {authMessages.changeMobile}

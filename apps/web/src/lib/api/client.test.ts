@@ -26,4 +26,13 @@ describe("API CSRF transport", () => {
     }));
     await apiRequest("/me");
   });
+
+  it("ignores a malformed CSRF cookie instead of throwing", async () => {
+    vi.stubGlobal("document", { cookie: "raahsathi_csrf=%E0%A4" });
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init?: RequestInit) => {
+      expect(new Headers(init?.headers).has("x-csrf-token")).toBe(false);
+      return new Response(null, { status: 204 });
+    }));
+    await expect(apiRequest("/auth/logout", { method: "POST" })).resolves.toBeUndefined();
+  });
 });

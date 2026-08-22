@@ -132,6 +132,21 @@
               }
             }
           },
+          "403": {
+            "description": "Exact Origin validation failed.",
+            "headers": {
+              "x-request-id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "413": {
             "description": "Request body exceeded the limit.",
             "headers": {
@@ -245,6 +260,51 @@
           },
           "400": {
             "description": "OTP invalid, expired, or request invalid.",
+            "headers": {
+              "x-request-id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Exact Origin validation failed.",
+            "headers": {
+              "x-request-id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Request body exceeded the limit.",
+            "headers": {
+              "x-request-id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "Request body is not JSON.",
             "headers": {
               "x-request-id": {
                 "$ref": "#/components/headers/RequestId"

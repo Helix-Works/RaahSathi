@@ -24,6 +24,6 @@ Private services receive an authenticated `{ sessionId, applicantId }` context a
 
 ## Local setup
 
-Set the PostgreSQL URLs and all three server-only auth variables from `.env.example`, apply migrations only to a disposable/local database, then run `pnpm prisma:seed`. Optional database tests require a distinct `TEST_DATABASE_URL` whose database name contains `test`, `ci`, or `ephemeral`.
+Set the PostgreSQL URLs and all three server-only auth variables from `.env.example`, apply migrations only to a disposable/local database, then run `pnpm prisma:seed`. Database tests require a distinct normalized `TEST_DATABASE_URL` plus the exact `TEST_DATABASE_DISPOSABLE_CONFIRMATION` acknowledgement; the runner fails closed when either is missing or the test identity matches `DATABASE_URL`.
 
 Production migrations and resets are outside Phase 1 implementation authorization.

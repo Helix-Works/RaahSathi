@@ -64,4 +64,6 @@ pnpm build
 pnpm test:e2e
 ```
 
+`pnpm test:db` intentionally fails unless both `TEST_DATABASE_URL` and the explicit disposable-database confirmation from `.env.example` are set. It must never target normal development or production data.
+
 Browser code must never import `apps/web/src/server`. Server Components should call server services directly, while browser clients use same-origin `/api/v1` requests.

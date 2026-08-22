@@ -11,7 +11,12 @@ const safeMethods = new Set(["GET", "HEAD", "OPTIONS"]);
 function readBrowserCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
   const item = document.cookie.split(";").map((part) => part.trim()).find((part) => part.startsWith(`${name}=`));
-  return item ? decodeURIComponent(item.slice(name.length + 1)) : undefined;
+  if (!item) return undefined;
+  try {
+    return decodeURIComponent(item.slice(name.length + 1));
+  } catch {
+    return undefined;
+  }
 }
 
 export type ApiRequestOptions = Omit<

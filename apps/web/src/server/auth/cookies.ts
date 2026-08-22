@@ -7,7 +7,13 @@ export function readCookie(cookieHeader: string | null, name: string): string | 
   if (!cookieHeader) return undefined;
   for (const part of cookieHeader.split(";")) {
     const [key, ...value] = part.trim().split("=");
-    if (key === name) return decodeURIComponent(value.join("="));
+    if (key === name) {
+      try {
+        return decodeURIComponent(value.join("="));
+      } catch {
+        return undefined;
+      }
+    }
   }
   return undefined;
 }
