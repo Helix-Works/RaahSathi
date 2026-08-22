@@ -11,6 +11,7 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:e2e": "jest --config ./test/jest-e2e.json",
+    "openapi:generate": "tsx src/scripts/generate-openapi.ts",
     "prisma:generate": "prisma generate",
     "prisma:validate": "prisma validate",
     "prisma:seed": "tsx prisma/seed.ts"
@@ -48,6 +49,7 @@
     "moduleFileExtensions": ["js", "json", "ts"],
     "rootDir": ".",
     "testRegex": ".*\\.spec\\.ts$",
+    "setupFiles": ["<rootDir>/test/test-environment.ts"],
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },

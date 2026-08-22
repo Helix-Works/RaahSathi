@@ -3,6 +3,7 @@
   "rootDir": "..",
   "testEnvironment": "node",
   "testRegex": "test/.*\\.e2e-spec\\.ts$",
+  "setupFiles": ["<rootDir>/test/test-environment.ts"],
   "transform": {
     "^.+\\.(t|j)s$": "ts-jest"
   }

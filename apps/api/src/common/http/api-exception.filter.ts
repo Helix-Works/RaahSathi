@@ -48,6 +48,10 @@ const errorDescriptors: Partial<Record<number, ErrorDescriptor>> = {
     code: "RATE_LIMIT_EXCEEDED",
     messageKey: "errors.rateLimitExceeded",
   },
+  [HttpStatus.SERVICE_UNAVAILABLE]: {
+    code: "DEPENDENCY_UNAVAILABLE",
+    messageKey: "errors.dependencyUnavailable",
+  },
 };
 
 const fallbackClientError: ErrorDescriptor = {

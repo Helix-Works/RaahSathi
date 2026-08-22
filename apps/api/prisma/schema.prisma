@@ -3,8 +3,82 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider          = "postgresql"
+  url               = env("DATABASE_URL")
+  directUrl         = env("DIRECT_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL")
 }
 
-// Product models are intentionally deferred until the domain-design phase.
+enum PreferredLocale {
+  EN
+  HI
+}
+
+enum AuthAttemptStatus {
+  PENDING
+  VERIFIED
+  EXPIRED
+  LOCKED
+}
+
+model Applicant {
+  id               String          @id @default(uuid()) @db.Uuid
+  mobileLookupHash String          @unique
+  mobileLast4      String          @db.Char(4)
+  preferredLocale  PreferredLocale @default(EN)
+  createdAt        DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime        @updatedAt @db.Timestamptz(3)
+  authAttempts     AuthAttempt[]
+  sessions         Session[]
+  auditEvents      AuditEvent[]     @relation("AuditActor")
+}
+
+model AuthAttempt {
+  id                  String            @id @default(uuid()) @db.Uuid
+  applicantId         String?           @db.Uuid
+  mobileLookupHash    String
+  otpHash             String
+  otpSalt             String
+  status              AuthAttemptStatus @default(PENDING)
+  attemptsRemaining   Int
+  expiresAt           DateTime          @db.Timestamptz(3)
+  resendAvailableAt   DateTime          @db.Timestamptz(3)
+  consumedAt          DateTime?         @db.Timestamptz(3)
+  createdAt           DateTime          @default(now()) @db.Timestamptz(3)
+  applicant           Applicant?        @relation(fields: [applicantId], references: [id], onDelete: SetNull)
+
+  @@index([mobileLookupHash, createdAt])
+  @@index([expiresAt])
+}
+
+model Session {
+  id                String    @id @default(uuid()) @db.Uuid
+  applicantId       String    @db.Uuid
+  tokenHash         String    @unique
+  csrfSecretHash    String
+  createdAt         DateTime  @default(now()) @db.Timestamptz(3)
+  lastSeenAt        DateTime  @default(now()) @db.Timestamptz(3)
+  idleExpiresAt     DateTime  @db.Timestamptz(3)
+  absoluteExpiresAt DateTime  @db.Timestamptz(3)
+  revokedAt         DateTime? @db.Timestamptz(3)
+  applicant         Applicant @relation(fields: [applicantId], references: [id], onDelete: Restrict)
+
+  @@index([applicantId, revokedAt])
+  @@index([idleExpiresAt])
+  @@index([absoluteExpiresAt])
+}
+
+model AuditEvent {
+  id               String     @id @default(uuid()) @db.Uuid
+  actorApplicantId String?    @db.Uuid
+  eventType        String
+  resourceType     String
+  resourceId       String?
+  metadata         Json?
+  correlationId    String
+  createdAt        DateTime   @default(now()) @db.Timestamptz(3)
+  actorApplicant   Applicant? @relation("AuditActor", fields: [actorApplicantId], references: [id], onDelete: SetNull)
+
+  @@index([actorApplicantId, createdAt])
+  @@index([resourceType, resourceId, createdAt])
+}

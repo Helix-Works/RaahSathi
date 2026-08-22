@@ -1,12 +1,17 @@
 import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { INestApplication } from "@nestjs/common";
+import type { CustomOrigin } from "@nestjs/common/interfaces/external/cors-options.interface";
 
 import { ApiExceptionFilter } from "./common/http/api-exception.filter";
 import { correlationIdMiddleware } from "./common/http/correlation-id.middleware";
 
 export function configureApplication(app: INestApplication): void {
   const config = app.get(ConfigService);
+  const webOrigin = config.getOrThrow<string>("WEB_ORIGIN");
+  const exactOrigin: CustomOrigin = (requestOrigin, callback) => {
+    callback(null, requestOrigin === undefined || requestOrigin === webOrigin);
+  };
 
   app.setGlobalPrefix("api/v1");
   app.use(correlationIdMiddleware);
@@ -20,6 +25,6 @@ export function configureApplication(app: INestApplication): void {
   );
   app.enableCors({
     credentials: true,
-    origin: config.get<string>("WEB_ORIGIN", "http://localhost:3000"),
+    origin: exactOrigin,
   });
 }

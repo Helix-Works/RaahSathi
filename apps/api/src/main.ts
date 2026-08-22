@@ -1,9 +1,10 @@
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
-import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import { SwaggerModule } from "@nestjs/swagger";
 
 import { AppModule } from "./app.module";
 import { configureApplication } from "./configure-application";
+import { createOpenApiDocument } from "./openapi";
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -13,12 +14,7 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   if (config.get<string>("NODE_ENV", "development") !== "production") {
-    const swaggerConfig = new DocumentBuilder()
-      .setTitle("RaahSathi API")
-      .setDescription("Independent hackathon prototype API using synthetic data only.")
-      .setVersion("0.1")
-      .build();
-    const documentFactory = () => SwaggerModule.createDocument(app, swaggerConfig);
+    const documentFactory = () => createOpenApiDocument(app);
     SwaggerModule.setup("api/docs", app, documentFactory);
   }
 
