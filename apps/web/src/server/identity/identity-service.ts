@@ -36,6 +36,11 @@ export function isRetryableIdentityOutcome(outcome: IdentityOutcome): boolean {
   return ["OTP_INVALID", "TIMEOUT", "PROVIDER_UNAVAILABLE", "RETRY_REQUIRED"].includes(outcome);
 }
 
+export function isIdentityConcurrencyConflict(error: unknown): boolean {
+  return error instanceof Prisma.PrismaClientKnownRequestError
+    && (error.code === "P2002" || error.code === "P2034");
+}
+
 function toContext(record: IdentityRecord): IdentityContext {
   const attempt = record.identityAttempts[0];
   return identityContextSchema.parse({
@@ -101,46 +106,53 @@ export async function startIdentityAttempt(
   input: Readonly<{ applicationId: string; correlationId: string; now?: Date }>,
   databaseClient: PrismaClient = prisma,
 ): Promise<IdentityContext> {
-  return databaseClient.$transaction(async (database) => {
-    await database.$queryRaw(Prisma.sql`SELECT "id" FROM "Application" WHERE "id" = ${input.applicationId}::uuid AND "applicantId" = ${context.applicantId}::uuid FOR UPDATE`);
-    const application = await database.application.findFirst({
-      where: { id: input.applicationId, applicantId: context.applicantId },
-      include: { sections: true, identityAttempts: { orderBy: [{ attemptNumber: "desc" }, { id: "desc" }] } },
-    });
-    if (!application) throw apiErrors.notFound();
-    if (application.identityAttempts[0]) return toContext(await ownedIdentityRecord(database, context, application.id));
+  try {
+    return await databaseClient.$transaction(async (database) => {
+      await database.$queryRaw(Prisma.sql`SELECT "id" FROM "Application" WHERE "id" = ${input.applicationId}::uuid AND "applicantId" = ${context.applicantId}::uuid FOR UPDATE`);
+      const application = await database.application.findFirst({
+        where: { id: input.applicationId, applicantId: context.applicantId },
+        include: { sections: true, identityAttempts: { orderBy: [{ attemptNumber: "desc" }, { id: "desc" }] } },
+      });
+      if (!application) throw apiErrors.notFound();
+      if (application.identityAttempts[0]) return toContext(await ownedIdentityRecord(database, context, application.id));
 
-    const completed = new Set(application.sections.filter((section) => section.completedAt).map((section) => section.sectionKey));
-    if (applicationSectionOrder.some((sectionKey) => !completed.has(sectionKey))) throw apiErrors.invalidTransition();
+      const completed = new Set(application.sections.filter((section) => section.completedAt).map((section) => section.sectionKey));
+      if (applicationSectionOrder.some((sectionKey) => !completed.has(sectionKey))) throw apiErrors.invalidTransition();
 
-    const now = input.now ?? new Date();
-    await database.documentRecord.createMany({
-      data: [
-        { applicationId: application.id, kind: "SYNTHETIC_IDENTITY_PROOF", syntheticReference: syntheticDocumentReference(application.id, "ID"), issuedAt: now },
-        { applicationId: application.id, kind: "SYNTHETIC_ADDRESS_PROOF", syntheticReference: syntheticDocumentReference(application.id, "ADDRESS"), issuedAt: now },
-      ],
-      skipDuplicates: true,
-    });
-    const outcome = providerOutcomeForAttempt(application.identityScenario, 1);
-    await database.identityAttempt.create({ data: {
-      applicationId: application.id,
-      outcome,
-      attemptNumber: 1,
-      correlationId: input.correlationId,
-      createdAt: now,
-    } });
-    await database.applicationEvent.create({ data: {
-      applicationId: application.id,
-      actorApplicantId: context.applicantId,
-      eventType: "IDENTITY_STARTED",
-      correlationId: input.correlationId,
-      createdAt: now,
-    } });
-    if (outcome === "VERIFIED") await advanceVerifiedIdentity(database, {
-      applicationId: application.id, applicantId: context.applicantId, correlationId: input.correlationId,
-    });
-    return toContext(await ownedIdentityRecord(database, context, application.id));
-  }, { isolationLevel: "Serializable" });
+      const now = input.now ?? new Date();
+      await database.documentRecord.createMany({
+        data: [
+          { applicationId: application.id, kind: "SYNTHETIC_IDENTITY_PROOF", syntheticReference: syntheticDocumentReference(application.id, "ID"), issuedAt: now },
+          { applicationId: application.id, kind: "SYNTHETIC_ADDRESS_PROOF", syntheticReference: syntheticDocumentReference(application.id, "ADDRESS"), issuedAt: now },
+        ],
+        skipDuplicates: true,
+      });
+      const outcome = providerOutcomeForAttempt(application.identityScenario, 1);
+      await database.identityAttempt.create({ data: {
+        applicationId: application.id,
+        outcome,
+        attemptNumber: 1,
+        correlationId: input.correlationId,
+        createdAt: now,
+      } });
+      await database.applicationEvent.create({ data: {
+        applicationId: application.id,
+        actorApplicantId: context.applicantId,
+        eventType: "IDENTITY_STARTED",
+        correlationId: input.correlationId,
+        createdAt: now,
+      } });
+      if (outcome === "VERIFIED") await advanceVerifiedIdentity(database, {
+        applicationId: application.id, applicantId: context.applicantId, correlationId: input.correlationId,
+      });
+      return toContext(await ownedIdentityRecord(database, context, application.id));
+    }, { isolationLevel: "Serializable" });
+  } catch (error) {
+    if (!isIdentityConcurrencyConflict(error)) throw error;
+    const persisted = await ownedIdentityRecord(databaseClient, context, input.applicationId);
+    if (!persisted.identityAttempts[0]) throw error;
+    return toContext(persisted);
+  }
 }
 
 export async function retryIdentityAttempt(
@@ -148,7 +160,8 @@ export async function retryIdentityAttempt(
   input: Readonly<{ applicationId: string; attemptId: string; correlationId: string; now?: Date }>,
   databaseClient: PrismaClient = prisma,
 ): Promise<IdentityContext> {
-  return databaseClient.$transaction(async (database) => {
+  try {
+    return await databaseClient.$transaction(async (database) => {
     await database.$queryRaw(Prisma.sql`SELECT "id" FROM "Application" WHERE "id" = ${input.applicationId}::uuid AND "applicantId" = ${context.applicantId}::uuid FOR UPDATE`);
     const application = await database.application.findFirst({
       where: { id: input.applicationId, applicantId: context.applicantId },
@@ -187,5 +200,12 @@ export async function retryIdentityAttempt(
       applicationId: application.id, applicantId: context.applicantId, correlationId: input.correlationId,
     });
     return toContext(await ownedIdentityRecord(database, context, application.id));
-  }, { isolationLevel: "Serializable" });
+    }, { isolationLevel: "Serializable" });
+  } catch (error) {
+    if (!isIdentityConcurrencyConflict(error)) throw error;
+    const persisted = await ownedIdentityRecord(databaseClient, context, input.applicationId);
+    const latest = persisted.identityAttempts[0];
+    if (!latest || (latest.id !== input.attemptId && latest.retryOfId !== input.attemptId)) throw error;
+    return toContext(persisted);
+  }
 }
