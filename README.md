@@ -54,6 +54,8 @@ Phase 2 implements durable learner and permanent-licence application skeletons: 
 
 Phase 3 adds synthetic document metadata, persisted identity outcomes, safe retry and idempotent verification advancement, and owner-scoped synthetic licence context. No real upload or external identity provider is used.
 
+Phase 4 adds server-calculated synthetic fee snapshots, idempotent payment attempts, signed simulated-provider events, browser-independent delayed convergence, duplicate-event safety, and bilingual payment/recovery presentation. No real payment network or financial data is used.
+
 ## Quality checks
 
 ```bash

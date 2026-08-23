@@ -11,6 +11,7 @@ export async function seedSyntheticApplication(database: PrismaClient, applicant
       serviceKey: "LEARNER_LICENCE",
       status: "IN_PROGRESS",
       identityScenario: "PROVIDER_UNAVAILABLE",
+      paymentScenario: "DUPLICATE_CALLBACK",
       sections: {
         create: {
           id: "31000000-0000-4000-8000-000000000001",
@@ -40,6 +41,6 @@ export async function seedSyntheticApplication(database: PrismaClient, applicant
       },
     },
     // The scenario is demo configuration. Durable workflow progress and history remain untouched.
-    update: { identityScenario: "PROVIDER_UNAVAILABLE" },
+    update: { identityScenario: "PROVIDER_UNAVAILABLE", paymentScenario: "DUPLICATE_CALLBACK" },
   });
 }

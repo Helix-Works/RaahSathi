@@ -17,6 +17,7 @@ const environmentSchema = z
     AUTH_MOBILE_LOOKUP_PEPPER: z.string().min(32),
     AUTH_OTP_PEPPER: z.string().min(32),
     AUTH_DEMO_OTP: z.string().regex(/^[0-9]{6}$/),
+    PAYMENT_PROVIDER_WEBHOOK_SECRET: z.string().min(32),
   })
   .transform((environment, context) => {
     if (environment.NODE_ENV === "production") {
@@ -26,7 +27,7 @@ const environmentSchema = z
           context.addIssue({ code: "custom", message: `${key} must require TLS in production.` });
         }
       }
-      for (const key of ["AUTH_MOBILE_LOOKUP_PEPPER", "AUTH_OTP_PEPPER"] as const) {
+      for (const key of ["AUTH_MOBILE_LOOKUP_PEPPER", "AUTH_OTP_PEPPER", "PAYMENT_PROVIDER_WEBHOOK_SECRET"] as const) {
         if (/placeholder|change-me|development/i.test(environment[key])) {
           context.addIssue({ code: "custom", message: `${key} must not use a placeholder in production.` });
         }

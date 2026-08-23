@@ -23,6 +23,9 @@ Implemented endpoints:
 - `POST /api/v1/applications/:id/identity-attempts/:attemptId/retry`
 - `GET /api/v1/licences`
 - `GET /api/v1/licences/:id`
+- `POST /api/v1/applications/:id/payments`
+- `GET /api/v1/payments/:id`
+- `POST /api/v1/payment-provider/events`
 
 Every endpoint returns or propagates a sanitized `x-request-id`. Public errors use stable codes, localization keys, and correlation IDs without raw exception details.
 

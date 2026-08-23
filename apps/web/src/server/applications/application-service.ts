@@ -13,22 +13,25 @@ import {
   type ApplicationSummary,
   type ServiceKey,
 } from "@raahsathi/contracts/applications";
-import { Prisma, type Application, type ApplicationEvent, type ApplicationSection, type IdentityAttempt } from "@prisma/client";
+import { Prisma, type Application, type ApplicationEvent, type ApplicationSection, type IdentityAttempt, type PaymentAttempt } from "@prisma/client";
 
 import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { prisma } from "@/server/database/prisma";
 import { apiErrors } from "@/server/http/api-error";
 
-type ApplicationRecord = Application & { sections: ApplicationSection[]; events: ApplicationEvent[]; identityAttempts: IdentityAttempt[] };
+type ApplicationRecord = Application & { sections: ApplicationSection[]; events: ApplicationEvent[]; identityAttempts: IdentityAttempt[]; paymentAttempts: PaymentAttempt[] };
 
-export function deriveApplicationPresentation(completedSectionKeys: readonly ApplicationSectionKey[], identityVerified = false): Readonly<{
-  statusCode: "DRAFT" | "IN_PROGRESS" | "READY_FOR_IDENTITY" | "READY_FOR_PAYMENT";
+export function deriveApplicationPresentation(completedSectionKeys: readonly ApplicationSectionKey[], identityVerified = false, paymentSucceeded = false): Readonly<{
+  statusCode: "DRAFT" | "IN_PROGRESS" | "READY_FOR_IDENTITY" | "READY_FOR_PAYMENT" | "READY_FOR_APPOINTMENT";
   progressPercent: number;
   nextActionCode: ApplicationSummary["nextActionCode"];
   blockingReasonCode?: "IDENTITY_VERIFICATION_REQUIRED" | "PAYMENT_REQUIRED";
 }> {
   const completed = new Set(completedSectionKeys);
   const nextSection = applicationSectionOrder.find((sectionKey) => !completed.has(sectionKey));
+  if (!nextSection && identityVerified && paymentSucceeded) return {
+    statusCode: "READY_FOR_APPOINTMENT", progressPercent: 100, nextActionCode: "SELECT_APPOINTMENT",
+  };
   if (!nextSection && identityVerified) return {
     statusCode: "READY_FOR_PAYMENT", progressPercent: 100, nextActionCode: "PAY_FEES", blockingReasonCode: "PAYMENT_REQUIRED",
   };
@@ -74,7 +77,11 @@ function validateSectionData(sectionKey: ApplicationSectionKey, serviceKey: Serv
 
 function derive(record: ApplicationRecord): ApplicationDetail {
   const completed = new Set(record.sections.filter((section) => section.completedAt).map((section) => section.sectionKey));
-  const presentation = deriveApplicationPresentation([...completed], record.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED"));
+  const presentation = deriveApplicationPresentation(
+    [...completed],
+    record.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED"),
+    record.paymentAttempts.some((attempt) => attempt.status === "SUCCEEDED"),
+  );
   return applicationDetailSchema.parse({
     id: record.id,
     serviceKey: record.serviceKey,
@@ -98,7 +105,7 @@ function derive(record: ApplicationRecord): ApplicationDetail {
 
 async function ownedRecord(database: Prisma.TransactionClient | typeof prisma, context: AuthenticatedContext, id: string): Promise<ApplicationRecord> {
   const application = await database.application.findFirst({
-    where: { id, applicantId: context.applicantId }, include: { sections: { orderBy: { createdAt: "asc" } }, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true },
+    where: { id, applicantId: context.applicantId }, include: { sections: { orderBy: { createdAt: "asc" } }, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true },
   });
   if (!application) throw apiErrors.notFound();
   return application;
@@ -109,7 +116,7 @@ export async function createApplication(context: AuthenticatedContext, serviceKe
     return await prisma.$transaction(async (database) => {
     const existing = await database.application.findUnique({
       where: { applicantId_serviceKey: { applicantId: context.applicantId, serviceKey } },
-      include: { sections: { orderBy: { createdAt: "asc" } }, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true },
+      include: { sections: { orderBy: { createdAt: "asc" } }, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true },
     });
     if (existing) return derive(existing);
     const created = await database.application.create({
@@ -118,7 +125,7 @@ export async function createApplication(context: AuthenticatedContext, serviceKe
         serviceKey,
         events: { create: { actorApplicantId: context.applicantId, eventType: "APPLICATION_CREATED", correlationId } },
       },
-      include: { sections: true, events: true, identityAttempts: true },
+      include: { sections: true, events: true, identityAttempts: true, paymentAttempts: true },
     });
     return derive(created);
     }, { isolationLevel: "Serializable" });
@@ -126,7 +133,7 @@ export async function createApplication(context: AuthenticatedContext, serviceKe
     if (reason instanceof Prisma.PrismaClientKnownRequestError && reason.code === "P2002") {
       const existing = await prisma.application.findUnique({
         where: { applicantId_serviceKey: { applicantId: context.applicantId, serviceKey } },
-        include: { sections: true, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true },
+        include: { sections: true, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true },
       });
       if (existing) return derive(existing);
     }
@@ -137,7 +144,7 @@ export async function createApplication(context: AuthenticatedContext, serviceKe
 export async function listApplications(context: AuthenticatedContext): Promise<readonly ApplicationSummary[]> {
   const records = await prisma.application.findMany({
     where: { applicantId: context.applicantId },
-    include: { sections: true, events: true, identityAttempts: true }, orderBy: { updatedAt: "desc" },
+    include: { sections: true, events: true, identityAttempts: true, paymentAttempts: true }, orderBy: { updatedAt: "desc" },
   });
   return applicationListSchema.parse({ applications: records.map(derive) }).applications;
 }

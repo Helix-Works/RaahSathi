@@ -6,12 +6,14 @@ import type { ApplicationDetail } from "@raahsathi/contracts/applications";
 import { ApplicationEditor } from "@/features/applications/components/application-editor";
 import { IdentityRecoveryPanel } from "@/features/identity/components/identity-recovery-panel";
 import { LicenceContextCard } from "@/features/identity/components/licence-context-card";
+import { PaymentPanel } from "@/features/payments/components/payment-panel";
 import { getRequestLocale } from "@/i18n/locale";
 import { getApplication } from "@/server/applications/application-service";
 import { resolveSessionFromCookie } from "@/server/auth/session-service";
 import { ApiError } from "@/server/http/api-error";
 import { getIdentityContext } from "@/server/identity/identity-service";
 import { listLicences } from "@/server/licences/licence-service";
+import { getPaymentContextForApplication } from "@/server/payments/payment-service";
 
 export default async function ApplicationPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -26,13 +28,15 @@ export default async function ApplicationPage({ params }: { params: Promise<{ id
     throw error;
   }
   const locale = await getRequestLocale();
-  const [identity, licences] = await Promise.all([
+  const [identity, licences, payment] = await Promise.all([
     getIdentityContext(session.context, id),
     listLicences(session.context),
+    getPaymentContextForApplication(session.context, id),
   ]);
   return <div className="mx-auto max-w-3xl space-y-6 px-4 py-10 sm:px-6">
     <ApplicationEditor initialApplication={application} locale={locale} />
     {application.progressPercent === 100 ? <IdentityRecoveryPanel applicationId={id} initialContext={identity} locale={locale} /> : null}
+    {["READY_FOR_PAYMENT", "READY_FOR_APPOINTMENT"].includes(application.statusCode) ? <PaymentPanel initialContext={payment} locale={locale} /> : null}
     <LicenceContextCard licences={licences} locale={locale} />
   </div>;
 }
