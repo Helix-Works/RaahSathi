@@ -39,6 +39,10 @@ function statusPresentation(
     return { label: messages.statusAppointmentBooked, tone: "success" };
   }
 
+  if (code === "DRAFT") return { label: messages.statusDraft, tone: "neutral" };
+  if (code === "IN_PROGRESS") return { label: messages.statusInProgress, tone: "warning" };
+  if (code === "READY_FOR_IDENTITY") return { label: messages.statusReadyForIdentity, tone: "success" };
+
   return { label: messages.statusUnknown, tone: "neutral" };
 }
 
@@ -54,6 +58,9 @@ function nextActionPresentation(
     return messages.nextActionNone;
   }
 
+  if (code.startsWith("COMPLETE_")) return messages.nextActionResumeApplication;
+  if (code === "VERIFY_IDENTITY") return messages.nextActionVerifyIdentity;
+
   return messages.nextActionUnknown;
 }
 
@@ -61,9 +68,9 @@ function blockingReasonPresentation(
   code: string,
   messages: MessageDictionary["dashboard"],
 ): string {
-  return code === "NO_SUITABLE_SLOT"
-    ? messages.blockingNoSuitableSlot
-    : messages.blockingUnknown;
+  if (code === "NO_SUITABLE_SLOT") return messages.blockingNoSuitableSlot;
+  if (code === "IDENTITY_VERIFICATION_REQUIRED") return messages.blockingIdentityRequired;
+  return messages.blockingUnknown;
 }
 
 function formatDateTime(value: string, locale: Locale, fallback: string): string {
@@ -203,6 +210,8 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
           <NextActionCard
             title={nextActionPresentation(application.nextActionCode, dashboard)}
             description={dashboard.nextActionDescription}
+            actionLabel={messages.common.continue}
+            actionHref={`/applications/${application.id}`}
           />
         </section>
       )}
