@@ -43,6 +43,7 @@ async function main() {
       applicantId: applicants[0].id,
       serviceKey: "LEARNER_LICENCE",
       status: "IN_PROGRESS",
+      identityScenario: "PROVIDER_UNAVAILABLE",
       sections: {
         create: {
           id: "31000000-0000-4000-8000-000000000001",
@@ -72,6 +73,19 @@ async function main() {
       },
     },
     // Seeding initializes missing demo state; reruns must not rewind durable workflow progress.
+    update: {},
+  });
+  await database.licenceRecord.upsert({
+    where: { applicantId_kind: { applicantId: applicants[0].id, kind: "LEARNER" } },
+    create: {
+      id: "33000000-0000-4000-8000-000000000001",
+      applicantId: applicants[0].id,
+      kind: "LEARNER",
+      syntheticReference: "SYN-LL-DEMO-0001",
+      vehicleClass: "LMV",
+      issuedAt: new Date("2026-01-15T00:00:00.000Z"),
+      validUntil: new Date("2026-12-31T23:59:59.000Z"),
+    },
     update: {},
   });
   console.info("Seeded synthetic applicants and one resumable learner application.");

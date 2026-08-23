@@ -22,7 +22,7 @@ const copy = {
     service: "Service details", declaration: "Declaration", name: "Synthetic full name", dob: "Synthetic date of birth",
     district: "Delhi district", postal: "Synthetic postal code", vehicle: "Vehicle class", learner: "Synthetic learner licence reference",
     accept: "I confirm this application uses synthetic data only.", error: "The change was not saved. Reload if another page updated this application.",
-    blocked: "Identity verification is the next step and will be connected in Phase 3.", completed: "Completed",
+    blocked: "Application sections are complete. Continue with synthetic identity verification below.", completed: "Completed",
   },
   hi: {
     title: "स्थायी आवेदन", saved: "ड्राफ्ट PostgreSQL में सहेजा गया।", save: "ड्राफ्ट सहेजें", complete: "सहेजा हुआ भाग पूरा करें",
@@ -30,7 +30,7 @@ const copy = {
     service: "सेवा विवरण", declaration: "घोषणा", name: "कृत्रिम पूरा नाम", dob: "कृत्रिम जन्मतिथि",
     district: "दिल्ली जिला", postal: "कृत्रिम पिन कोड", vehicle: "वाहन वर्ग", learner: "कृत्रिम लर्नर लाइसेंस संदर्भ",
     accept: "मैं पुष्टि करता/करती हूँ कि यह आवेदन केवल कृत्रिम डेटा का उपयोग करता है।", error: "बदलाव सहेजा नहीं गया। यदि किसी अन्य पेज ने आवेदन बदला है तो फिर लोड करें।",
-    blocked: "पहचान सत्यापन अगला चरण है और इसे चरण 3 में जोड़ा जाएगा।", completed: "पूरा",
+    blocked: "आवेदन के भाग पूरे हैं। नीचे कृत्रिम पहचान सत्यापन जारी रखें।", completed: "पूरा",
   },
 } as const;
 

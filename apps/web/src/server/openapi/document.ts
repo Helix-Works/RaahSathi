@@ -6,6 +6,7 @@ import {
 import { healthEndpointContracts } from "../contracts/health";
 import { authEndpointContracts } from "../contracts/auth";
 import { applicationEndpointContracts } from "../contracts/applications";
+import { identityEndpointContracts } from "../contracts/identity";
 import type { ResponseHeaderContract } from "../contracts/endpoint";
 
 function schemaFor(schema: z.ZodType): Record<string, unknown> {
@@ -25,7 +26,7 @@ function responseHeaders(response: Readonly<{ headers: Record<string, ResponseHe
 }
 
 export function createOpenApiDocument(): Record<string, unknown> {
-  const endpointContracts = [...healthEndpointContracts, ...authEndpointContracts, ...applicationEndpointContracts];
+  const endpointContracts = [...healthEndpointContracts, ...authEndpointContracts, ...applicationEndpointContracts, ...identityEndpointContracts];
   const paths: Record<string, unknown> = {};
   const successSchemas: Record<string, unknown> = {};
   const requestSchemas: Record<string, unknown> = {};

@@ -37,6 +37,7 @@ enum ApplicationStatus {
   DRAFT
   IN_PROGRESS
   READY_FOR_IDENTITY
+  READY_FOR_PAYMENT
 }
 
 enum ApplicationSectionKey {
@@ -51,6 +52,40 @@ enum ApplicationEventType {
   SECTION_SAVED
   SECTION_COMPLETED
   WORKFLOW_ADVANCED
+  IDENTITY_STARTED
+  IDENTITY_RETRY_STARTED
+  IDENTITY_VERIFIED
+}
+
+enum IdentityProviderScenario {
+  SUCCESS
+  OTP_INVALID
+  USER_MISMATCH
+  TIMEOUT
+  PROVIDER_UNAVAILABLE
+  RETRY_REQUIRED
+}
+
+enum IdentityOutcome {
+  VERIFIED
+  OTP_INVALID
+  USER_MISMATCH
+  TIMEOUT
+  PROVIDER_UNAVAILABLE
+  RETRY_REQUIRED
+}
+
+enum DocumentKind {
+  SYNTHETIC_IDENTITY_PROOF
+  SYNTHETIC_ADDRESS_PROOF
+}
+
+enum LicenceKind {
+  LEARNER
+}
+
+enum VehicleClass {
+  LMV
 }
 
 model Applicant {
@@ -67,6 +102,7 @@ model Applicant {
   auditEvents       AuditEvent[]          @relation("AuditActor")
   applications      Application[]
   applicationEvents ApplicationEvent[]    @relation("ApplicationEventActor")
+  licences          LicenceRecord[]
 }
 
 model AuthAttempt {
@@ -122,15 +158,18 @@ model AuditEvent {
 }
 
 model Application {
-  id          String               @id @default(uuid()) @db.Uuid
-  applicantId String               @db.Uuid
-  serviceKey  ServiceKey
-  status      ApplicationStatus    @default(DRAFT)
-  createdAt   DateTime             @default(now()) @db.Timestamptz(3)
-  updatedAt   DateTime             @updatedAt @db.Timestamptz(3)
-  applicant   Applicant            @relation(fields: [applicantId], references: [id], onDelete: Restrict)
-  sections    ApplicationSection[]
-  events      ApplicationEvent[]
+  id               String                   @id @default(uuid()) @db.Uuid
+  applicantId      String                   @db.Uuid
+  serviceKey       ServiceKey
+  status           ApplicationStatus        @default(DRAFT)
+  identityScenario IdentityProviderScenario @default(SUCCESS)
+  createdAt        DateTime                 @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime                 @updatedAt @db.Timestamptz(3)
+  applicant        Applicant                @relation(fields: [applicantId], references: [id], onDelete: Restrict)
+  sections         ApplicationSection[]
+  events           ApplicationEvent[]
+  documents        DocumentRecord[]
+  identityAttempts IdentityAttempt[]
 
   @@unique([applicantId, serviceKey])
   @@index([applicantId, updatedAt])
@@ -164,4 +203,48 @@ model ApplicationEvent {
 
   @@index([applicationId, createdAt, id])
   @@index([actorApplicantId, createdAt])
+}
+
+model DocumentRecord {
+  id                 String       @id @default(uuid()) @db.Uuid
+  applicationId      String       @db.Uuid
+  kind               DocumentKind
+  syntheticReference String
+  issuedAt           DateTime     @db.Timestamptz(3)
+  createdAt          DateTime     @default(now()) @db.Timestamptz(3)
+  application        Application  @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, kind])
+  @@index([applicationId, createdAt])
+}
+
+model IdentityAttempt {
+  id            String          @id @default(uuid()) @db.Uuid
+  applicationId String          @db.Uuid
+  outcome       IdentityOutcome
+  attemptNumber Int
+  retryOfId     String?         @unique @db.Uuid
+  correlationId String
+  createdAt     DateTime        @default(now()) @db.Timestamptz(3)
+  application   Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  retryOf       IdentityAttempt? @relation("IdentityAttemptRetry", fields: [retryOfId], references: [id], onDelete: Restrict)
+  retry         IdentityAttempt? @relation("IdentityAttemptRetry")
+
+  @@unique([applicationId, attemptNumber])
+  @@index([applicationId, createdAt, id])
+}
+
+model LicenceRecord {
+  id                 String       @id @default(uuid()) @db.Uuid
+  applicantId        String       @db.Uuid
+  kind               LicenceKind
+  syntheticReference String       @unique
+  vehicleClass       VehicleClass
+  issuedAt           DateTime     @db.Timestamptz(3)
+  validUntil         DateTime     @db.Timestamptz(3)
+  createdAt          DateTime     @default(now()) @db.Timestamptz(3)
+  applicant          Applicant    @relation(fields: [applicantId], references: [id], onDelete: Restrict)
+
+  @@unique([applicantId, kind])
+  @@index([applicantId, validUntil])
 }

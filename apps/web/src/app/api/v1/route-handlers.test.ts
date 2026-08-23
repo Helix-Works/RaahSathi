@@ -8,6 +8,7 @@ import { createVerifyOtpHandler } from "./auth/verify-otp/route";
 import { createMeHandler } from "./me/route";
 import { GET as getServices } from "./services/route";
 import { POST as createApplication } from "./applications/route";
+import { POST as startIdentity } from "./applications/[id]/identity-attempts/route";
 
 describe("Route Handlers", () => {
   it("serves health with a correlation ID and no permissive CORS", async () => {
@@ -50,6 +51,14 @@ describe("Route Handlers", () => {
       body: JSON.stringify({ serviceKey: "LEARNER_LICENCE" }),
     }));
     expect(rejected.status).toBe(403);
+  });
+
+  it("blocks cross-origin identity mutations before database access", async () => {
+    const response = await startIdentity(new Request("http://localhost/api/v1/applications/30000000-0000-4000-8000-000000000001/identity-attempts", {
+      method: "POST", headers: { origin: "https://attacker.invalid" },
+    }), { params: Promise.resolve({ id: "30000000-0000-4000-8000-000000000001" }) });
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({ error: { code: "ACCESS_DENIED" } });
   });
 
   it("rejects cross-origin and malformed OTP requests before database work", async () => {

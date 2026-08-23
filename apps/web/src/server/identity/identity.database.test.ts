@@ -1,0 +1,81 @@
+import { randomUUID } from "node:crypto";
+
+import { PrismaClient } from "@prisma/client";
+import { afterAll, describe, expect, it } from "vitest";
+
+import { isDisposableDatabaseApproved } from "@/server/auth/database-test-safety";
+import { getIdentityContext, retryIdentityAttempt, startIdentityAttempt } from "@/server/identity/identity-service";
+import { getLicence } from "@/server/licences/licence-service";
+
+const testUrl = process.env.TEST_DATABASE_URL;
+const approved = isDisposableDatabaseApproved({
+  testDatabaseUrl: testUrl,
+  primaryDatabaseUrl: process.env.DATABASE_URL,
+  confirmation: process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION,
+});
+if ((testUrl || process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION) && !approved) {
+  throw new Error("Refusing Phase 3 database tests: database identities are not safely distinct.");
+}
+const database = approved ? new PrismaClient({ datasourceUrl: testUrl }) : undefined;
+
+describe.skipIf(!database)("Phase 3 disposable PostgreSQL identity recovery", () => {
+  const applicantA = randomUUID();
+  const applicantB = randomUUID();
+  const applicationId = randomUUID();
+  const licenceId = randomUUID();
+  const contextA = { sessionId: randomUUID(), applicantId: applicantA };
+  const contextB = { sessionId: randomUUID(), applicantId: applicantB };
+
+  afterAll(async () => {
+    if (!database) return;
+    await database.application.deleteMany({ where: { id: applicationId } });
+    await database.licenceRecord.deleteMany({ where: { id: licenceId } });
+    await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB] } } });
+    await database.$disconnect();
+  });
+
+  it("preserves completed progress through provider failure and advances exactly once after safe retry", async () => {
+    if (!database) return;
+    await database.applicant.createMany({ data: [
+      { id: applicantA, mobileLookupHash: `phase3-${applicantA}`, mobileLast4: "0000", displayName: "Phase 3 A" },
+      { id: applicantB, mobileLookupHash: `phase3-${applicantB}`, mobileLast4: "0001", displayName: "Phase 3 B" },
+    ] });
+    await database.application.create({ data: {
+      id: applicationId,
+      applicantId: applicantA,
+      serviceKey: "LEARNER_LICENCE",
+      status: "READY_FOR_IDENTITY",
+      identityScenario: "PROVIDER_UNAVAILABLE",
+      sections: { create: [
+        { sectionKey: "PERSONAL_DETAILS", data: { fullName: "Synthetic A", dateOfBirth: "1995-01-15" }, completedAt: new Date() },
+        { sectionKey: "ADDRESS", data: { district: "CENTRAL", postalCode: "110001" }, completedAt: new Date() },
+        { sectionKey: "SERVICE_DETAILS", data: { vehicleClass: "LMV" }, completedAt: new Date() },
+        { sectionKey: "DECLARATION", data: { accepted: true }, completedAt: new Date() },
+      ] },
+    } });
+    await database.licenceRecord.create({ data: {
+      id: licenceId, applicantId: applicantA, kind: "LEARNER", syntheticReference: `SYN-LL-${licenceId}`,
+      vehicleClass: "LMV", issuedAt: new Date("2026-01-01T00:00:00.000Z"), validUntil: new Date("2026-12-31T00:00:00.000Z"),
+    } });
+
+    const failed = await startIdentityAttempt(contextA, { applicationId, correlationId: "phase3-start" }, database);
+    expect(failed.attempt?.outcome).toBe("PROVIDER_UNAVAILABLE");
+    expect(await database.applicationSection.count({ where: { applicationId, completedAt: { not: null } } })).toBe(4);
+    expect((await database.application.findUniqueOrThrow({ where: { id: applicationId } })).status).toBe("READY_FOR_IDENTITY");
+
+    const verified = await retryIdentityAttempt(contextA, {
+      applicationId, attemptId: failed.attempt?.id ?? "", correlationId: "phase3-retry",
+    }, database);
+    expect(verified.attempt?.outcome).toBe("VERIFIED");
+    const duplicate = await retryIdentityAttempt(contextA, {
+      applicationId, attemptId: failed.attempt?.id ?? "", correlationId: "phase3-retry-duplicate",
+    }, database);
+    expect(duplicate.attempt?.id).toBe(verified.attempt?.id);
+    expect(await database.identityAttempt.count({ where: { applicationId } })).toBe(2);
+    expect(await database.applicationEvent.count({ where: { applicationId, eventType: "IDENTITY_VERIFIED" } })).toBe(1);
+    expect((await database.application.findUniqueOrThrow({ where: { id: applicationId } })).status).toBe("READY_FOR_PAYMENT");
+
+    await expect(getIdentityContext(contextB, applicationId, database)).rejects.toThrowError(/RESOURCE_NOT_FOUND/);
+    await expect(getLicence(contextB, licenceId, database)).rejects.toThrowError(/RESOURCE_NOT_FOUND/);
+  });
+});
