@@ -17,6 +17,10 @@ describe("OpenAPI", () => {
         "/api/v1/auth/verify-otp": { post: { responses: { 200: {} } } },
         "/api/v1/auth/logout": { post: { responses: { 204: {} }, security: [{ cookieAuth: [] }] } },
         "/api/v1/me": { get: { responses: { 200: {}, 401: {} }, security: [{ cookieAuth: [] }] } },
+        "/api/v1/applications": { get: { responses: { 200: {} } }, post: { responses: { 201: {}, 403: {} } } },
+        "/api/v1/applications/{id}/sections/{sectionKey}": {
+          patch: { parameters: [{ name: "id", in: "path" }, { name: "sectionKey", in: "path" }] },
+        },
         "/api/v1/health/ready": {
           get: {
             responses: {

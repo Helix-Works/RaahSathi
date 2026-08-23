@@ -10,6 +10,8 @@ node_modules/
 
 # Framework and build output
 .next/
+apps/web/.next-e2e-*/
+apps/web/.next-e2e/
 apps/web/next-env.d.ts
 dist/
 coverage/

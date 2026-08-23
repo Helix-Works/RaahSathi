@@ -5,6 +5,7 @@ import {
 } from "../contracts/health";
 import { healthEndpointContracts } from "../contracts/health";
 import { authEndpointContracts } from "../contracts/auth";
+import { applicationEndpointContracts } from "../contracts/applications";
 import type { ResponseHeaderContract } from "../contracts/endpoint";
 
 function schemaFor(schema: z.ZodType): Record<string, unknown> {
@@ -24,7 +25,7 @@ function responseHeaders(response: Readonly<{ headers: Record<string, ResponseHe
 }
 
 export function createOpenApiDocument(): Record<string, unknown> {
-  const endpointContracts = [...healthEndpointContracts, ...authEndpointContracts];
+  const endpointContracts = [...healthEndpointContracts, ...authEndpointContracts, ...applicationEndpointContracts];
   const paths: Record<string, unknown> = {};
   const successSchemas: Record<string, unknown> = {};
   const requestSchemas: Record<string, unknown> = {};
@@ -66,11 +67,15 @@ export function createOpenApiDocument(): Record<string, unknown> {
     if (endpoint.request) {
       operation.requestBody = { required: true, content: { "application/json": { schema: { $ref: `#/components/schemas/${endpoint.request.schemaName}` } } } };
     }
-    if (endpoint.requestHeaders) {
-      operation.parameters = endpoint.requestHeaders.map((header) => ({
+    const parameters = [
+      ...(endpoint.pathParameters ?? []).map((parameter) => ({
+        name: parameter.name, in: "path", required: true, description: parameter.description, schema: schemaFor(parameter.schema),
+      })),
+      ...(endpoint.requestHeaders ?? []).map((header) => ({
         name: header.name, in: "header", required: header.required, description: header.description, schema: schemaFor(header.schema),
-      }));
-    }
+      })),
+    ];
+    if (parameters.length > 0) operation.parameters = parameters;
     if (endpoint.security) operation.security = endpoint.security.map((name) => ({ [name]: [] }));
     paths[endpoint.path] = { ...(paths[endpoint.path] as Record<string, unknown> | undefined), [endpoint.method]: operation };
   }

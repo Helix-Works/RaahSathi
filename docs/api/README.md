@@ -12,6 +12,12 @@ Implemented endpoints:
 - `POST /api/v1/auth/verify-otp`
 - `POST /api/v1/auth/logout`
 - `GET /api/v1/me`
+- `GET /api/v1/services`
+- `POST /api/v1/applications`
+- `GET /api/v1/applications`
+- `GET /api/v1/applications/:id`
+- `PATCH /api/v1/applications/:id/sections/:sectionKey`
+- `POST /api/v1/applications/:id/steps/:sectionKey/complete`
 
 Every endpoint returns or propagates a sanitized `x-request-id`. Public errors use stable codes, localization keys, and correlation IDs without raw exception details.
 

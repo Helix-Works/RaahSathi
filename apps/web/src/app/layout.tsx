@@ -30,6 +30,7 @@ export default async function RootLayout({
     session.kind === "authenticated"
       ? ([
           { href: "/dashboard", label: messages.navigation.dashboard },
+          { href: "/applications", label: messages.navigation.applications },
           { href: "/services", label: messages.navigation.services },
         ] satisfies readonly NavigationItem[])
       : ([

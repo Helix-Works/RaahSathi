@@ -85,7 +85,7 @@ export const hiMessages = {
     eyebrow: "ड्राइविंग-लाइसेंस सेवाएँ",
     title: "अपनी ज़रूरत की यात्रा चुनें",
     description:
-      "राहसाथी प्रोटोटाइप के लिए दो मुख्य सेवाएँ तैयार हैं। आवेदन यात्राएँ अगले चरण में जोड़ी जाएँगी।",
+      "दो स्थायी कृत्रिम आवेदन यात्राओं में से एक शुरू करें या जारी रखें।",
     learnerName: "नया लर्नर लाइसेंस",
     learnerDescription:
       "स्पष्ट प्रगति और सुरक्षित वापसी के साथ पहला लर्नर-लाइसेंस आवेदन तैयार करें।",
@@ -154,21 +154,27 @@ export const hiMessages = {
       "अपना मौजूदा काम, स्पष्ट स्थिति और सेवा से मिला अगला कदम देखें।",
     activeApplicationTitle: "सक्रिय आवेदन",
     currentWorkDescription:
-      "यह फ्रंटएंड विकास के लिए तय कृत्रिम सारांश है।",
+      "यह स्थिति PostgreSQL में सहेजे गए आवेदन भागों से दोबारा बनाई गई है।",
     serviceLabel: "सेवा",
     progressLabel: "आवेदन की प्रगति",
     updatedLabel: "अंतिम अपडेट",
     statusAppointmentRequired: "अपॉइंटमेंट आवश्यक है",
     statusAppointmentBooked: "अपॉइंटमेंट बुक है",
+    statusDraft: "ड्राफ्ट",
+    statusInProgress: "प्रगति में",
+    statusReadyForIdentity: "पहचान सत्यापन के लिए तैयार",
     statusUnknown: "स्थिति उपलब्ध नहीं है",
     nextActionReviewOffer: "अस्थायी स्लॉट ऑफ़र देखें",
     nextActionNone: "अभी कोई कार्रवाई आवश्यक नहीं है",
+    nextActionResumeApplication: "आवेदन का अगला भाग जारी रखें",
+    nextActionVerifyIdentity: "पहचान सत्यापन अगला नियोजित चरण है",
     nextActionUnknown: "अगले कदम के लिए फिर जाँचें",
     nextActionDescription:
       "यह अगला कदम सीधे डैशबोर्ड सारांश से मिला है; राहसाथी ब्राउज़र में इसका अनुमान नहीं लगाता। यह कार्रवाई रूट सुरक्षित रूप से वापस शुरू होने वाली आवेदन यात्रा के चरण में जोड़ा जाएगा।",
     blockingTitle: "आप अभी आगे क्यों नहीं बढ़ सकते",
     blockingNoSuitableSlot:
       "उपयुक्त अपॉइंटमेंट स्लॉट उपलब्ध नहीं था। नीचे दिखाया गया अस्थायी ऑफ़र देखें।",
+    blockingIdentityRequired: "चरण 3 जुड़ने पर पहचान सत्यापन पूरा करें। आपके आवेदन की प्रगति सुरक्षित है।",
     blockingUnknown:
       "अभी आगे बढ़ना संभव नहीं है। बाद में फिर जाँचें या दिखाई गई संदर्भ जानकारी के साथ सहायता लें।",
     noApplicationTitle: "कोई सक्रिय आवेदन नहीं है",

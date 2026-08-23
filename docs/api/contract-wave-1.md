@@ -33,11 +33,6 @@ POST /api/v1/auth/request-otp
 POST /api/v1/auth/verify-otp
 POST /api/v1/auth/logout
 GET  /api/v1/me
-```
-
-## Next contract slice
-
-```text
 GET  /api/v1/services
 POST /api/v1/applications
 GET  /api/v1/applications
@@ -45,5 +40,7 @@ GET  /api/v1/applications/:id
 PATCH /api/v1/applications/:id/sections/:sectionKey
 POST /api/v1/applications/:id/steps/:stepKey/complete
 ```
+
+Application mutations use optimistic `expectedRevision` values for safe multi-page draft editing. Completion is ordered and idempotent. Responses derive `statusCode`, `progressPercent`, `nextActionCode`, and `blockingReasonCode` on the server and include immutable history events.
 
 Mutation schemas are strict. Cookies are same-origin, opaque, HttpOnly, and server managed. Cookie-authenticated mutations require a session-bound CSRF token and exact Origin validation. Ownership filtering occurs in server services and database queries, never in client code.

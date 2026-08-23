@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 export type NavigationItem = Readonly<{
   label: string;
-  href?: "/" | "/services" | "/login" | "/dashboard";
+  href?: "/" | "/services" | "/login" | "/dashboard" | "/applications";
   disabled?: boolean;
   hint?: string;
 }>;

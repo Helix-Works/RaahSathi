@@ -12,6 +12,10 @@
     "./auth": {
       "types": "./src/auth.ts",
       "import": "./src/auth.ts"
+    },
+    "./applications": {
+      "types": "./src/applications.ts",
+      "import": "./src/applications.ts"
     }
   },
   "scripts": {

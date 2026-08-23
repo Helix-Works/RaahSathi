@@ -14,13 +14,14 @@ export interface JsonResponseContract {
 }
 
 export interface EndpointContract {
-  method: "get" | "post";
+  method: "get" | "post" | "patch";
   path: string;
   operationId: string;
   summary: string;
   request?: Readonly<{ schemaName: string; schema: z.ZodType }>;
   requestHeaders?: ReadonlyArray<Readonly<{ name: string; description: string; required: boolean; schema: z.ZodType }>>;
-  success: (JsonResponseContract & { status: 200 | 202 }) | Readonly<{ status: 204; description: string; headers: Record<string, ResponseHeaderContract> }>;
+  pathParameters?: ReadonlyArray<Readonly<{ name: string; description: string; schema: z.ZodType }>>;
+  success: (JsonResponseContract & { status: 200 | 201 | 202 }) | Readonly<{ status: 204; description: string; headers: Record<string, ResponseHeaderContract> }>;
   errors: ReadonlyArray<{ status: number; description: string; headers?: Record<string, ResponseHeaderContract> }>;
   security?: readonly "cookieAuth"[];
 }

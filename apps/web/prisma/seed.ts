@@ -35,7 +35,38 @@ async function main() {
       },
     });
   }
-  console.info("Seeded STANDARD and PROVIDER_UNAVAILABLE synthetic applicants.");
+  const applicationId = "30000000-0000-4000-8000-000000000001";
+  await database.application.upsert({
+    where: { id: applicationId },
+    create: { id: applicationId, applicantId: applicants[0].id, serviceKey: "LEARNER_LICENCE", status: "IN_PROGRESS" },
+    update: { applicantId: applicants[0].id, serviceKey: "LEARNER_LICENCE", status: "IN_PROGRESS" },
+  });
+  await database.applicationSection.upsert({
+    where: { applicationId_sectionKey: { applicationId, sectionKey: "PERSONAL_DETAILS" } },
+    create: {
+      id: "31000000-0000-4000-8000-000000000001", applicationId, sectionKey: "PERSONAL_DETAILS",
+      data: { fullName: "RaahSathi Demo", dateOfBirth: "1995-01-15" }, completedAt: new Date("2026-08-23T00:00:00.000Z"),
+    },
+    update: { data: { fullName: "RaahSathi Demo", dateOfBirth: "1995-01-15" }, completedAt: new Date("2026-08-23T00:00:00.000Z") },
+  });
+  await database.applicationEvent.upsert({
+    where: { id: "32000000-0000-4000-8000-000000000001" },
+    create: {
+      id: "32000000-0000-4000-8000-000000000001", applicationId, actorApplicantId: applicants[0].id,
+      eventType: "APPLICATION_CREATED", correlationId: "synthetic-seed", createdAt: new Date("2026-08-23T00:00:00.000Z"),
+    },
+    update: {},
+  });
+  await database.applicationEvent.upsert({
+    where: { id: "32000000-0000-4000-8000-000000000002" },
+    create: {
+      id: "32000000-0000-4000-8000-000000000002", applicationId, actorApplicantId: applicants[0].id,
+      eventType: "SECTION_COMPLETED", sectionKey: "PERSONAL_DETAILS", correlationId: "synthetic-seed",
+      createdAt: new Date("2026-08-23T00:00:01.000Z"),
+    },
+    update: {},
+  });
+  console.info("Seeded synthetic applicants and one resumable learner application.");
 }
 
 void main()
