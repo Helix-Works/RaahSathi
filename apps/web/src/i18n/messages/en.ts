@@ -149,6 +149,11 @@ export const enMessages = {
       "Sign in again to see private dashboard information. No consequential action was replayed.",
     reauthenticate: "Sign in again",
   },
+  payments: {
+    errors: {
+      invalidProviderEvent: "The payment provider event is invalid.",
+    },
+  },
   dashboard: {
     eyebrow: "Citizen dashboard",
     title: "Your next step, at a glance",

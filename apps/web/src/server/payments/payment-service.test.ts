@@ -1,10 +1,12 @@
 import { createPaymentRequestSchema } from "@raahsathi/contracts/payments";
+import type { PrismaClient } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
 import { ApiError } from "@/server/http/api-error";
 
 import {
   feeForService,
+  getPayment,
   paymentDecisionForScenario,
   paymentTransition,
   providerEventCanonicalValue,
@@ -54,5 +56,56 @@ describe("payment convergence foundation", () => {
     expect(paymentTransition("FAILED", "SUCCESS")).toEqual({ nextStatus: "SUCCEEDED", appendFailure: false, advanceApplication: true });
     expect(paymentTransition("SUCCEEDED", "SUCCESS")).toEqual({ nextStatus: "SUCCEEDED", appendFailure: false, advanceApplication: false });
     expect(paymentTransition("SUCCEEDED", "FAILED")).toEqual({ nextStatus: "SUCCEEDED", appendFailure: false, advanceApplication: false });
+  });
+
+  it("returns the payment attempt identified by the requested resource ID", async () => {
+    const applicationId = "30000000-0000-4000-8000-000000000001";
+    const requestedPaymentId = "30000000-0000-4000-8000-000000000002";
+    const newestPaymentId = "30000000-0000-4000-8000-000000000003";
+    const createdAt = new Date("2026-08-23T12:00:00.000Z");
+    const database = {
+      paymentAttempt: {
+        findFirst: async () => ({ applicationId }),
+      },
+      application: {
+        findFirst: async () => ({
+          id: applicationId,
+          serviceKey: "LEARNER_LICENCE",
+          feeSnapshot: null,
+          paymentAttempts: [
+            {
+              id: newestPaymentId,
+              status: "FAILED",
+              attemptNumber: 2,
+              providerReference: "SYN-PAY-NEWEST-ATTEMPT",
+              createdAt,
+              updatedAt: createdAt,
+              succeededAt: null,
+            },
+            {
+              id: requestedPaymentId,
+              status: "SUCCEEDED",
+              attemptNumber: 1,
+              providerReference: "SYN-PAY-REQUESTED-ATTEMPT",
+              createdAt,
+              updatedAt: createdAt,
+              succeededAt: createdAt,
+            },
+          ],
+        }),
+      },
+    } as unknown as PrismaClient;
+
+    const payment = await getPayment(
+      { sessionId: crypto.randomUUID(), applicantId: crypto.randomUUID() },
+      requestedPaymentId,
+      database,
+    );
+
+    expect(payment.attempt).toMatchObject({
+      id: requestedPaymentId,
+      status: "SUCCEEDED",
+      providerReference: "SYN-PAY-REQUESTED-ATTEMPT",
+    });
   });
 });

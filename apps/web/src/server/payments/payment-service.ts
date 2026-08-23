@@ -55,9 +55,12 @@ export function verifyPaymentProviderSignature(event: PaymentProviderEventReques
   if (!signature || !safeEqual(signature, signPaymentProviderEvent(event, secret))) throw apiErrors.paymentEventInvalid();
 }
 
-function toPaymentContext(record: PaymentApplicationRecord): PaymentContext {
+function toPaymentContext(record: PaymentApplicationRecord, paymentId?: string): PaymentContext {
   const fee = record.feeSnapshot ?? { id: null, ...feeForService(record.serviceKey) };
-  const attempt = record.paymentAttempts[0];
+  const attempt = paymentId
+    ? record.paymentAttempts.find((candidate) => candidate.id === paymentId)
+    : record.paymentAttempts[0];
+  if (paymentId && !attempt) throw apiErrors.notFound();
   return paymentContextSchema.parse({
     applicationId: record.id,
     fee: {
@@ -113,7 +116,10 @@ export async function getPayment(
     select: { applicationId: true },
   });
   if (!payment) throw apiErrors.notFound();
-  return getPaymentContextForApplication(context, payment.applicationId, database);
+  return toPaymentContext(
+    await ownedPaymentApplication(database, context, payment.applicationId),
+    paymentId,
+  );
 }
 
 export function paymentDecisionForScenario(scenario: PaymentProviderScenario, attemptNumber: number): Readonly<{
