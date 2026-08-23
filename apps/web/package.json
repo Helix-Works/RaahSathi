@@ -11,7 +11,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:db": "node -e \"if (!process.env.TEST_DATABASE_URL || process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION !== 'I_UNDERSTAND_THIS_DATABASE_WILL_BE_MUTATED') { console.error('TEST_DATABASE_URL and explicit disposable confirmation are required.'); process.exit(1) }\" && vitest run src/server/auth/auth.database.test.ts",
+    "test:db": "node -e \"if (!process.env.TEST_DATABASE_URL || !process.env.DATABASE_URL || process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION !== 'I_UNDERSTAND_THIS_DATABASE_WILL_BE_MUTATED') { console.error('DATABASE_URL, TEST_DATABASE_URL, and explicit disposable confirmation are required.'); process.exit(1) }\" && vitest run src/server/**/*.database.test.ts",
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",
     "prisma:validate": "prisma validate --schema prisma/schema.prisma",
     "prisma:seed": "tsx prisma/seed.ts",

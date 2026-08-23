@@ -6,6 +6,8 @@ import { createReadinessHandler } from "./health/ready/route";
 import { createRequestOtpHandler, POST as requestOtp } from "./auth/request-otp/route";
 import { createVerifyOtpHandler } from "./auth/verify-otp/route";
 import { createMeHandler } from "./me/route";
+import { GET as getServices } from "./services/route";
+import { POST as createApplication } from "./applications/route";
 
 describe("Route Handlers", () => {
   it("serves health with a correlation ID and no permissive CORS", async () => {
@@ -35,6 +37,19 @@ describe("Route Handlers", () => {
     const response = await getUnknown(new Request("http://localhost/api/v1/missing", { headers: { "x-request-id": "missing-route" } }));
     expect(response.status).toBe(404);
     expect(await response.json()).toEqual({ error: { code: "RESOURCE_NOT_FOUND", messageKey: "errors.resourceNotFound", correlationId: "missing-route" } });
+  });
+
+  it("serves the Phase 2 catalogue and blocks cross-origin application creation before database access", async () => {
+    const services = await getServices(new Request("http://localhost/api/v1/services"));
+    expect(services.status).toBe(200);
+    expect(await services.json()).toEqual([
+      { serviceKey: "LEARNER_LICENCE" }, { serviceKey: "PERMANENT_DRIVING_LICENCE" },
+    ]);
+    const rejected = await createApplication(new Request("http://localhost/api/v1/applications", {
+      method: "POST", headers: { origin: "https://attacker.invalid", "content-type": "application/json" },
+      body: JSON.stringify({ serviceKey: "LEARNER_LICENCE" }),
+    }));
+    expect(rejected.status).toBe(403);
   });
 
   it("rejects cross-origin and malformed OTP requests before database work", async () => {

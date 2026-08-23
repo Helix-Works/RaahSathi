@@ -7,3 +7,6 @@ Browser → Next.js UI/Route Handlers → server-only services → Prisma → Ne
 ```
 
 Route Handlers use the Node.js runtime and may execute as bounded serverless invocations. Durable state cannot depend on process memory or the local filesystem. PostgreSQL transactions and constraints remain authoritative for workflows, payments, appointments, waitlists, offers, and audit history.
+
+- [Phase 1 authentication](./phase-1-authentication.md)
+- [Phase 2 durable applications](./phase-2-durable-applications.md)

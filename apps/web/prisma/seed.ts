@@ -35,7 +35,46 @@ async function main() {
       },
     });
   }
-  console.info("Seeded STANDARD and PROVIDER_UNAVAILABLE synthetic applicants.");
+  const seedApplicationId = "30000000-0000-4000-8000-000000000001";
+  await database.application.upsert({
+    where: { applicantId_serviceKey: { applicantId: applicants[0].id, serviceKey: "LEARNER_LICENCE" } },
+    create: {
+      id: seedApplicationId,
+      applicantId: applicants[0].id,
+      serviceKey: "LEARNER_LICENCE",
+      status: "IN_PROGRESS",
+      sections: {
+        create: {
+          id: "31000000-0000-4000-8000-000000000001",
+          sectionKey: "PERSONAL_DETAILS",
+          data: { fullName: "RaahSathi Demo", dateOfBirth: "1995-01-15" },
+          completedAt: new Date("2026-08-23T00:00:00.000Z"),
+        },
+      },
+      events: {
+        create: [
+          {
+            id: "32000000-0000-4000-8000-000000000001",
+            actorApplicantId: applicants[0].id,
+            eventType: "APPLICATION_CREATED",
+            correlationId: "synthetic-seed",
+            createdAt: new Date("2026-08-23T00:00:00.000Z"),
+          },
+          {
+            id: "32000000-0000-4000-8000-000000000002",
+            actorApplicantId: applicants[0].id,
+            eventType: "SECTION_COMPLETED",
+            sectionKey: "PERSONAL_DETAILS",
+            correlationId: "synthetic-seed",
+            createdAt: new Date("2026-08-23T00:00:01.000Z"),
+          },
+        ],
+      },
+    },
+    // Seeding initializes missing demo state; reruns must not rewind durable workflow progress.
+    update: {},
+  });
+  console.info("Seeded synthetic applicants and one resumable learner application.");
 }
 
 void main()

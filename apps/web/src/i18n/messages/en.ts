@@ -89,7 +89,7 @@ export const enMessages = {
     eyebrow: "Driving-licence services",
     title: "Choose the journey you need",
     description:
-      "Two core services are prepared for the RaahSathi prototype. Application journeys will be connected in a later phase.",
+      "Start or resume one of the two durable synthetic application journeys.",
     learnerName: "New Learner Licence",
     learnerDescription:
       "Prepare for a first learner-licence application with clear progress and recovery.",
@@ -158,21 +158,27 @@ export const enMessages = {
       "See your current work, explicit status, and the next action supplied by the service.",
     activeApplicationTitle: "Active application",
     currentWorkDescription:
-      "This is a deterministic synthetic summary for frontend development.",
+      "This status is reconstructed from your saved PostgreSQL application sections.",
     serviceLabel: "Service",
     progressLabel: "Application progress",
     updatedLabel: "Last updated",
     statusAppointmentRequired: "Appointment required",
     statusAppointmentBooked: "Appointment booked",
+    statusDraft: "Draft",
+    statusInProgress: "In progress",
+    statusReadyForIdentity: "Ready for identity verification",
     statusUnknown: "Status unavailable",
     nextActionReviewOffer: "Review temporary slot offer",
     nextActionNone: "No action needed right now",
+    nextActionResumeApplication: "Resume the next application section",
+    nextActionVerifyIdentity: "Identity verification is the next planned step",
     nextActionUnknown: "Check again for the next action",
     nextActionDescription:
       "This next action is supplied directly by the dashboard summary; RaahSathi does not infer it in the browser. The action route will be connected during the resumable application phase.",
     blockingTitle: "Why you cannot continue yet",
     blockingNoSuitableSlot:
       "No suitable appointment slot was available. Review the temporary offer shown below.",
+    blockingIdentityRequired: "Complete identity verification when Phase 3 is connected. Your application progress is saved.",
     blockingUnknown:
       "Continuation is currently unavailable. Check again later or contact support with the reference details shown.",
     noApplicationTitle: "No active application",

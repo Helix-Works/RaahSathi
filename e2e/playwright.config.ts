@@ -27,9 +27,10 @@ export default defineConfig({
     command: `corepack pnpm --filter @raahsathi/web exec next dev -p ${port}`,
     env: {
       NEXT_PUBLIC_DATA_SOURCE: "mock",
+      NEXT_DIST_DIR: ".next-e2e",
     },
     url: baseURL,
-    reuseExistingServer: false,
+    reuseExistingServer: process.env.E2E_REUSE_EXISTING_SERVER === "true",
     timeout: 120_000,
   },
 });

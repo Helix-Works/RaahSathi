@@ -50,6 +50,7 @@ test("renders the public landing shell and navigates to services", async ({ page
   await expect(
     page.getByRole("heading", { name: "Permanent Driving Licence" }),
   ).toBeVisible();
+  await expect(page.getByRole("button", { name: "Continue" })).toHaveCount(2);
 });
 
 test("switches to Hindi and preserves it during navigation", async ({ page }, testInfo) => {

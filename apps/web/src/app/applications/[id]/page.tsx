@@ -1,0 +1,25 @@
+import { cookies } from "next/headers";
+import { notFound, redirect } from "next/navigation";
+import { z } from "zod";
+import type { ApplicationDetail } from "@raahsathi/contracts/applications";
+
+import { ApplicationEditor } from "@/features/applications/components/application-editor";
+import { getRequestLocale } from "@/i18n/locale";
+import { getApplication } from "@/server/applications/application-service";
+import { resolveSessionFromCookie } from "@/server/auth/session-service";
+import { ApiError } from "@/server/http/api-error";
+
+export default async function ApplicationPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  if (!z.uuid().safeParse(id).success) notFound();
+  const session = await resolveSessionFromCookie((await cookies()).toString());
+  if (session.kind !== "authenticated") redirect(`/login?returnTo=/applications/${id}`);
+  let application: ApplicationDetail;
+  try {
+    application = await getApplication(session.context, id);
+  } catch (error: unknown) {
+    if (error instanceof ApiError && error.status === 404) notFound();
+    throw error;
+  }
+  return <div className="mx-auto max-w-3xl px-4 py-10 sm:px-6"><ApplicationEditor initialApplication={application} locale={await getRequestLocale()} /></div>;
+}
