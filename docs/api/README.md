@@ -18,6 +18,11 @@ Implemented endpoints:
 - `GET /api/v1/applications/:id`
 - `PATCH /api/v1/applications/:id/sections/:sectionKey`
 - `POST /api/v1/applications/:id/steps/:sectionKey/complete`
+- `GET /api/v1/applications/:id/identity-attempts/latest`
+- `POST /api/v1/applications/:id/identity-attempts`
+- `POST /api/v1/applications/:id/identity-attempts/:attemptId/retry`
+- `GET /api/v1/licences`
+- `GET /api/v1/licences/:id`
 
 Every endpoint returns or propagates a sanitized `x-request-id`. Public errors use stable codes, localization keys, and correlation IDs without raw exception details.
 

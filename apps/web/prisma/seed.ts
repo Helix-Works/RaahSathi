@@ -2,6 +2,8 @@ import { createHmac } from "node:crypto";
 
 import { PrismaClient } from "@prisma/client";
 
+import { seedSyntheticApplication } from "./seed-application";
+
 const database = new PrismaClient();
 
 function lookupHash(mobileNumber: string, pepper: string): string {
@@ -35,43 +37,18 @@ async function main() {
       },
     });
   }
-  const seedApplicationId = "30000000-0000-4000-8000-000000000001";
-  await database.application.upsert({
-    where: { applicantId_serviceKey: { applicantId: applicants[0].id, serviceKey: "LEARNER_LICENCE" } },
+  await seedSyntheticApplication(database, applicants[0].id);
+  await database.licenceRecord.upsert({
+    where: { applicantId_kind: { applicantId: applicants[0].id, kind: "LEARNER" } },
     create: {
-      id: seedApplicationId,
+      id: "33000000-0000-4000-8000-000000000001",
       applicantId: applicants[0].id,
-      serviceKey: "LEARNER_LICENCE",
-      status: "IN_PROGRESS",
-      sections: {
-        create: {
-          id: "31000000-0000-4000-8000-000000000001",
-          sectionKey: "PERSONAL_DETAILS",
-          data: { fullName: "RaahSathi Demo", dateOfBirth: "1995-01-15" },
-          completedAt: new Date("2026-08-23T00:00:00.000Z"),
-        },
-      },
-      events: {
-        create: [
-          {
-            id: "32000000-0000-4000-8000-000000000001",
-            actorApplicantId: applicants[0].id,
-            eventType: "APPLICATION_CREATED",
-            correlationId: "synthetic-seed",
-            createdAt: new Date("2026-08-23T00:00:00.000Z"),
-          },
-          {
-            id: "32000000-0000-4000-8000-000000000002",
-            actorApplicantId: applicants[0].id,
-            eventType: "SECTION_COMPLETED",
-            sectionKey: "PERSONAL_DETAILS",
-            correlationId: "synthetic-seed",
-            createdAt: new Date("2026-08-23T00:00:01.000Z"),
-          },
-        ],
-      },
+      kind: "LEARNER",
+      syntheticReference: "SYN-LL-DEMO-0001",
+      vehicleClass: "LMV",
+      issuedAt: new Date("2026-01-15T00:00:00.000Z"),
+      validUntil: new Date("2026-12-31T23:59:59.000Z"),
     },
-    // Seeding initializes missing demo state; reruns must not rewind durable workflow progress.
     update: {},
   });
   console.info("Seeded synthetic applicants and one resumable learner application.");

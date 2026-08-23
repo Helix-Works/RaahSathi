@@ -21,6 +21,11 @@ describe("OpenAPI", () => {
         "/api/v1/applications/{id}/sections/{sectionKey}": {
           patch: { parameters: [{ name: "id", in: "path" }, { name: "sectionKey", in: "path" }] },
         },
+        "/api/v1/applications/{id}/identity-attempts": { post: { responses: { 200: {}, 409: {} } } },
+        "/api/v1/applications/{id}/identity-attempts/latest": { get: { responses: { 200: {}, 404: {} } } },
+        "/api/v1/applications/{id}/identity-attempts/{attemptId}/retry": { post: { responses: { 200: {}, 409: {} } } },
+        "/api/v1/licences": { get: { responses: { 200: {}, 401: {} } } },
+        "/api/v1/licences/{id}": { get: { responses: { 200: {}, 404: {} } } },
         "/api/v1/health/ready": {
           get: {
             responses: {

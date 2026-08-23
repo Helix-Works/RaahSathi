@@ -11,6 +11,9 @@ describe("durable application workflow", () => {
     expect(deriveApplicationPresentation(["PERSONAL_DETAILS", "ADDRESS", "SERVICE_DETAILS", "DECLARATION"])).toEqual({
       statusCode: "READY_FOR_IDENTITY", progressPercent: 100, nextActionCode: "VERIFY_IDENTITY", blockingReasonCode: "IDENTITY_VERIFICATION_REQUIRED",
     });
+    expect(deriveApplicationPresentation(["PERSONAL_DETAILS", "ADDRESS", "SERVICE_DETAILS", "DECLARATION"], true)).toEqual({
+      statusCode: "READY_FOR_PAYMENT", progressPercent: 100, nextActionCode: "PAY_FEES", blockingReasonCode: "PAYMENT_REQUIRED",
+    });
   });
 
   it("rejects cross-applicant ownership", () => {

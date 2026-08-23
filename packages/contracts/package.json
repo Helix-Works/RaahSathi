@@ -16,6 +16,10 @@
     "./applications": {
       "types": "./src/applications.ts",
       "import": "./src/applications.ts"
+    },
+    "./identity": {
+      "types": "./src/identity.ts",
+      "import": "./src/identity.ts"
     }
   },
   "scripts": {

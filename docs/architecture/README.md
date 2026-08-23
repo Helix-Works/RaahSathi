@@ -10,3 +10,4 @@ Route Handlers use the Node.js runtime and may execute as bounded serverless inv
 
 - [Phase 1 authentication](./phase-1-authentication.md)
 - [Phase 2 durable applications](./phase-2-durable-applications.md)
+- [Phase 3 identity recovery](./phase-3-identity-recovery.md)
