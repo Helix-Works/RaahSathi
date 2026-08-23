@@ -19,12 +19,12 @@ export function LanguageSwitcher({
 }: LanguageSwitcherProps) {
   return (
     <div
-      className="flex min-h-11 items-center rounded-xl border border-border bg-card p-1"
+      className="flex min-h-10 items-center rounded-md border border-primary-foreground/35 bg-primary-foreground p-0.5 text-primary"
       role="group"
       aria-label={label}
     >
       <Languages
-        className="mx-1 hidden size-4 text-muted-foreground min-[390px]:block"
+        className="mx-1 hidden size-4 text-primary/60 min-[390px]:block"
         aria-hidden="true"
       />
       {([
@@ -34,13 +34,17 @@ export function LanguageSwitcher({
         <form action={setLocalePreference} key={value}>
           <input type="hidden" name="locale" value={value} />
           <Button
-            className="min-h-9 rounded-lg px-2.5 text-xs sm:px-3"
+            className="min-h-9 rounded-sm px-2 text-xs sm:px-2.5"
             variant={locale === value ? "secondary" : "ghost"}
             size="sm"
             type="submit"
             aria-pressed={locale === value}
+            aria-label={languageLabel}
           >
-            {languageLabel}
+            <span className="hidden sm:inline">{languageLabel}</span>
+            <span className="sm:hidden" aria-hidden="true">
+              {value === "en" ? "EN" : "हि"}
+            </span>
           </Button>
         </form>
       ))}

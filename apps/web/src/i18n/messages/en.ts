@@ -66,6 +66,19 @@ export const enMessages = {
       "Built for transparent status, durable progress, and honest appointment availability.",
     prototypeNotice: "Hackathon prototype using synthetic data.",
     independenceNotice: "Not an official government service.",
+    primaryActionsLabel: "Licence service actions",
+    applyTitle: "Start a licence application",
+    applyDescription:
+      "Choose a supported learner or permanent driving-licence journey.",
+    applyAction: "View available services",
+    resumeTitle: "Resume saved work",
+    resumeDescription:
+      "Return to an application whose progress has already been saved.",
+    resumeAction: "Open your applications",
+    checkStatusTitle: "Check status and next action",
+    checkStatusDescription:
+      "See what is complete, what needs attention, and what to do next.",
+    checkStatusAction: "Open your dashboard",
     benefitsTitle: "Reliability you can understand",
     benefitsDescription:
       "RaahSathi is designed around the questions citizens need answered at every step.",
@@ -101,6 +114,8 @@ export const enMessages = {
     emptyDescription:
       "The service catalogue is being prepared. Please check again later.",
     loading: "Loading driving-licence services",
+    availableStatus: "Available in this prototype",
+    startFailed: "Unable to start safely. Please try again.",
   },
   account: {
     label: "Synthetic citizen account",

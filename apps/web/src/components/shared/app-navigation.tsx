@@ -40,11 +40,16 @@ function NavigationEntry({
   mobile?: boolean;
 }>) {
   const className = cn(
-    "inline-flex min-h-11 items-center gap-2 rounded-xl px-3 text-sm font-bold transition-colors",
-    mobile && "w-full justify-between px-4",
-    item.href && pathname === item.href
-      ? "bg-secondary text-secondary-foreground"
-      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+    "inline-flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-bold transition-colors",
+    mobile
+      ? "w-full justify-between px-4 text-foreground hover:bg-muted"
+      : "text-primary-foreground/75 hover:bg-primary-foreground/10 hover:text-primary-foreground",
+    item.href && pathname === item.href &&
+      (mobile
+        ? "bg-secondary text-secondary-foreground"
+        : "bg-primary-foreground !text-primary"),
+    !mobile && item.href === "/login" &&
+      "ml-2 border border-primary-foreground bg-primary-foreground px-4 !text-primary hover:bg-primary-foreground/85 hover:!text-primary",
   );
 
   if (!item.href || item.disabled) {
@@ -78,7 +83,7 @@ export function DesktopNavigation({
   const pathname = usePathname();
 
   return (
-    <nav className="hidden items-center gap-1 md:flex" aria-label={primaryLabel}>
+    <nav className="hidden items-center gap-1 lg:flex" aria-label={primaryLabel}>
       {items.map((item) => (
         <NavigationEntry key={`${item.href ?? "disabled"}-${item.label}`} item={item} pathname={pathname} />
       ))}
@@ -115,7 +120,7 @@ export function MobileNavigation({
   }, [isOpen]);
 
   return (
-    <div className="md:hidden">
+    <div className="lg:hidden">
       <Button
         variant="outline"
         size="icon"
@@ -134,7 +139,7 @@ export function MobileNavigation({
       {isOpen ? (
         <div
           id="mobile-navigation-panel"
-          className="absolute inset-x-0 top-full border-b border-border bg-card px-4 py-3 shadow-lg"
+          className="absolute inset-x-0 top-full border-b border-border-strong bg-card px-4 py-4 text-foreground"
         >
           <nav className="mx-auto grid max-w-6xl gap-1" aria-label={mobileLabel}>
             {items.map((item) => (

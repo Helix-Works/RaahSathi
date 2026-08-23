@@ -8,10 +8,12 @@ import {
 import { CheckCircle2, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
 import { completeSection, saveSection } from "@/features/applications/api";
 import type { Locale } from "@/i18n";
 
@@ -35,6 +37,42 @@ const copy = {
 } as const;
 
 type ApplicationCopy = { [Key in keyof typeof copy.en]: string };
+
+const districtLabels = {
+  en: {
+    CENTRAL: "Central Delhi",
+    EAST: "East Delhi",
+    NEW_DELHI: "New Delhi",
+    NORTH: "North Delhi",
+    NORTH_WEST: "North West Delhi",
+    SOUTH: "South Delhi",
+    SOUTH_WEST: "South West Delhi",
+    WEST: "West Delhi",
+  },
+  hi: {
+    CENTRAL: "मध्य दिल्ली",
+    EAST: "पूर्वी दिल्ली",
+    NEW_DELHI: "नई दिल्ली",
+    NORTH: "उत्तरी दिल्ली",
+    NORTH_WEST: "उत्तर पश्चिम दिल्ली",
+    SOUTH: "दक्षिण दिल्ली",
+    SOUTH_WEST: "दक्षिण पश्चिम दिल्ली",
+    WEST: "पश्चिम दिल्ली",
+  },
+} as const;
+
+const historyLabels: Readonly<Record<Locale, Readonly<Record<string, string>>>> = {
+  en: {
+    APPLICATION_CREATED: "Application started",
+    SECTION_SAVED: "Section saved",
+    SECTION_COMPLETED: "Section completed",
+  },
+  hi: {
+    APPLICATION_CREATED: "आवेदन शुरू हुआ",
+    SECTION_SAVED: "भाग सहेजा गया",
+    SECTION_COMPLETED: "भाग पूरा हुआ",
+  },
+};
 
 function sectionTitle(key: ApplicationSectionKey, messages: ApplicationCopy): string {
   return key === "PERSONAL_DETAILS" ? messages.personal : key === "ADDRESS" ? messages.address : key === "SERVICE_DETAILS" ? messages.service : messages.declaration;
@@ -60,7 +98,7 @@ export function ApplicationEditor({ initialApplication, locale }: Readonly<{ ini
   const stored = currentKey ? application.sections.find((section) => section.sectionKey === currentKey) : undefined;
   const [data, setData] = useState<Record<string, unknown>>(() => draftFor(initialApplication, nextSection(initialApplication)));
   const [pending, setPending] = useState(false);
-  const [notice, setNotice] = useState<string>();
+  const [notice, setNotice] = useState<Readonly<{ message: string; kind: "info" | "error" }>>();
 
   const run = async (action: "save" | "complete") => {
     if (!currentKey) return;
@@ -72,36 +110,37 @@ export function ApplicationEditor({ initialApplication, locale }: Readonly<{ ini
         : await completeSection(application.id, currentKey);
       setApplication(updated);
       setData(draftFor(updated, nextSection(updated)));
-      setNotice(action === "save" ? messages.saved : messages.completed);
+      setNotice({
+        message: action === "save" ? messages.saved : messages.completed,
+        kind: "info",
+      });
     } catch {
-      setNotice(messages.error);
+      setNotice({ message: messages.error, kind: "error" });
     } finally {
       setPending(false);
     }
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <Card>
-        <CardHeader><h1 className="text-3xl font-black">{messages.title}</h1></CardHeader>
+        <CardHeader><h1 className="text-3xl font-black leading-tight tracking-[-0.025em]">{messages.title}</h1></CardHeader>
         <CardContent className="space-y-3">
           <div className="flex justify-between text-sm font-bold"><span id="application-progress-label">{messages.progress}</span><span>{application.progressPercent}%</span></div>
-          <div className="h-2 rounded-full bg-muted" role="progressbar" aria-labelledby="application-progress-label" aria-valuenow={application.progressPercent} aria-valuemin={0} aria-valuemax={100}>
-            <div className="h-full rounded-full bg-primary" style={{ width: `${application.progressPercent}%` }} />
-          </div>
+          <Progress value={application.progressPercent} label={messages.progress} />
         </CardContent>
       </Card>
 
       {currentKey ? (
         <Card>
-          <CardHeader><h2 className="text-2xl font-black">{sectionTitle(currentKey, messages)}</h2></CardHeader>
+          <CardHeader><CardTitle>{sectionTitle(currentKey, messages)}</CardTitle></CardHeader>
           <CardContent className="space-y-5">
             {currentKey === "PERSONAL_DETAILS" ? <>
               <div className="space-y-2"><Label htmlFor="fullName">{messages.name}</Label><Input id="fullName" value={String(data.fullName ?? "")} onChange={(event) => setData({ ...data, fullName: event.target.value })} /></div>
               <div className="space-y-2"><Label htmlFor="dateOfBirth">{messages.dob}</Label><Input id="dateOfBirth" type="date" value={String(data.dateOfBirth ?? "")} onChange={(event) => setData({ ...data, dateOfBirth: event.target.value })} /></div>
             </> : null}
             {currentKey === "ADDRESS" ? <>
-              <div className="space-y-2"><Label htmlFor="district">{messages.district}</Label><select id="district" className="h-11 w-full rounded-md border bg-background px-3" value={String(data.district ?? "CENTRAL")} onChange={(event) => setData({ ...data, district: event.target.value })}><option value="CENTRAL">Central Delhi</option><option value="EAST">East Delhi</option><option value="NEW_DELHI">New Delhi</option><option value="NORTH">North Delhi</option><option value="NORTH_WEST">North West Delhi</option><option value="SOUTH">South Delhi</option><option value="SOUTH_WEST">South West Delhi</option><option value="WEST">West Delhi</option></select></div>
+              <div className="space-y-2"><Label htmlFor="district">{messages.district}</Label><select id="district" className="min-h-11 w-full rounded-md border border-border-strong bg-card px-3 py-2 text-base leading-6" value={String(data.district ?? "CENTRAL")} onChange={(event) => setData({ ...data, district: event.target.value })}>{Object.entries(districtLabels[locale]).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></div>
               <div className="space-y-2"><Label htmlFor="postalCode">{messages.postal}</Label><Input id="postalCode" inputMode="numeric" value={String(data.postalCode ?? "")} onChange={(event) => setData({ ...data, district: data.district ?? "CENTRAL", postalCode: event.target.value })} /></div>
             </> : null}
             {currentKey === "SERVICE_DETAILS" ? <>
@@ -109,16 +148,16 @@ export function ApplicationEditor({ initialApplication, locale }: Readonly<{ ini
               {application.serviceKey === "PERMANENT_DRIVING_LICENCE" ? <div className="space-y-2"><Label htmlFor="learnerReference">{messages.learner}</Label><Input id="learnerReference" value={String(data.learnerLicenceReference ?? "")} onChange={(event) => setData({ vehicleClass: "LMV", learnerLicenceReference: event.target.value })} /></div> : null}
             </> : null}
             {currentKey === "DECLARATION" ? <label className="flex gap-3"><input type="checkbox" checked={data.accepted === true} onChange={(event) => setData({ accepted: event.target.checked })} /><span>{messages.accept}</span></label> : null}
-            {notice ? <p role="status" className="text-sm font-semibold">{notice}</p> : null}
+            {notice ? <Alert variant={notice.kind} role="status"><AlertDescription>{notice.message}</AlertDescription></Alert> : null}
             <div className="flex flex-wrap gap-3">
               <Button type="button" variant="secondary" disabled={pending} onClick={() => run("save")}>{pending ? <LoaderCircle className="size-4 animate-spin" /> : null}{messages.save}</Button>
               <Button type="button" disabled={pending || !stored} onClick={() => run("complete")}>{messages.complete}</Button>
             </div>
           </CardContent>
         </Card>
-      ) : <Card><CardContent className="space-y-3 py-6"><CheckCircle2 className="size-8 text-success" /><p className="font-bold">{messages.blocked}</p></CardContent></Card>}
+      ) : <Card className="border-foreground"><CardContent className="space-y-3 py-6"><CheckCircle2 className="size-8 text-foreground" /><p className="font-bold leading-6">{messages.blocked}</p></CardContent></Card>}
 
-      <Card><CardHeader><h2 className="text-xl font-black">{messages.history}</h2></CardHeader><CardContent><ol className="space-y-2">{application.history.map((event) => <li key={event.id} className="border-l-2 pl-3 text-sm"><strong>{event.eventType.replaceAll("_", " ")}</strong><br /><span className="text-muted-foreground">{new Date(event.createdAt).toLocaleString(locale === "hi" ? "hi-IN" : "en-IN")}</span></li>)}</ol></CardContent></Card>
+      <Card><CardHeader><CardTitle>{messages.history}</CardTitle></CardHeader><CardContent><ol className="space-y-3">{application.history.map((event) => <li key={event.id} className="border-l-2 pl-3 text-sm leading-6"><strong>{historyLabels[locale][event.eventType] ?? event.eventType.replaceAll("_", " ")}</strong><br /><span className="text-muted-foreground">{new Date(event.createdAt).toLocaleString(locale === "hi" ? "hi-IN" : "en-IN")}</span></li>)}</ol></CardContent></Card>
     </div>
   );
 }
