@@ -39,7 +39,8 @@ async function main() {
   const application = await database.application.upsert({
     where: { applicantId_serviceKey: { applicantId: applicants[0].id, serviceKey: "LEARNER_LICENCE" } },
     create: { id: seedApplicationId, applicantId: applicants[0].id, serviceKey: "LEARNER_LICENCE", status: "IN_PROGRESS" },
-    update: { status: "IN_PROGRESS" },
+    // Seeding initializes missing demo state; reruns must not rewind durable workflow progress.
+    update: {},
   });
   const applicationId = application.id;
   await database.applicationSection.upsert({
