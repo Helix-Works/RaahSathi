@@ -22,7 +22,7 @@ export function LicenceContextCard({ licences, locale }: Readonly<{ licences: re
             <p className="font-black">{messages.learner}</p>
             <p className="break-all text-sm text-muted-foreground">{licence.syntheticReference}</p>
             <p className="mt-2 text-sm">{messages.vehicle}: {licence.vehicleClass}</p>
-            <p className="text-sm">{messages.validUntil}: {new Intl.DateTimeFormat(locale === "hi" ? "hi-IN" : "en-IN", { dateStyle: "medium" }).format(new Date(licence.validUntil))}</p>
+            <p className="text-sm">{messages.validUntil}: {new Intl.DateTimeFormat(locale === "hi" ? "hi-IN" : "en-IN", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(licence.validUntil))}</p>
           </div>
         ))}
       </CardContent>

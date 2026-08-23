@@ -13,7 +13,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const params = await context.params;
     const id = z.uuid().safeParse(params.id);
     const attemptId = z.uuid().safeParse(params.attemptId);
-    if (!id.success || !attemptId.success) throw apiErrors.validation();
+    if (!id.success || !attemptId.success) {
+      throw apiErrors.validation({
+        ...(id.success ? {} : { id: ["invalid_format"] }),
+        ...(attemptId.success ? {} : { attemptId: ["invalid_format"] }),
+      });
+    }
     const session = await requireMutationSecurity(request, correlationId);
     const response = Response.json(identityContextSchema.parse(await retryIdentityAttempt(session.context, {
       applicationId: id.data, attemptId: attemptId.data, correlationId,

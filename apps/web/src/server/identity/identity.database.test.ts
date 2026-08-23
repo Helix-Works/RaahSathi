@@ -61,7 +61,7 @@ describe.skipIf(!database)("Phase 3 disposable PostgreSQL identity recovery", ()
       } },
     } });
     await database.licenceRecord.create({ data: {
-      id: licenceId, applicantId: applicantA, kind: "LEARNER", syntheticReference: `SYN-LL-${licenceId}`,
+      id: licenceId, applicantId: applicantA, kind: "LEARNER", syntheticReference: `SYN-LL-${licenceId.toUpperCase()}`,
       vehicleClass: "LMV", issuedAt: new Date("2026-01-01T00:00:00.000Z"), validUntil: new Date("2026-12-31T00:00:00.000Z"),
     } });
 
@@ -100,6 +100,7 @@ describe.skipIf(!database)("Phase 3 disposable PostgreSQL identity recovery", ()
     expect(await database.applicationEvent.count({ where: { applicationId, eventType: "IDENTITY_VERIFIED" } })).toBe(1);
     expect((await database.application.findUniqueOrThrow({ where: { id: applicationId } })).status).toBe("READY_FOR_PAYMENT");
 
+    expect((await getLicence(contextA, licenceId, database)).id).toBe(licenceId);
     await expect(getIdentityContext(contextB, applicationId, database)).rejects.toThrowError(/RESOURCE_NOT_FOUND/);
     await expect(getLicence(contextB, licenceId, database)).rejects.toThrowError(/RESOURCE_NOT_FOUND/);
   });

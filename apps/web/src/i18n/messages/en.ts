@@ -176,7 +176,7 @@ export const enMessages = {
     nextActionPayFees: "Review fees and continue to payment",
     nextActionUnknown: "Check again for the next action",
     nextActionDescription:
-      "This next action is supplied directly by the dashboard summary; RaahSathi does not infer it in the browser. The action route will be connected during the resumable application phase.",
+      "This next action is supplied directly by the dashboard summary; RaahSathi does not infer it in the browser. Selecting it opens the application and identity recovery flow.",
     blockingTitle: "Why you cannot continue yet",
     blockingNoSuitableSlot:
       "No suitable appointment slot was available. Review the temporary offer shown below.",

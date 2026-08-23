@@ -22,6 +22,14 @@ const copy = {
     addressProof: "Address proof metadata",
     reference: "Synthetic reference",
     error: "Identity verification could not be updated. Your completed application sections remain safe.",
+    outcomeLabels: {
+      VERIFIED: "Verified",
+      OTP_INVALID: "OTP rejected",
+      USER_MISMATCH: "Review required",
+      TIMEOUT: "Timed out",
+      PROVIDER_UNAVAILABLE: "Provider unavailable",
+      RETRY_REQUIRED: "Retry required",
+    },
     outcomes: {
       VERIFIED: "Identity verified. Your application is ready for the payment phase.",
       OTP_INVALID: "The simulated provider rejected the OTP. Retry without re-entering application details.",
@@ -42,6 +50,14 @@ const copy = {
     addressProof: "पता प्रमाण मेटाडेटा",
     reference: "कृत्रिम संदर्भ",
     error: "पहचान सत्यापन अपडेट नहीं हो सका। आपके पूरे किए गए आवेदन भाग सुरक्षित हैं।",
+    outcomeLabels: {
+      VERIFIED: "सत्यापित",
+      OTP_INVALID: "ओटीपी अस्वीकृत",
+      USER_MISMATCH: "समीक्षा आवश्यक",
+      TIMEOUT: "समय समाप्त",
+      PROVIDER_UNAVAILABLE: "प्रदाता अनुपलब्ध",
+      RETRY_REQUIRED: "पुनः प्रयास आवश्यक",
+    },
     outcomes: {
       VERIFIED: "पहचान सत्यापित हो गई। आपका आवेदन भुगतान चरण के लिए तैयार है।",
       OTP_INVALID: "नकली प्रदाता ने ओटीपी अस्वीकार किया। आवेदन विवरण दोबारा भरे बिना फिर प्रयास करें।",
@@ -87,7 +103,7 @@ export function IdentityRecoveryPanel({ applicationId, initialContext, locale }:
       <CardHeader className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-2xl font-black">{messages.title}</h2>
-          {context.attempt ? <StatusBadge tone={outcomeTone(context.attempt.outcome)}>{context.attempt.outcome.replaceAll("_", " ")}</StatusBadge> : null}
+          {context.attempt ? <StatusBadge tone={outcomeTone(context.attempt.outcome)}>{messages.outcomeLabels[context.attempt.outcome]}</StatusBadge> : null}
         </div>
         <p className="leading-7 text-muted-foreground">{messages.description}</p>
       </CardHeader>
