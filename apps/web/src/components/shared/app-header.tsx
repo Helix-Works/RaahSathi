@@ -59,7 +59,7 @@ export function AppHeader({ locale, messages, navigation, account }: AppHeaderPr
             </span>
             <LogoutButton
               presentation={account}
-              buttonClassName="!text-primary-foreground hover:bg-primary-foreground/10 hover:!text-primary-foreground"
+              buttonClassName="text-primary-foreground! hover:bg-primary-foreground/10 hover:text-primary-foreground!"
             />
           </div>
         ) : null}

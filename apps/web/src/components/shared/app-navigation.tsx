@@ -47,9 +47,9 @@ function NavigationEntry({
     item.href && pathname === item.href &&
       (mobile
         ? "bg-secondary text-secondary-foreground"
-        : "bg-primary-foreground !text-primary"),
+        : "bg-primary-foreground text-primary!"),
     !mobile && item.href === "/login" &&
-      "ml-2 border border-primary-foreground bg-primary-foreground px-4 !text-primary hover:bg-primary-foreground/85 hover:!text-primary",
+      "ml-2 border border-primary-foreground bg-primary-foreground px-4 text-primary! hover:bg-primary-foreground/85 hover:text-primary!",
   );
 
   if (!item.href || item.disabled) {

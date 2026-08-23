@@ -78,7 +78,12 @@ export default async function ApplicationsPage() {
                 <CardTitle>{serviceName(application.serviceKey, messages)}</CardTitle>
                 <p className="text-sm font-bold">{statusLabels[application.statusCode]}</p>
                 <p className="text-sm text-muted-foreground">{actionLabels[application.nextActionCode]}</p>
-                <p className="text-xs text-muted-foreground">{messages.applications.updatedLabel}: {new Date(application.updatedAt).toLocaleString(hindi ? "hi-IN" : "en-IN")}</p>
+                <p className="text-xs text-muted-foreground">
+                  {messages.applications.updatedLabel}: {new Date(application.updatedAt).toLocaleString(
+                    hindi ? "hi-IN" : "en-IN",
+                    { timeZone: "Asia/Kolkata" },
+                  )}
+                </p>
               </CardHeader>
               <CardContent className="flex flex-wrap items-center gap-4 p-0 sm:justify-end">
                 <span className="text-sm font-black">

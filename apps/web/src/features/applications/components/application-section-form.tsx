@@ -216,7 +216,7 @@ function FormActions<TValues extends FieldValues>({
 
   return (
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-      <Button type="submit" variant="secondary" disabled={pending}>
+      <Button type="button" variant="secondary" disabled={pending} onClick={() => run("save")}>
         {pendingAction === "save" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : null}
         {pendingAction === "save" ? messages.saving : messages.saveDraft}
       </Button>
@@ -283,6 +283,7 @@ function AddressForm(props: SectionFormProps) {
       errors.present(error);
     }
   };
+  const districtError = fieldMessage(form.formState.errors.district, props.messages.applications.validationError);
   const postalError = fieldMessage(form.formState.errors.postalCode, props.messages.applications.invalidPostalError);
 
   return (
@@ -290,9 +291,10 @@ function AddressForm(props: SectionFormProps) {
       <FormSummary applicationId={props.applicationId} localValidation={form.formState.isSubmitted && !form.formState.isValid} messages={props.messages.applications} summary={errors.summary} />
       <div className="space-y-2">
         <Label htmlFor="district">{props.messages.applications.district}</Label>
-        <select id="district" className="min-h-11 w-full rounded-md border border-border-strong bg-card px-3 py-2 text-base leading-7" {...form.register("district")}>
+        <select id="district" className="min-h-11 w-full rounded-md border border-border-strong bg-card px-3 py-2 text-base leading-7" aria-invalid={Boolean(districtError)} aria-describedby={districtError ? "district-error" : undefined} {...form.register("district")}>
           {districtValues.map((value) => <option key={value} value={value}>{districtLabels[props.locale][value]}</option>)}
         </select>
+        {districtError ? <p id="district-error" className="text-sm font-bold" role="alert">{districtError}</p> : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor="postalCode">{props.messages.applications.postalCode}</Label>

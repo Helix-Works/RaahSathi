@@ -20,7 +20,16 @@ import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { prisma } from "@/server/database/prisma";
 import { apiErrors } from "@/server/http/api-error";
 
-type ApplicationRecord = Application & { sections: ApplicationSection[]; events: ApplicationEvent[]; identityAttempts: IdentityAttempt[] };
+type ApplicationSummaryRecord = Pick<Application, "id" | "serviceKey" | "updatedAt"> & {
+  sections: Pick<ApplicationSection, "sectionKey" | "completedAt">[];
+  identityAttempts: Pick<IdentityAttempt, "outcome">[];
+};
+
+type ApplicationRecord = Application & {
+  sections: ApplicationSection[];
+  events: ApplicationEvent[];
+  identityAttempts: IdentityAttempt[];
+};
 
 export function deriveApplicationPresentation(completedSectionKeys: readonly ApplicationSectionKey[], identityVerified = false): Readonly<{
   statusCode: "DRAFT" | "IN_PROGRESS" | "READY_FOR_IDENTITY" | "READY_FOR_PAYMENT";
@@ -73,7 +82,7 @@ function validateSectionData(sectionKey: ApplicationSectionKey, serviceKey: Serv
   return result.data as Prisma.InputJsonValue;
 }
 
-function deriveSummary(record: ApplicationRecord): ApplicationSummary {
+function deriveSummary(record: ApplicationSummaryRecord): ApplicationSummary {
   const completed = new Set(record.sections.filter((section) => section.completedAt).map((section) => section.sectionKey));
   const presentation = deriveApplicationPresentation([...completed], record.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED"));
   return applicationSummarySchema.parse({
@@ -147,7 +156,14 @@ export async function listApplications(
 ): Promise<readonly ApplicationSummary[]> {
   const records = await databaseClient.application.findMany({
     where: { applicantId: context.applicantId },
-    include: { sections: true, events: true, identityAttempts: true }, orderBy: { updatedAt: "desc" },
+    select: {
+      id: true,
+      serviceKey: true,
+      updatedAt: true,
+      sections: { select: { sectionKey: true, completedAt: true } },
+      identityAttempts: { select: { outcome: true } },
+    },
+    orderBy: { updatedAt: "desc" },
   });
   return applicationListSchema.parse({ applications: records.map(deriveSummary) }).applications;
 }

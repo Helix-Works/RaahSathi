@@ -1,54 +1,295 @@
 "use client";
 
-import { applicationSectionOrder, type ApplicationDetail, type ApplicationSectionData, type ApplicationSectionKey } from "@raahsathi/contracts/applications";
+import {
+  applicationSectionOrder,
+  type ApplicationDetail,
+  type ApplicationSectionData,
+  type ApplicationSectionKey,
+} from "@raahsathi/contracts/applications";
 import type { IdentityContext } from "@raahsathi/contracts/identity";
 import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
+
 import { StatusBadge } from "@/components/shared/state-presentations";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { completeSection, getApplication, saveSection } from "@/features/applications/api";
-import { ApplicationSectionForm, type SectionSubmitAction } from "@/features/applications/components/application-section-form";
+import {
+  ApplicationSectionForm,
+  type SectionSubmitAction,
+} from "@/features/applications/components/application-section-form";
 import { IdentityRecoveryPanel } from "@/features/identity/components/identity-recovery-panel";
 import type { Locale, MessageDictionary } from "@/i18n";
 
+type ApplicationMessages = MessageDictionary["applications"];
+type SectionNames = Readonly<Record<ApplicationSectionKey, string>>;
+
 const nextSection: Readonly<Partial<Record<ApplicationDetail["nextActionCode"], ApplicationSectionKey>>> = {
-  COMPLETE_PERSONAL_DETAILS: "PERSONAL_DETAILS", COMPLETE_ADDRESS: "ADDRESS", COMPLETE_SERVICE_DETAILS: "SERVICE_DETAILS", COMPLETE_DECLARATION: "DECLARATION",
+  COMPLETE_PERSONAL_DETAILS: "PERSONAL_DETAILS",
+  COMPLETE_ADDRESS: "ADDRESS",
+  COMPLETE_SERVICE_DETAILS: "SERVICE_DETAILS",
+  COMPLETE_DECLARATION: "DECLARATION",
 };
 
-export function ApplicationEditor({ initialApplication, initialIdentity, locale, messages }: Readonly<{ initialApplication: ApplicationDetail; initialIdentity: IdentityContext; locale: Locale; messages: MessageDictionary }>) {
-  const m = messages.applications;
+function formatDelhiDate(value: string, locale: Locale): string {
+  return new Date(value).toLocaleString(locale === "hi" ? "hi-IN" : "en-IN", {
+    timeZone: "Asia/Kolkata",
+  });
+}
+
+function ApplicationStatusCard({
+  application,
+  locale,
+  messages,
+}: Readonly<{
+  application: ApplicationDetail;
+  locale: Locale;
+  messages: ApplicationMessages;
+}>) {
+  const statuses = {
+    DRAFT: messages.statusDraft,
+    IN_PROGRESS: messages.statusInProgress,
+    READY_FOR_IDENTITY: messages.statusReadyForIdentity,
+    READY_FOR_PAYMENT: messages.statusReadyForPayment,
+  };
+  const actions = {
+    COMPLETE_PERSONAL_DETAILS: messages.nextPersonalDetails,
+    COMPLETE_ADDRESS: messages.nextAddress,
+    COMPLETE_SERVICE_DETAILS: messages.nextServiceDetails,
+    COMPLETE_DECLARATION: messages.nextDeclaration,
+    VERIFY_IDENTITY: messages.nextIdentity,
+    PAY_FEES: messages.nextPayment,
+  };
+  const blocking = application.blockingReasonCode === "IDENTITY_VERIFICATION_REQUIRED"
+    ? messages.blockingIdentity
+    : application.blockingReasonCode === "PAYMENT_REQUIRED"
+      ? messages.blockingPayment
+      : undefined;
+
+  return (
+    <Card>
+      <CardHeader>
+        <p className="text-sm font-bold uppercase tracking-widest">{messages.eyebrow}</p>
+        <h1 className="text-3xl font-black">{messages.detailTitle}</h1>
+        <p className="text-muted-foreground">{messages.detailDescription}</p>
+      </CardHeader>
+      <CardContent className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="text-sm text-muted-foreground">{messages.statusLabel}</p>
+          <StatusBadge tone="neutral">{statuses[application.statusCode]}</StatusBadge>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">{messages.updatedLabel}</p>
+          <p className="font-bold">{formatDelhiDate(application.updatedAt, locale)}</p>
+        </div>
+        <div className="sm:col-span-2">
+          <div className="mb-2 flex justify-between font-bold">
+            <span>{messages.progressLabel}</span>
+            <span>{application.progressPercent}%</span>
+          </div>
+          <Progress value={application.progressPercent} label={messages.progressLabel} />
+        </div>
+        <div className="sm:col-span-2">
+          <p className="text-sm text-muted-foreground">{messages.nextActionLabel}</p>
+          <p className="font-bold">{actions[application.nextActionCode]}</p>
+        </div>
+        {blocking ? (
+          <Alert className="sm:col-span-2">
+            <AlertTitle>{messages.blockingTitle}</AlertTitle>
+            <AlertDescription>{blocking}</AlertDescription>
+          </Alert>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ApplicationSectionsCard({
+  application,
+  currentKey,
+  messages,
+  sectionNames,
+}: Readonly<{
+  application: ApplicationDetail;
+  currentKey?: ApplicationSectionKey;
+  messages: ApplicationMessages;
+  sectionNames: SectionNames;
+}>) {
+  return (
+    <Card>
+      <CardHeader><CardTitle>{messages.sectionsTitle}</CardTitle></CardHeader>
+      <CardContent>
+        <ol className="grid gap-3 sm:grid-cols-2">
+          {applicationSectionOrder.map((key) => {
+            const completed = application.sections.some(
+              (section) => section.sectionKey === key && section.completed,
+            );
+            const state = completed
+              ? messages.completedSection
+              : key === currentKey
+                ? messages.currentSection
+                : messages.upcomingSection;
+
+            return (
+              <li key={key} className="rounded-xl border p-4">
+                <p className="font-bold">{sectionNames[key]}</p>
+                <p className="text-sm text-muted-foreground">{state}</p>
+              </li>
+            );
+          })}
+        </ol>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ApplicationHistoryCard({
+  application,
+  locale,
+  messages,
+  sectionNames,
+}: Readonly<{
+  application: ApplicationDetail;
+  locale: Locale;
+  messages: ApplicationMessages;
+  sectionNames: SectionNames;
+}>) {
+  const historyLabels: Readonly<Record<ApplicationDetail["history"][number]["eventType"], string>> = {
+    APPLICATION_CREATED: messages.historyApplicationCreated,
+    SECTION_SAVED: messages.historySectionSaved,
+    SECTION_COMPLETED: messages.historySectionCompleted,
+    WORKFLOW_ADVANCED: messages.historyWorkflowAdvanced,
+    IDENTITY_STARTED: messages.historyIdentityStarted,
+    IDENTITY_RETRY_STARTED: messages.historyIdentityRetryStarted,
+    IDENTITY_VERIFIED: messages.historyIdentityVerified,
+  };
+
+  return (
+    <Card>
+      <CardHeader><CardTitle>{messages.historyTitle}</CardTitle></CardHeader>
+      <CardContent>
+        {application.history.length ? (
+          <ol className="space-y-3">
+            {application.history.slice(-6).reverse().map((event) => (
+              <li key={event.id} className="border-l-2 pl-3 text-sm">
+                <strong>{historyLabels[event.eventType] ?? messages.historyGeneric}</strong>
+                {event.sectionKey ? ` — ${sectionNames[event.sectionKey]}` : ""}
+                <br />
+                <span className="text-muted-foreground">
+                  {formatDelhiDate(event.createdAt, locale)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        ) : <p>{messages.historyEmpty}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function ApplicationEditor({
+  initialApplication,
+  initialIdentity,
+  locale,
+  messages,
+}: Readonly<{
+  initialApplication: ApplicationDetail;
+  initialIdentity: IdentityContext;
+  locale: Locale;
+  messages: MessageDictionary;
+}>) {
+  const applicationMessages = messages.applications;
   const [application, setApplication] = useState(initialApplication);
   const [notice, setNotice] = useState<string>();
   const currentKey = nextSection[application.nextActionCode];
-  const stored = currentKey ? application.sections.find((section) => section.sectionKey === currentKey) : undefined;
-  const sectionNames: Record<ApplicationSectionKey, string> = { PERSONAL_DETAILS: m.personalDetails, ADDRESS: m.address, SERVICE_DETAILS: m.serviceDetails, DECLARATION: m.declaration };
-  const statuses = { DRAFT: m.statusDraft, IN_PROGRESS: m.statusInProgress, READY_FOR_IDENTITY: m.statusReadyForIdentity, READY_FOR_PAYMENT: m.statusReadyForPayment };
-  const actions = { COMPLETE_PERSONAL_DETAILS: m.nextPersonalDetails, COMPLETE_ADDRESS: m.nextAddress, COMPLETE_SERVICE_DETAILS: m.nextServiceDetails, COMPLETE_DECLARATION: m.nextDeclaration, VERIFY_IDENTITY: m.nextIdentity, PAY_FEES: m.nextPayment };
-  const blocking = application.blockingReasonCode === "IDENTITY_VERIFICATION_REQUIRED" ? m.blockingIdentity : application.blockingReasonCode === "PAYMENT_REQUIRED" ? m.blockingPayment : undefined;
-  const historyLabels = { APPLICATION_CREATED: m.historyApplicationCreated, SECTION_SAVED: m.historySectionSaved, SECTION_COMPLETED: m.historySectionCompleted, WORKFLOW_ADVANCED: m.historyWorkflowAdvanced, IDENTITY_STARTED: m.historyIdentityStarted, IDENTITY_RETRY_STARTED: m.historyIdentityRetryStarted, IDENTITY_VERIFIED: m.historyIdentityVerified };
-  const persist = async (data: ApplicationSectionData, action: SectionSubmitAction, dirty: boolean) => {
+  const stored = currentKey
+    ? application.sections.find((section) => section.sectionKey === currentKey)
+    : undefined;
+  const sectionNames: SectionNames = {
+    PERSONAL_DETAILS: applicationMessages.personalDetails,
+    ADDRESS: applicationMessages.address,
+    SERVICE_DETAILS: applicationMessages.serviceDetails,
+    DECLARATION: applicationMessages.declaration,
+  };
+
+  const persist = async (
+    data: ApplicationSectionData,
+    action: SectionSubmitAction,
+    dirty: boolean,
+  ) => {
     if (!currentKey) return;
     let updated = application;
-    if (dirty || !stored) updated = await saveSection({ applicationId: application.id, sectionKey: currentKey, expectedRevision: stored?.revision ?? 0, data });
+    if (dirty || !stored) {
+      updated = await saveSection({
+        applicationId: application.id,
+        sectionKey: currentKey,
+        expectedRevision: stored?.revision ?? 0,
+        data,
+      });
+    }
     if (action === "complete") updated = await completeSection(application.id, currentKey);
-    setApplication(updated); setNotice(action === "save" ? m.saved : m.completed);
+    setApplication(updated);
+    setNotice(action === "save" ? applicationMessages.saved : applicationMessages.completed);
   };
   const refresh = async () => setApplication(await getApplication(application.id));
 
-  return <div className="space-y-6">
-    <Card><CardHeader><p className="text-sm font-bold uppercase tracking-widest">{m.eyebrow}</p><h1 className="text-3xl font-black">{m.detailTitle}</h1><p className="text-muted-foreground">{m.detailDescription}</p></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
-      <div><p className="text-sm text-muted-foreground">{m.statusLabel}</p><StatusBadge tone="neutral">{statuses[application.statusCode]}</StatusBadge></div>
-      <div><p className="text-sm text-muted-foreground">{m.updatedLabel}</p><p className="font-bold">{new Date(application.updatedAt).toLocaleString(locale === "hi" ? "hi-IN" : "en-IN")}</p></div>
-      <div className="sm:col-span-2"><div className="mb-2 flex justify-between font-bold"><span>{m.progressLabel}</span><span>{application.progressPercent}%</span></div><Progress value={application.progressPercent} label={m.progressLabel} /></div>
-      <div className="sm:col-span-2"><p className="text-sm text-muted-foreground">{m.nextActionLabel}</p><p className="font-bold">{actions[application.nextActionCode]}</p></div>
-      {blocking ? <Alert className="sm:col-span-2"><AlertTitle>{m.blockingTitle}</AlertTitle><AlertDescription>{blocking}</AlertDescription></Alert> : null}
-    </CardContent></Card>
-    <Card><CardHeader><CardTitle>{m.sectionsTitle}</CardTitle></CardHeader><CardContent><ol className="grid gap-3 sm:grid-cols-2">{applicationSectionOrder.map((key) => { const completed = application.sections.some((section) => section.sectionKey === key && section.completed); const state = completed ? m.completedSection : key === currentKey ? m.currentSection : m.upcomingSection; return <li key={key} className="rounded-xl border p-4"><p className="font-bold">{sectionNames[key]}</p><p className="text-sm text-muted-foreground">{state}</p></li>; })}</ol></CardContent></Card>
-    {currentKey ? <Card><CardHeader><CardTitle>{sectionNames[currentKey]}</CardTitle></CardHeader><CardContent className="space-y-4">{notice ? <Alert role="status"><AlertDescription>{notice}</AlertDescription></Alert> : null}<ApplicationSectionForm key={`${currentKey}-${stored?.revision ?? 0}`} applicationId={application.id} sectionKey={currentKey} serviceKey={application.serviceKey} initialData={stored?.data} locale={locale} messages={messages} onPersist={persist} /></CardContent></Card> : <Alert><CheckCircle2 className="size-5" aria-hidden="true" /><AlertDescription>{m.allSectionsComplete}</AlertDescription></Alert>}
-    {application.progressPercent === 100 ? <IdentityRecoveryPanel applicationId={application.id} initialContext={initialIdentity} locale={locale} messages={messages} onApplicationChanged={refresh} /> : null}
-    {application.statusCode === "READY_FOR_PAYMENT" ? <Alert><AlertTitle>{m.paymentUnavailableTitle}</AlertTitle><AlertDescription>{m.paymentUnavailableDescription}</AlertDescription></Alert> : null}
-    <Card><CardHeader><CardTitle>{m.historyTitle}</CardTitle></CardHeader><CardContent>{application.history.length ? <ol className="space-y-3">{application.history.slice(-6).reverse().map((event) => <li key={event.id} className="border-l-2 pl-3 text-sm"><strong>{historyLabels[event.eventType] ?? m.historyGeneric}</strong>{event.sectionKey ? ` — ${sectionNames[event.sectionKey]}` : ""}<br/><span className="text-muted-foreground">{new Date(event.createdAt).toLocaleString(locale === "hi" ? "hi-IN" : "en-IN")}</span></li>)}</ol> : <p>{m.historyEmpty}</p>}</CardContent></Card>
-  </div>;
+  return (
+    <div className="space-y-6">
+      <ApplicationStatusCard application={application} locale={locale} messages={applicationMessages} />
+      <ApplicationSectionsCard
+        application={application}
+        currentKey={currentKey}
+        messages={applicationMessages}
+        sectionNames={sectionNames}
+      />
+
+      {currentKey ? (
+        <Card>
+          <CardHeader><CardTitle>{sectionNames[currentKey]}</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            {notice ? <Alert role="status"><AlertDescription>{notice}</AlertDescription></Alert> : null}
+            <ApplicationSectionForm
+              key={`${currentKey}-${stored?.revision ?? 0}`}
+              applicationId={application.id}
+              sectionKey={currentKey}
+              serviceKey={application.serviceKey}
+              initialData={stored?.data}
+              locale={locale}
+              messages={messages}
+              onPersist={persist}
+            />
+          </CardContent>
+        </Card>
+      ) : (
+        <Alert>
+          <CheckCircle2 className="size-5" aria-hidden="true" />
+          <AlertDescription>{applicationMessages.allSectionsComplete}</AlertDescription>
+        </Alert>
+      )}
+
+      {application.progressPercent === 100 ? (
+        <IdentityRecoveryPanel
+          applicationId={application.id}
+          initialContext={initialIdentity}
+          messages={messages}
+          onApplicationChanged={refresh}
+        />
+      ) : null}
+
+      {application.statusCode === "READY_FOR_PAYMENT" ? (
+        <Alert>
+          <AlertTitle>{applicationMessages.paymentUnavailableTitle}</AlertTitle>
+          <AlertDescription>{applicationMessages.paymentUnavailableDescription}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <ApplicationHistoryCard
+        application={application}
+        locale={locale}
+        messages={applicationMessages}
+        sectionNames={sectionNames}
+      />
+    </div>
+  );
 }
