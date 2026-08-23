@@ -35,12 +35,13 @@ async function main() {
       },
     });
   }
-  const applicationId = "30000000-0000-4000-8000-000000000001";
-  await database.application.upsert({
-    where: { id: applicationId },
-    create: { id: applicationId, applicantId: applicants[0].id, serviceKey: "LEARNER_LICENCE", status: "IN_PROGRESS" },
-    update: { applicantId: applicants[0].id, serviceKey: "LEARNER_LICENCE", status: "IN_PROGRESS" },
+  const seedApplicationId = "30000000-0000-4000-8000-000000000001";
+  const application = await database.application.upsert({
+    where: { applicantId_serviceKey: { applicantId: applicants[0].id, serviceKey: "LEARNER_LICENCE" } },
+    create: { id: seedApplicationId, applicantId: applicants[0].id, serviceKey: "LEARNER_LICENCE", status: "IN_PROGRESS" },
+    update: { status: "IN_PROGRESS" },
   });
+  const applicationId = application.id;
   await database.applicationSection.upsert({
     where: { applicationId_sectionKey: { applicationId, sectionKey: "PERSONAL_DETAILS" } },
     create: {

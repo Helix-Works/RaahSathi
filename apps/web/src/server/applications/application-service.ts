@@ -4,6 +4,7 @@ import {
   addressDataSchema,
   applicationDetailSchema,
   applicationListSchema,
+  applicationSectionOrder,
   declarationDataSchema,
   personalDetailsDataSchema,
   serviceDetailsDataSchema,
@@ -17,10 +18,6 @@ import { Prisma, type Application, type ApplicationEvent, type ApplicationSectio
 import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { prisma } from "@/server/database/prisma";
 import { apiErrors } from "@/server/http/api-error";
-
-export const applicationSectionOrder: readonly ApplicationSectionKey[] = [
-  "PERSONAL_DETAILS", "ADDRESS", "SERVICE_DETAILS", "DECLARATION",
-];
 
 type ApplicationRecord = Application & { sections: ApplicationSection[]; events: ApplicationEvent[] };
 

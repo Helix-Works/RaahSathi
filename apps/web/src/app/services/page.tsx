@@ -4,7 +4,6 @@ import { PageHeader } from "@/components/shared/page-header";
 import {
   EmptyState,
   ErrorState,
-  StatusBadge,
 } from "@/components/shared/state-presentations";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StartApplicationButton } from "@/features/applications/components/start-application-button";
@@ -82,7 +81,6 @@ export default async function ServicesPage() {
             return (
               <Card key={service.serviceKey} className="flex h-full flex-col">
                 <CardHeader>
-                  <StatusBadge tone="success">{messages.status.saved}</StatusBadge>
                   <h2 className="text-2xl font-black tracking-tight">{copy.name}</h2>
                   <p className="leading-7 text-muted-foreground">{copy.description}</p>
                 </CardHeader>

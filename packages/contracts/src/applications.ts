@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 export const serviceKeySchema = z.enum(["LEARNER_LICENCE", "PERMANENT_DRIVING_LICENCE"]);
-export const applicationSectionKeySchema = z.enum(["PERSONAL_DETAILS", "ADDRESS", "SERVICE_DETAILS", "DECLARATION"]);
+export const applicationSectionOrder = ["PERSONAL_DETAILS", "ADDRESS", "SERVICE_DETAILS", "DECLARATION"] as const;
+export const applicationSectionKeySchema = z.enum(applicationSectionOrder);
 export const applicationStatusCodeSchema = z.enum(["DRAFT", "IN_PROGRESS", "READY_FOR_IDENTITY"]);
 export const applicationNextActionCodeSchema = z.enum([
   "COMPLETE_PERSONAL_DETAILS", "COMPLETE_ADDRESS", "COMPLETE_SERVICE_DETAILS", "COMPLETE_DECLARATION", "VERIFY_IDENTITY",

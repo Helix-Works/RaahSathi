@@ -1,6 +1,10 @@
 "use client";
 
-import type { ApplicationDetail, ApplicationSectionKey } from "@raahsathi/contracts/applications";
+import {
+  applicationSectionOrder,
+  type ApplicationDetail,
+  type ApplicationSectionKey,
+} from "@raahsathi/contracts/applications";
 import { CheckCircle2, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 
@@ -11,7 +15,6 @@ import { Label } from "@/components/ui/label";
 import { completeSection, saveSection } from "@/features/applications/api";
 import type { Locale } from "@/i18n";
 
-const order: readonly ApplicationSectionKey[] = ["PERSONAL_DETAILS", "ADDRESS", "SERVICE_DETAILS", "DECLARATION"];
 const copy = {
   en: {
     title: "Durable application", saved: "Draft saved in PostgreSQL.", save: "Save draft", complete: "Complete saved section",
@@ -38,7 +41,7 @@ function sectionTitle(key: ApplicationSectionKey, messages: ApplicationCopy): st
 }
 
 function nextSection(application: ApplicationDetail): ApplicationSectionKey | undefined {
-  return order.find((key) => !application.sections.find((section) => section.sectionKey === key)?.completed);
+  return applicationSectionOrder.find((key) => !application.sections.find((section) => section.sectionKey === key)?.completed);
 }
 
 function draftFor(application: ApplicationDetail, key: ApplicationSectionKey | undefined): Record<string, unknown> {
@@ -82,8 +85,8 @@ export function ApplicationEditor({ initialApplication, locale }: Readonly<{ ini
       <Card>
         <CardHeader><h1 className="text-3xl font-black">{messages.title}</h1></CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex justify-between text-sm font-bold"><span>{messages.progress}</span><span>{application.progressPercent}%</span></div>
-          <div className="h-2 rounded-full bg-muted" role="progressbar" aria-valuenow={application.progressPercent} aria-valuemin={0} aria-valuemax={100}>
+          <div className="flex justify-between text-sm font-bold"><span id="application-progress-label">{messages.progress}</span><span>{application.progressPercent}%</span></div>
+          <div className="h-2 rounded-full bg-muted" role="progressbar" aria-labelledby="application-progress-label" aria-valuenow={application.progressPercent} aria-valuemin={0} aria-valuemax={100}>
             <div className="h-full rounded-full bg-primary" style={{ width: `${application.progressPercent}%` }} />
           </div>
         </CardContent>
