@@ -30,7 +30,7 @@ export function deriveApplicationPresentation(completedSectionKeys: readonly App
   const completed = new Set(completedSectionKeys);
   const nextSection = applicationSectionOrder.find((sectionKey) => !completed.has(sectionKey));
   if (!nextSection && identityVerified && paymentSucceeded) return {
-    statusCode: "READY_FOR_APPOINTMENT", progressPercent: 100, nextActionCode: "SELECT_APPOINTMENT",
+    statusCode: "READY_FOR_APPOINTMENT", progressPercent: 100, nextActionCode: "NONE",
   };
   if (!nextSection && identityVerified) return {
     statusCode: "READY_FOR_PAYMENT", progressPercent: 100, nextActionCode: "PAY_FEES", blockingReasonCode: "PAYMENT_REQUIRED",

@@ -55,4 +55,6 @@ Identity start and retry accept no browser-selected provider outcome. The server
 
 Payment creation accepts only an idempotency key. Fee amounts come from an immutable server-created snapshot. Synthetic provider events require an HMAC signature and stable event ID; duplicate, delayed, and reordered events converge transactionally without trusting a browser redirect.
 
+`POST /api/v1/payment-provider/events` is a server-to-server exception to cookie authentication. It requires the `x-raahsathi-provider-signature` HMAC-SHA-256 header and does not use a citizen session cookie or CSRF token.
+
 Mutation schemas are strict. Cookies are same-origin, opaque, HttpOnly, and server managed. Cookie-authenticated mutations require a session-bound CSRF token and exact Origin validation. Ownership filtering occurs in server services and database queries, never in client code.

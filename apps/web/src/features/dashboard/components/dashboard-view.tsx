@@ -214,9 +214,11 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
 
           <NextActionCard
             title={nextActionPresentation(application.nextActionCode, dashboard)}
-            description={dashboard.nextActionDescription}
-            actionLabel={messages.common.continue}
-            actionHref={`/applications/${application.id}`}
+            description={application.nextActionCode === "NONE"
+              ? dashboard.nextActionUnavailableDescription
+              : dashboard.nextActionDescription}
+            actionLabel={application.nextActionCode === "NONE" ? undefined : messages.common.continue}
+            actionHref={application.nextActionCode === "NONE" ? undefined : `/applications/${application.id}`}
           />
         </section>
       )}

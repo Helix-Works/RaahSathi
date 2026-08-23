@@ -94,7 +94,10 @@ export function createOpenApiDocument(): Record<string, unknown> {
       headers: {
         ...componentHeaders,
       },
-      securitySchemes: { cookieAuth: { type: "apiKey", in: "cookie", name: "raahsathi_session" } },
+      securitySchemes: {
+        cookieAuth: { type: "apiKey", in: "cookie", name: "raahsathi_session" },
+        providerSignatureAuth: { type: "apiKey", in: "header", name: "x-raahsathi-provider-signature" },
+      },
       schemas: { ApiError: schemaFor(apiErrorSchema), ...requestSchemas, ...successSchemas },
     },
   };

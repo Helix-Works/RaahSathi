@@ -28,7 +28,9 @@ describe("OpenAPI", () => {
         "/api/v1/licences/{id}": { get: { responses: { 200: {}, 404: {} } } },
         "/api/v1/applications/{id}/payments": { post: { responses: { 200: {}, 409: {} } } },
         "/api/v1/payments/{id}": { get: { responses: { 200: {}, 404: {} } } },
-        "/api/v1/payment-provider/events": { post: { responses: { 200: {}, 400: {} } } },
+        "/api/v1/payment-provider/events": {
+          post: { responses: { 200: {}, 400: {} }, security: [{ providerSignatureAuth: [] }] },
+        },
         "/api/v1/health/ready": {
           get: {
             responses: {
@@ -38,7 +40,16 @@ describe("OpenAPI", () => {
           },
         },
       },
-      components: { headers: { RequestId: {} } },
+      components: {
+        headers: { RequestId: {} },
+        securitySchemes: {
+          providerSignatureAuth: {
+            type: "apiKey",
+            in: "header",
+            name: "x-raahsathi-provider-signature",
+          },
+        },
+      },
     });
   });
 

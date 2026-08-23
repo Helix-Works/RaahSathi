@@ -43,5 +43,6 @@ export const paymentEndpointContracts: readonly EndpointContract[] = [
     requestHeaders: [{ name: "x-raahsathi-provider-signature", description: "HMAC-SHA-256 signature over the canonical synthetic event.", required: true, schema: z.string().startsWith("sha256=") }],
     success: { status: 200, description: "Converged payment state.", schemaName: "PaymentContext", schema: paymentContextSchema, headers },
     errors: mutationErrors.filter((error) => [400, 404, 413, 415, 500].includes(error.status)),
+    security: ["providerSignatureAuth"],
   },
 ];

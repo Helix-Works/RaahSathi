@@ -15,7 +15,7 @@ describe("durable application workflow", () => {
       statusCode: "READY_FOR_PAYMENT", progressPercent: 100, nextActionCode: "PAY_FEES", blockingReasonCode: "PAYMENT_REQUIRED",
     });
     expect(deriveApplicationPresentation(["PERSONAL_DETAILS", "ADDRESS", "SERVICE_DETAILS", "DECLARATION"], true, true)).toEqual({
-      statusCode: "READY_FOR_APPOINTMENT", progressPercent: 100, nextActionCode: "SELECT_APPOINTMENT",
+      statusCode: "READY_FOR_APPOINTMENT", progressPercent: 100, nextActionCode: "NONE",
     });
   });
 

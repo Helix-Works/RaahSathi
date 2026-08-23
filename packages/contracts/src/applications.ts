@@ -5,7 +5,7 @@ export const applicationSectionOrder = ["PERSONAL_DETAILS", "ADDRESS", "SERVICE_
 export const applicationSectionKeySchema = z.enum(applicationSectionOrder);
 export const applicationStatusCodeSchema = z.enum(["DRAFT", "IN_PROGRESS", "READY_FOR_IDENTITY", "READY_FOR_PAYMENT", "READY_FOR_APPOINTMENT"]);
 export const applicationNextActionCodeSchema = z.enum([
-  "COMPLETE_PERSONAL_DETAILS", "COMPLETE_ADDRESS", "COMPLETE_SERVICE_DETAILS", "COMPLETE_DECLARATION", "VERIFY_IDENTITY", "PAY_FEES", "SELECT_APPOINTMENT",
+  "COMPLETE_PERSONAL_DETAILS", "COMPLETE_ADDRESS", "COMPLETE_SERVICE_DETAILS", "COMPLETE_DECLARATION", "VERIFY_IDENTITY", "PAY_FEES", "SELECT_APPOINTMENT", "NONE",
 ]);
 export const applicationBlockingReasonCodeSchema = z.enum(["IDENTITY_VERIFICATION_REQUIRED", "PAYMENT_REQUIRED"]);
 

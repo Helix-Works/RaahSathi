@@ -184,6 +184,8 @@ export const enMessages = {
     nextActionUnknown: "Check again for the next action",
     nextActionDescription:
       "This next action is supplied directly by the dashboard summary; RaahSathi does not infer it in the browser. Selecting it opens the application and identity recovery flow.",
+    nextActionUnavailableDescription:
+      "Payment is complete and your progress is safe. Appointment selection will become available in Phase 5.",
     blockingTitle: "Why you cannot continue yet",
     blockingNoSuitableSlot:
       "No suitable appointment slot was available. Review the temporary offer shown below.",

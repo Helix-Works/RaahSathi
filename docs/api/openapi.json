@@ -2059,6 +2059,11 @@
               "pattern": "^sha256=.*"
             }
           }
+        ],
+        "security": [
+          {
+            "providerSignatureAuth": []
+          }
         ]
       }
     }
@@ -2085,6 +2090,11 @@
         "type": "apiKey",
         "in": "cookie",
         "name": "raahsathi_session"
+      },
+      "providerSignatureAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "x-raahsathi-provider-signature"
       }
     },
     "schemas": {
@@ -2421,7 +2431,8 @@
               "COMPLETE_DECLARATION",
               "VERIFY_IDENTITY",
               "PAY_FEES",
-              "SELECT_APPOINTMENT"
+              "SELECT_APPOINTMENT",
+              "NONE"
             ]
           },
           "blockingReasonCode": {
@@ -2660,7 +2671,8 @@
                     "COMPLETE_DECLARATION",
                     "VERIFY_IDENTITY",
                     "PAY_FEES",
-                    "SELECT_APPOINTMENT"
+                    "SELECT_APPOINTMENT",
+                    "NONE"
                   ]
                 },
                 "blockingReasonCode": {
