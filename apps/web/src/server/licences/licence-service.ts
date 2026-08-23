@@ -1,0 +1,40 @@
+import "server-only";
+
+import { licenceListSchema, licenceRecordSchema, type LicenceRecordSummary } from "@raahsathi/contracts/identity";
+import type { PrismaClient } from "@prisma/client";
+
+import type { AuthenticatedContext } from "@/server/auth/auth-types";
+import { prisma } from "@/server/database/prisma";
+import { apiErrors } from "@/server/http/api-error";
+
+function toSummary(record: Readonly<{
+  id: string;
+  kind: "LEARNER";
+  syntheticReference: string;
+  vehicleClass: "LMV";
+  issuedAt: Date;
+  validUntil: Date;
+}>): LicenceRecordSummary {
+  return licenceRecordSchema.parse({
+    id: record.id,
+    kind: record.kind,
+    syntheticReference: record.syntheticReference,
+    vehicleClass: record.vehicleClass,
+    issuedAt: record.issuedAt.toISOString(),
+    validUntil: record.validUntil.toISOString(),
+  });
+}
+
+export async function listLicences(context: AuthenticatedContext, database: PrismaClient = prisma): Promise<readonly LicenceRecordSummary[]> {
+  const records = await database.licenceRecord.findMany({
+    where: { applicantId: context.applicantId },
+    orderBy: [{ validUntil: "desc" }, { id: "asc" }],
+  });
+  return licenceListSchema.parse({ licences: records.map(toSummary) }).licences;
+}
+
+export async function getLicence(context: AuthenticatedContext, id: string, database: PrismaClient = prisma): Promise<LicenceRecordSummary> {
+  const record = await database.licenceRecord.findFirst({ where: { id, applicantId: context.applicantId } });
+  if (!record) throw apiErrors.notFound();
+  return toSummary(record);
+}

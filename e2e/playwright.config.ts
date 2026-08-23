@@ -5,7 +5,10 @@ const baseURL = `http://localhost:${port}`;
 
 export default defineConfig({
   testDir: "./tests",
-  fullyParallel: true,
+  // Next.js development Server Actions intermittently close response streams under
+  // multi-worker compilation; serial execution keeps the documented local gate deterministic.
+  fullyParallel: false,
+  workers: 1,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 2 : 0,
   reporter: "html",

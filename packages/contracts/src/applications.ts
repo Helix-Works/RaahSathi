@@ -3,11 +3,11 @@ import { z } from "zod";
 export const serviceKeySchema = z.enum(["LEARNER_LICENCE", "PERMANENT_DRIVING_LICENCE"]);
 export const applicationSectionOrder = ["PERSONAL_DETAILS", "ADDRESS", "SERVICE_DETAILS", "DECLARATION"] as const;
 export const applicationSectionKeySchema = z.enum(applicationSectionOrder);
-export const applicationStatusCodeSchema = z.enum(["DRAFT", "IN_PROGRESS", "READY_FOR_IDENTITY"]);
+export const applicationStatusCodeSchema = z.enum(["DRAFT", "IN_PROGRESS", "READY_FOR_IDENTITY", "READY_FOR_PAYMENT"]);
 export const applicationNextActionCodeSchema = z.enum([
-  "COMPLETE_PERSONAL_DETAILS", "COMPLETE_ADDRESS", "COMPLETE_SERVICE_DETAILS", "COMPLETE_DECLARATION", "VERIFY_IDENTITY",
+  "COMPLETE_PERSONAL_DETAILS", "COMPLETE_ADDRESS", "COMPLETE_SERVICE_DETAILS", "COMPLETE_DECLARATION", "VERIFY_IDENTITY", "PAY_FEES",
 ]);
-export const applicationBlockingReasonCodeSchema = z.enum(["IDENTITY_VERIFICATION_REQUIRED"]);
+export const applicationBlockingReasonCodeSchema = z.enum(["IDENTITY_VERIFICATION_REQUIRED", "PAYMENT_REQUIRED"]);
 
 export const personalDetailsDataSchema = z.object({
   fullName: z.string().trim().min(2).max(80),
@@ -41,7 +41,10 @@ export const applicationSectionSchema = z.object({
   updatedAt: z.iso.datetime(),
 }).strict();
 export const applicationEventSchema = z.object({
-  id: z.uuid(), eventType: z.enum(["APPLICATION_CREATED", "SECTION_SAVED", "SECTION_COMPLETED", "WORKFLOW_ADVANCED"]),
+  id: z.uuid(), eventType: z.enum([
+    "APPLICATION_CREATED", "SECTION_SAVED", "SECTION_COMPLETED", "WORKFLOW_ADVANCED",
+    "IDENTITY_STARTED", "IDENTITY_RETRY_STARTED", "IDENTITY_VERIFIED",
+  ]),
   sectionKey: applicationSectionKeySchema.optional(), createdAt: z.iso.datetime(),
 }).strict();
 export const applicationSummarySchema = z.object({

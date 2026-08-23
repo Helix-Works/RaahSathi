@@ -39,8 +39,15 @@ GET  /api/v1/applications
 GET  /api/v1/applications/:id
 PATCH /api/v1/applications/:id/sections/:sectionKey
 POST /api/v1/applications/:id/steps/:stepKey/complete
+GET  /api/v1/applications/:id/identity-attempts/latest
+POST /api/v1/applications/:id/identity-attempts
+POST /api/v1/applications/:id/identity-attempts/:attemptId/retry
+GET  /api/v1/licences
+GET  /api/v1/licences/:id
 ```
 
 Application mutations use optimistic `expectedRevision` values for safe multi-page draft editing. Completion is ordered and idempotent. Responses derive `statusCode`, `progressPercent`, `nextActionCode`, and `blockingReasonCode` on the server and include immutable history events.
+
+Identity start and retry accept no browser-selected provider outcome. The server derives deterministic synthetic outcomes from persisted scenario state, preserves application sections on failure, and advances verified applications exactly once. Document responses contain metadata only; licence queries are owner scoped.
 
 Mutation schemas are strict. Cookies are same-origin, opaque, HttpOnly, and server managed. Cookie-authenticated mutations require a session-bound CSRF token and exact Origin validation. Ownership filtering occurs in server services and database queries, never in client code.

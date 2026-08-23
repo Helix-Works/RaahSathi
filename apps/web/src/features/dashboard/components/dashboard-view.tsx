@@ -49,6 +49,7 @@ function statusPresentation(
   if (code === "DRAFT") return { label: messages.statusDraft, tone: "neutral" };
   if (code === "IN_PROGRESS") return { label: messages.statusInProgress, tone: "warning" };
   if (code === "READY_FOR_IDENTITY") return { label: messages.statusReadyForIdentity, tone: "success" };
+  if (code === "READY_FOR_PAYMENT") return { label: messages.statusReadyForPayment, tone: "success" };
 
   return { label: messages.statusUnknown, tone: "neutral" };
 }
@@ -67,6 +68,7 @@ function nextActionPresentation(
 
   if (code.startsWith("COMPLETE_")) return messages.nextActionResumeApplication;
   if (code === "VERIFY_IDENTITY") return messages.nextActionVerifyIdentity;
+  if (code === "PAY_FEES") return messages.nextActionPayFees;
 
   return messages.nextActionUnknown;
 }
@@ -77,6 +79,7 @@ function blockingReasonPresentation(
 ): string {
   if (code === "NO_SUITABLE_SLOT") return messages.blockingNoSuitableSlot;
   if (code === "IDENTITY_VERIFICATION_REQUIRED") return messages.blockingIdentityRequired;
+  if (code === "PAYMENT_REQUIRED") return messages.blockingPaymentRequired;
   return messages.blockingUnknown;
 }
 
