@@ -11,7 +11,7 @@ export function PrototypeDisclosure({
 }: PrototypeDisclosureProps) {
   return (
     <aside
-      className="flex gap-3 rounded-2xl border border-primary/20 bg-secondary p-4 text-secondary-foreground"
+      className="flex gap-3 rounded-md border border-primary-foreground/30 bg-primary-foreground/5 p-4 text-primary-foreground"
       aria-labelledby="prototype-disclosure-title"
     >
       <ShieldCheck className="mt-0.5 size-5 shrink-0" aria-hidden="true" />

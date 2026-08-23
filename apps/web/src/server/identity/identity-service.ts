@@ -37,8 +37,11 @@ export function isRetryableIdentityOutcome(outcome: IdentityOutcome): boolean {
 }
 
 export function isIdentityConcurrencyConflict(error: unknown): boolean {
-  return error instanceof Prisma.PrismaClientKnownRequestError
-    && (error.code === "P2002" || error.code === "P2034");
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+
+  return error.code === "P2002"
+    || error.code === "P2034"
+    || (error.code === "P2010" && error.meta?.code === "40001");
 }
 
 function toContext(record: IdentityRecord): IdentityContext {

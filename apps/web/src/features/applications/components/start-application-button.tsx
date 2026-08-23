@@ -8,7 +8,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { startApplication } from "@/features/applications/api";
 
-export function StartApplicationButton({ serviceKey, label, loginPath }: Readonly<{ serviceKey: ServiceKey; label: string; loginPath: string }>) {
+export function StartApplicationButton({ serviceKey, label, errorLabel, loginPath }: Readonly<{ serviceKey: ServiceKey; label: string; errorLabel: string; loginPath: string }>) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -33,11 +33,11 @@ export function StartApplicationButton({ serviceKey, label, loginPath }: Readonl
 
   return (
     <div className="space-y-2">
-      <Button type="button" onClick={start} disabled={pending}>
+      <Button className="w-full sm:w-auto" type="button" size="lg" onClick={start} disabled={pending}>
         {pending ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : null}
         {label}
       </Button>
-      {failed ? <p className="text-sm text-destructive" role="alert">Unable to start safely. Please try again.</p> : null}
+      {failed ? <p className="border-l-2 border-foreground pl-2 text-sm font-bold text-foreground" role="alert">{errorLabel}</p> : null}
     </div>
   );
 }

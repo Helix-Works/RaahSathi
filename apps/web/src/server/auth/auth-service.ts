@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { OtpChallenge, SessionSummary, VerifyOtpInput } from "@raahsathi/contracts/auth";
-import type { PreferredLocale } from "@prisma/client";
+import { Prisma, type PreferredLocale } from "@prisma/client";
 
 import { getServerEnvironment } from "@/server/config/environment";
 import { prisma } from "@/server/database/prisma";
@@ -17,6 +17,13 @@ function databaseLocale(locale: "en" | "hi"): PreferredLocale {
   return locale === "hi" ? "HI" : "EN";
 }
 
+export async function acquireAuthTransactionLock(
+  database: Prisma.TransactionClient,
+  lockKey: string,
+): Promise<void> {
+  await database.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${lockKey}))::text`;
+}
+
 export async function requestOtp(
   mobileNumber: string,
   correlationId: string,
@@ -29,7 +36,7 @@ export async function requestOtp(
   const windowStart = new Date(now.getTime() - authPolicy.requestWindowMs);
 
   const result = await prisma.$transaction(async (database) => {
-    await database.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${lookupHash}))`;
+    await acquireAuthTransactionLock(database, lookupHash);
     await database.authAttempt.updateMany({
       where: { mobileLookupHash: lookupHash, status: "PENDING", expiresAt: { lte: now } },
       data: { status: "EXPIRED" },
@@ -108,7 +115,7 @@ export async function verifyOtp(
 ): Promise<Readonly<{ summary: SessionSummary; sessionToken: string; csrfToken: string; absoluteExpiresAt: Date }>> {
   const environment = getServerEnvironment();
   const result = await prisma.$transaction(async (database) => {
-    await database.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${input.challengeId}))`;
+    await acquireAuthTransactionLock(database, input.challengeId);
     const attempt = await database.authAttempt.findUnique({ where: { id: input.challengeId }, include: { applicant: true } });
     if (!attempt || attempt.status === "VERIFIED" || attempt.status === "SUPERSEDED" || attempt.status === "PROVIDER_FAILED") {
       return { kind: "invalid" as const };

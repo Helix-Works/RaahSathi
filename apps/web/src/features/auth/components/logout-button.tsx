@@ -17,9 +17,11 @@ export type AccountPresentation = Readonly<{
 export function LogoutButton({
   presentation,
   className,
+  buttonClassName,
 }: Readonly<{
   presentation: AccountPresentation;
   className?: string;
+  buttonClassName?: string;
 }>) {
   const router = useRouter();
   const [state, setState] = useState<"idle" | "submitting" | "error">("idle");
@@ -39,6 +41,7 @@ export function LogoutButton({
   return (
     <div className={className}>
       <Button
+        className={buttonClassName}
         variant="ghost"
         size="sm"
         onClick={logout}

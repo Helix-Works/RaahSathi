@@ -8,7 +8,14 @@ import {
   NextActionCard,
   StatusBadge,
 } from "@/components/shared/state-presentations";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import type { DashboardSummary } from "@/features/dashboard/types";
 import type { Locale, MessageDictionary } from "@/i18n";
 
@@ -120,16 +127,16 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
     : 0;
 
   return (
-    <div className="mx-auto max-w-6xl space-y-10 px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-      <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-end">
+    <div className="mx-auto max-w-[80rem] space-y-9 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
+      <div className="grid gap-6 border-b border-border-strong pb-8 lg:grid-cols-[1fr_auto] lg:items-end">
         <PageHeader
           eyebrow={dashboard.eyebrow}
           title={dashboard.title}
           description={dashboard.description}
         />
-        <div className="rounded-2xl border border-border bg-card px-5 py-4 lg:min-w-52">
+        <div className="border-l-2 border-foreground pl-4 lg:min-w-52">
           <p className="text-sm text-muted-foreground">{dashboard.greeting}</p>
-          <p className="font-black">{dashboard.syntheticCitizen}</p>
+          <p className="text-lg font-black">{dashboard.syntheticCitizen}</p>
         </div>
       </div>
 
@@ -147,26 +154,26 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
           />
         </div>
       ) : (
-        <section className="space-y-6" aria-labelledby="active-application-title">
-          <Card>
-            <CardHeader className="gap-4 border-b border-border">
+        <section className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]" aria-labelledby="active-application-title">
+          <Card className="overflow-hidden border-foreground">
+            <CardHeader className="gap-4 border-b border-primary-foreground/25 bg-primary text-primary-foreground">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="eyebrow">{dashboard.activeApplicationTitle}</p>
+                <p className="text-xs font-black uppercase tracking-[0.12em] text-primary-foreground/65">{dashboard.activeApplicationTitle}</p>
                 <StatusBadge tone={applicationStatus.tone}>
                   {applicationStatus.label}
                 </StatusBadge>
               </div>
               <div className="space-y-2">
-                <h2 id="active-application-title" className="text-2xl font-black tracking-tight">
+                <CardTitle id="active-application-title" className="text-2xl font-black text-primary-foreground sm:text-3xl">
                   {serviceName(application.serviceKey, messages)}
-                </h2>
-                <p className="text-sm leading-6 text-muted-foreground">
+                </CardTitle>
+                <CardDescription className="max-w-xl text-primary-foreground/70">
                   {dashboard.currentWorkDescription}
-                </p>
+                </CardDescription>
               </div>
             </CardHeader>
             <CardContent className="grid gap-6 pt-6 md:grid-cols-[1fr_auto] md:items-end">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <div className="flex items-center justify-between gap-3 text-sm font-bold">
                   <span>{dashboard.progressLabel}</span>
                   <span>
@@ -176,21 +183,7 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                     %
                   </span>
                 </div>
-                <div
-                  className="h-2 overflow-hidden rounded-full bg-muted"
-                  role="progressbar"
-                  aria-label={dashboard.progressLabel}
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  aria-valuenow={applicationProgress}
-                >
-                  <div
-                    className="h-full rounded-full bg-primary"
-                    style={{
-                      width: `${applicationProgress}%`,
-                    }}
-                  />
-                </div>
+                <Progress value={applicationProgress} label={dashboard.progressLabel} />
               </div>
               <p className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock3 className="size-4" aria-hidden="true" />
@@ -200,41 +193,42 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
             </CardContent>
           </Card>
 
-          {application.blockingReasonCode ? (
-            <BlockingReasonAlert
-              title={dashboard.blockingTitle}
-              description={blockingReasonPresentation(
-                application.blockingReasonCode,
-                dashboard,
-              )}
+          <div className="space-y-5">
+            <NextActionCard
+              title={nextActionPresentation(application.nextActionCode, dashboard)}
+              description={dashboard.nextActionDescription}
+              actionLabel={messages.common.continue}
+              actionHref={`/applications/${application.id}`}
             />
-          ) : null}
-
-          <NextActionCard
-            title={nextActionPresentation(application.nextActionCode, dashboard)}
-            description={dashboard.nextActionDescription}
-            actionLabel={messages.common.continue}
-            actionHref={`/applications/${application.id}`}
-          />
+            {application.blockingReasonCode ? (
+              <BlockingReasonAlert
+                title={dashboard.blockingTitle}
+                description={blockingReasonPresentation(
+                  application.blockingReasonCode,
+                  dashboard,
+                )}
+              />
+            ) : null}
+          </div>
         </section>
       )}
 
       {summary.offer || summary.appointment || summary.licence ? (
-        <section className="space-y-5" aria-labelledby="support-summary-title">
-          <h2 id="support-summary-title" className="text-2xl font-black tracking-tight">
+        <section className="space-y-5 pt-2" aria-labelledby="support-summary-title">
+          <h2 id="support-summary-title" className="text-2xl font-black tracking-[-0.025em]">
             {dashboard.supportTitle}
           </h2>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="border-t border-border-strong">
             {summary.offer ? (
-              <Card>
-                <CardContent className="space-y-4 py-6">
-                  <span className="grid size-11 place-items-center rounded-xl bg-warning/10 text-warning">
+              <article className="grid gap-4 border-b border-border-strong py-5 md:grid-cols-[3rem_0.65fr_1.35fr] md:items-center">
+                  <span className="grid size-11 place-items-center border border-foreground bg-card">
                     <TicketCheck className="size-5" aria-hidden="true" />
                   </span>
-                  <StatusBadge tone="warning">{dashboard.offerStatus}</StatusBadge>
                   <div className="space-y-2">
+                    <StatusBadge tone="warning">{dashboard.offerStatus}</StatusBadge>
                     <h3 className="text-xl font-extrabold">{dashboard.offerTitle}</h3>
-                    <p className="leading-7 text-muted-foreground">
+                  </div>
+                  <p className="leading-6 text-muted-foreground">
                       {replaceDashboardTokens(dashboard.offerDescription, {
                         rto: localizedCodeLabel(
                           dashboard.rtoNames,
@@ -247,22 +241,20 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                           messages.status.unavailable,
                         ),
                       })}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                  </p>
+              </article>
             ) : null}
 
             {summary.appointment ? (
-              <Card>
-                <CardContent className="space-y-4 py-6">
-                  <span className="grid size-11 place-items-center rounded-xl bg-success/10 text-success">
+              <article className="grid gap-4 border-b border-border-strong py-5 md:grid-cols-[3rem_0.65fr_1.35fr] md:items-center">
+                  <span className="grid size-11 place-items-center border border-foreground bg-card">
                     <CalendarClock className="size-5" aria-hidden="true" />
                   </span>
-                  <StatusBadge tone="success">{dashboard.appointmentStatus}</StatusBadge>
                   <div className="space-y-2">
+                    <StatusBadge tone="success">{dashboard.appointmentStatus}</StatusBadge>
                     <h3 className="text-xl font-extrabold">{dashboard.appointmentTitle}</h3>
-                    <p className="leading-7 text-muted-foreground">
+                  </div>
+                  <p className="leading-6 text-muted-foreground">
                       {replaceDashboardTokens(dashboard.appointmentDescription, {
                         rto: localizedCodeLabel(
                           dashboard.rtoNames,
@@ -275,21 +267,19 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                           messages.status.unavailable,
                         ),
                       })}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                  </p>
+              </article>
             ) : null}
 
             {summary.licence ? (
-              <Card>
-                <CardContent className="space-y-4 py-6">
-                  <span className="grid size-11 place-items-center rounded-xl bg-secondary text-primary">
+              <article className="grid gap-4 border-b border-border-strong py-5 md:grid-cols-[3rem_0.65fr_1.35fr] md:items-center">
+                  <span className="grid size-11 place-items-center border border-foreground bg-card">
                     <IdCard className="size-5" aria-hidden="true" />
                   </span>
-                  <div className="space-y-2">
+                  <div>
                     <h3 className="text-xl font-extrabold">{dashboard.licenceTitle}</h3>
-                    <p className="leading-7 text-muted-foreground">
+                  </div>
+                  <p className="leading-6 text-muted-foreground">
                       {dashboard.licenceDescription.replace(
                         "{vehicleClass}",
                         localizedCodeLabel(
@@ -298,10 +288,8 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                           messages.status.unavailable,
                         ),
                       )}
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
+                  </p>
+              </article>
             ) : null}
           </div>
         </section>

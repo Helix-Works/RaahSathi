@@ -1,16 +1,17 @@
 import type { ServiceKey, ServiceSummary } from "@raahsathi/contracts";
+import { CheckCircle2 } from "lucide-react";
 
 import { PageHeader } from "@/components/shared/page-header";
 import {
   EmptyState,
   ErrorState,
 } from "@/components/shared/state-presentations";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { StartApplicationButton } from "@/features/applications/components/start-application-button";
-import { getServices } from "@/features/services/api";
+import { getMockServices } from "@/features/services/api/mock";
 import { getDictionary, type MessageDictionary } from "@/i18n";
 import { getRequestLocale } from "@/i18n/locale";
-import { ApiClientError } from "@/lib/api";
+import { dataSource } from "@/lib/data-source";
+import { listAvailableServices } from "@/server/applications/service-catalogue";
 
 function getServiceCopy(
   serviceKey: ServiceKey,
@@ -36,13 +37,12 @@ export default async function ServicesPage() {
   let services: readonly ServiceSummary[];
 
   try {
-    services = await getServices();
-  } catch (error) {
-    const correlationId =
-      error instanceof ApiClientError ? error.correlationId : undefined;
-
+    services = dataSource === "real"
+      ? listAvailableServices()
+      : await getMockServices();
+  } catch {
     return (
-      <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+      <div className="mx-auto max-w-[80rem] space-y-8 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
         <PageHeader
           eyebrow={messages.services.eyebrow}
           title={messages.services.title}
@@ -53,7 +53,6 @@ export default async function ServicesPage() {
           description={messages.errors.servicesDescription}
           retryLabel={messages.common.retry}
           retryHref="/services"
-          correlationId={correlationId}
           correlationLabel={messages.errors.correlationLabel}
         />
       </div>
@@ -61,12 +60,17 @@ export default async function ServicesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-8 px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
-      <PageHeader
-        eyebrow={messages.services.eyebrow}
-        title={messages.services.title}
-        description={messages.services.description}
-      />
+    <div className="mx-auto max-w-[80rem] space-y-8 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
+      <div className="grid gap-6 border-b border-border-strong pb-8 lg:grid-cols-[1fr_20rem] lg:items-end">
+        <PageHeader
+          eyebrow={messages.services.eyebrow}
+          title={messages.services.title}
+          description={messages.services.description}
+        />
+        <p className="border-l-2 border-foreground pl-4 text-sm font-bold leading-6 text-muted-foreground">
+          {messages.disclosure.description}
+        </p>
+      </div>
 
       {services.length === 0 ? (
         <EmptyState
@@ -74,20 +78,35 @@ export default async function ServicesPage() {
           description={messages.services.emptyDescription}
         />
       ) : (
-        <div className="grid gap-5 md:grid-cols-2">
-          {services.map((service) => {
+        <div className="grid border-t border-border-strong">
+          {services.map((service, index) => {
             const copy = getServiceCopy(service.serviceKey, messages.services);
 
             return (
-              <Card key={service.serviceKey} className="flex h-full flex-col">
-                <CardHeader>
-                  <h2 className="text-2xl font-black tracking-tight">{copy.name}</h2>
-                  <p className="leading-7 text-muted-foreground">{copy.description}</p>
-                </CardHeader>
-                <CardContent className="mt-auto">
-                  <StartApplicationButton serviceKey={service.serviceKey} label={messages.common.continue} loginPath="/login?returnTo=/services" />
-                </CardContent>
-              </Card>
+              <article
+                key={service.serviceKey}
+                className="grid gap-5 border-b border-border-strong bg-card px-5 py-6 md:grid-cols-[3.5rem_1fr] md:px-6 lg:grid-cols-[4rem_1fr_auto] lg:items-center lg:gap-8 lg:px-7 lg:py-7"
+              >
+                <p className="text-3xl font-black tracking-[-0.04em] text-muted-foreground" aria-hidden="true">
+                  {String(index + 1).padStart(2, "0")}
+                </p>
+                <div className="space-y-3">
+                  <span className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.08em]">
+                    <CheckCircle2 className="size-4" aria-hidden="true" />
+                    {messages.services.availableStatus}
+                  </span>
+                  <h2 className="text-xl font-black leading-snug tracking-[-0.025em] sm:text-2xl">{copy.name}</h2>
+                  <p className="max-w-2xl leading-6 text-muted-foreground">{copy.description}</p>
+                </div>
+                <div className="md:col-start-2 lg:col-start-auto">
+                  <StartApplicationButton
+                    serviceKey={service.serviceKey}
+                    label={messages.common.continue}
+                    errorLabel={messages.services.startFailed}
+                    loginPath="/login?returnTo=/services"
+                  />
+                </div>
+              </article>
             );
           })}
         </div>

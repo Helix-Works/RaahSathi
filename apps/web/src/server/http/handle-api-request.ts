@@ -1,3 +1,5 @@
+import { Prisma } from "@prisma/client";
+
 import { ApiError, type ApiErrorBody } from "./api-error";
 import { getCorrelationId } from "./correlation-id";
 
@@ -7,6 +9,29 @@ export interface ApiRequestContext {
 }
 
 type ApiHandler = (context: ApiRequestContext) => Promise<Response> | Response;
+
+const safePrismaMetaKeys = [
+  "code",
+  "modelName",
+  "table",
+  "column",
+  "constraint",
+  "field_name",
+  "target",
+] as const;
+
+function safePrismaMeta(meta: Record<string, unknown> | undefined): Readonly<Record<string, unknown>> | undefined {
+  if (!meta) return undefined;
+
+  const safeEntries = safePrismaMetaKeys.flatMap((key) => {
+    const value = meta[key];
+    const isSafeValue = typeof value === "string"
+      || (Array.isArray(value) && value.every((item) => typeof item === "string"));
+    return isSafeValue ? [[key, value] as const] : [];
+  });
+
+  return safeEntries.length > 0 ? Object.fromEntries(safeEntries) : undefined;
+}
 
 function errorResponse(error: ApiError, correlationId: string): Response {
   const body: ApiErrorBody = {
@@ -35,11 +60,20 @@ export async function handleApiRequest(request: Request, handler: ApiHandler): P
       : new ApiError(500, "INTERNAL_SERVER_ERROR", "errors.internalServerError");
 
     if (!(reason instanceof ApiError) || error.status >= 500) {
+      const prismaDiagnostics = process.env.NODE_ENV !== "production"
+        && reason instanceof Prisma.PrismaClientKnownRequestError
+        ? {
+            prismaCode: reason.code,
+            prismaMeta: safePrismaMeta(reason.meta),
+          }
+        : {};
+
       console.error(JSON.stringify({
         correlationId,
         exceptionType: reason instanceof Error ? reason.constructor.name : "UnknownException",
         method: request.method,
         path: new URL(request.url).pathname,
+        ...prismaDiagnostics,
       }));
     }
     response = errorResponse(error, correlationId);

@@ -8,91 +8,57 @@ import { StatusBadge } from "@/components/shared/state-presentations";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { retryIdentity, startIdentity } from "@/features/identity/api";
-import type { Locale } from "@/i18n";
-
-const copy = {
-  en: {
-    title: "Synthetic identity verification",
-    description: "RaahSathi sends synthetic metadata to a simulated provider. No real document is uploaded or stored.",
-    start: "Start synthetic verification",
-    retry: "Retry safely",
-    pending: "Checking synthetic identity",
-    documents: "Synthetic document metadata",
-    identityProof: "Identity proof metadata",
-    addressProof: "Address proof metadata",
-    reference: "Synthetic reference",
-    error: "Identity verification could not be updated. Your completed application sections remain safe.",
-    outcomeLabels: {
-      VERIFIED: "Verified",
-      OTP_INVALID: "OTP rejected",
-      USER_MISMATCH: "Review required",
-      TIMEOUT: "Timed out",
-      PROVIDER_UNAVAILABLE: "Provider unavailable",
-      RETRY_REQUIRED: "Retry required",
-    },
-    outcomes: {
-      VERIFIED: "Identity verified. Your application is ready for the payment phase.",
-      OTP_INVALID: "The simulated provider rejected the OTP. Retry without re-entering application details.",
-      USER_MISMATCH: "The simulated identity does not match this application. Review is required before continuing.",
-      TIMEOUT: "The simulated provider timed out. Your progress is safe and this attempt can be retried.",
-      PROVIDER_UNAVAILABLE: "The simulated provider is unavailable. Your progress is safe and this attempt can be retried.",
-      RETRY_REQUIRED: "The simulated provider requires a fresh attempt. Your completed sections remain saved.",
-    },
-  },
-  hi: {
-    title: "कृत्रिम पहचान सत्यापन",
-    description: "राहसाथी केवल कृत्रिम मेटाडेटा एक नकली प्रदाता को भेजता है। कोई वास्तविक दस्तावेज़ अपलोड या संग्रहीत नहीं होता।",
-    start: "कृत्रिम सत्यापन शुरू करें",
-    retry: "सुरक्षित रूप से फिर प्रयास करें",
-    pending: "कृत्रिम पहचान जाँची जा रही है",
-    documents: "कृत्रिम दस्तावेज़ मेटाडेटा",
-    identityProof: "पहचान प्रमाण मेटाडेटा",
-    addressProof: "पता प्रमाण मेटाडेटा",
-    reference: "कृत्रिम संदर्भ",
-    error: "पहचान सत्यापन अपडेट नहीं हो सका। आपके पूरे किए गए आवेदन भाग सुरक्षित हैं।",
-    outcomeLabels: {
-      VERIFIED: "सत्यापित",
-      OTP_INVALID: "ओटीपी अस्वीकृत",
-      USER_MISMATCH: "समीक्षा आवश्यक",
-      TIMEOUT: "समय समाप्त",
-      PROVIDER_UNAVAILABLE: "प्रदाता अनुपलब्ध",
-      RETRY_REQUIRED: "पुनः प्रयास आवश्यक",
-    },
-    outcomes: {
-      VERIFIED: "पहचान सत्यापित हो गई। आपका आवेदन भुगतान चरण के लिए तैयार है।",
-      OTP_INVALID: "नकली प्रदाता ने ओटीपी अस्वीकार किया। आवेदन विवरण दोबारा भरे बिना फिर प्रयास करें।",
-      USER_MISMATCH: "कृत्रिम पहचान इस आवेदन से मेल नहीं खाती। आगे बढ़ने से पहले समीक्षा आवश्यक है।",
-      TIMEOUT: "नकली प्रदाता का समय समाप्त हो गया। आपकी प्रगति सुरक्षित है और फिर प्रयास किया जा सकता है।",
-      PROVIDER_UNAVAILABLE: "नकली प्रदाता उपलब्ध नहीं है। आपकी प्रगति सुरक्षित है और फिर प्रयास किया जा सकता है।",
-      RETRY_REQUIRED: "नकली प्रदाता को नया प्रयास चाहिए। आपके पूरे किए गए भाग सुरक्षित हैं।",
-    },
-  },
-} as const;
+import type { MessageDictionary } from "@/i18n";
 
 function outcomeTone(outcome: IdentityOutcome): "success" | "warning" | "neutral" {
   return outcome === "VERIFIED" ? "success" : outcome === "USER_MISMATCH" ? "neutral" : "warning";
 }
 
-export function IdentityRecoveryPanel({ applicationId, initialContext, locale }: Readonly<{
+export function IdentityRecoveryPanel({ applicationId, initialContext, messages: dictionary, onApplicationChanged }: Readonly<{
   applicationId: string;
   initialContext: IdentityContext;
-  locale: Locale;
+  messages: MessageDictionary;
+  onApplicationChanged: () => Promise<void>;
 }>) {
-  const messages = copy[locale];
+  const messages = dictionary.identity;
+  const outcomeLabels: Readonly<Record<IdentityOutcome, string>> = {
+    VERIFIED: messages.verified,
+    OTP_INVALID: messages.otpInvalid,
+    USER_MISMATCH: messages.userMismatch,
+    TIMEOUT: messages.timeout,
+    PROVIDER_UNAVAILABLE: messages.providerUnavailable,
+    RETRY_REQUIRED: messages.retryRequired,
+  };
+  const outcomes: Readonly<Record<IdentityOutcome, string>> = {
+    VERIFIED: messages.verifiedDescription,
+    OTP_INVALID: messages.otpInvalidDescription,
+    USER_MISMATCH: messages.userMismatchDescription,
+    TIMEOUT: messages.timeoutDescription,
+    PROVIDER_UNAVAILABLE: messages.providerUnavailableDescription,
+    RETRY_REQUIRED: messages.retryRequiredDescription,
+  };
   const [context, setContext] = useState(initialContext);
   const [pending, setPending] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<"identity" | "refresh">();
 
   const run = async (action: "start" | "retry") => {
     setPending(true);
-    setFailed(false);
+    setFailure(undefined);
     try {
       const updated = action === "start" || !context.attempt
         ? await startIdentity(applicationId)
         : await retryIdentity(applicationId, context.attempt.id);
       setContext(updated);
     } catch {
-      setFailed(true);
+      setFailure("identity");
+      setPending(false);
+      return;
+    }
+
+    try {
+      await onApplicationChanged();
+    } catch {
+      setFailure("refresh");
     } finally {
       setPending(false);
     }
@@ -103,13 +69,13 @@ export function IdentityRecoveryPanel({ applicationId, initialContext, locale }:
       <CardHeader className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-2xl font-black">{messages.title}</h2>
-          {context.attempt ? <StatusBadge tone={outcomeTone(context.attempt.outcome)}>{messages.outcomeLabels[context.attempt.outcome]}</StatusBadge> : null}
+          {context.attempt ? <StatusBadge tone={outcomeTone(context.attempt.outcome)}>{outcomeLabels[context.attempt.outcome]}</StatusBadge> : null}
         </div>
         <p className="leading-7 text-muted-foreground">{messages.description}</p>
       </CardHeader>
       <CardContent className="space-y-5">
-        {context.attempt ? <p role="status" className="rounded-xl border bg-muted/40 p-4 font-semibold">{messages.outcomes[context.attempt.outcome]}</p> : null}
-        {failed ? <p role="alert" className="rounded-xl border border-destructive/40 p-4 text-sm font-semibold text-destructive">{messages.error}</p> : null}
+        {context.attempt ? <p role="status" className="rounded-xl border bg-muted/40 p-4 font-semibold">{outcomes[context.attempt.outcome]}</p> : null}
+        {failure ? <p role="alert" className="rounded-xl border border-destructive/40 p-4 text-sm font-semibold text-destructive">{failure === "refresh" ? messages.refreshError : messages.genericError}</p> : null}
         {context.documents.length > 0 ? (
           <section className="space-y-3" aria-labelledby="synthetic-documents-title">
             <h3 id="synthetic-documents-title" className="font-black">{messages.documents}</h3>

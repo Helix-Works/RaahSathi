@@ -2,32 +2,39 @@
 
 :root {
   color-scheme: light;
-  --background: #f1f5f1;
-  --foreground: #17201b;
-  --card: #fffdf7;
-  --card-foreground: #17201b;
-  --muted: #edf1ed;
-  --muted-foreground: #59645e;
-  --border: #dce3dd;
-  --primary: #176b45;
+  --background: #f5f5f2;
+  --foreground: #11110f;
+  --surface: #ffffff;
+  --surface-muted: #ecece8;
+  --surface-strong: #191917;
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --muted: var(--surface-muted);
+  --muted-foreground: #5e5e58;
+  --border: #c8c8c1;
+  --border-strong: #777770;
+  --primary: var(--surface-strong);
   --primary-foreground: #ffffff;
-  --secondary: #e7f3ec;
-  --secondary-foreground: #114d33;
-  --success: #18794e;
-  --warning: #a15c00;
-  --error: #b42318;
-  --focus: #176b45;
-  --background-accent: #dcecdf;
+  --secondary: #e7e7e2;
+  --secondary-foreground: var(--foreground);
+  --success: #1f1f1c;
+  --warning: #464640;
+  --error: #11110f;
+  --focus: #11110f;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-surface-strong: var(--surface-strong);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-secondary: var(--secondary);
@@ -45,7 +52,7 @@
 html {
   min-width: 320px;
   overflow-x: hidden;
-  scroll-padding-top: 5.5rem;
+  scroll-padding-top: 6rem;
   background: var(--background);
 }
 
@@ -54,10 +61,9 @@ body {
   margin: 0;
   overflow-x: hidden;
   color: var(--foreground);
-  background:
-    radial-gradient(circle at top left, var(--background-accent) 0, transparent 34rem),
-    var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--background);
+  font-family: Arial, "Nirmala UI", "Mangal", sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
 a {
@@ -66,8 +72,15 @@ a {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
 }
 
 .skip-link {
@@ -76,7 +89,8 @@ input {
   top: 0.75rem;
   left: 0.75rem;
   transform: translateY(-150%);
-  border-radius: 0.75rem;
+  border: 1px solid var(--primary-foreground);
+  border-radius: 0.25rem;
   color: var(--primary-foreground);
   background: var(--primary);
   padding: 0.75rem 1rem;
@@ -90,10 +104,11 @@ input {
 
 .eyebrow {
   margin: 0;
-  color: var(--primary);
-  font-size: 0.78rem;
-  font-weight: 800;
-  letter-spacing: 0.075em;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 900;
+  line-height: 1.55;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
@@ -105,9 +120,32 @@ p {
   overflow-wrap: anywhere;
 }
 
+html:lang(hi) h1,
+html:lang(hi) h2,
+html:lang(hi) h3 {
+  line-height: 1.24;
+  letter-spacing: -0.01em;
+}
+
+html:lang(hi) .eyebrow {
+  line-height: 1.7;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+html:lang(hi) button,
+html:lang(hi) [role="button"] {
+  line-height: 1.5;
+}
+
+::selection {
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
 :focus-visible {
   outline: 0.2rem solid var(--focus);
-  outline-offset: 0.2rem;
+  outline-offset: 0.22rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

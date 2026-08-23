@@ -6,9 +6,15 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
-import { Alert } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authApi } from "@/features/auth/api";
@@ -50,8 +56,8 @@ function ApiErrorSummary({
 
   return (
     <Alert ref={summaryRef} variant="error" role="alert" tabIndex={-1}>
-      <p className="font-extrabold">{title}</p>
-      <p>{error.message}</p>
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription>{error.message}</AlertDescription>
       {error.correlationId ? (
         <p className="mt-2 font-mono text-xs text-muted-foreground">
           {correlationLabel}: {error.correlationId}
@@ -168,31 +174,32 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
   };
 
   return (
-    <Card className="overflow-hidden border-primary/20">
-      <div className="h-1 bg-primary" aria-hidden="true" />
+    <Card className="overflow-hidden border-0 bg-transparent">
       <CardHeader>
-        <div className="grid size-12 place-items-center rounded-2xl bg-secondary text-primary">
+        <div className="grid size-12 place-items-center border border-foreground bg-primary text-primary-foreground">
           {challenge ? (
             <MessageSquareText className="size-6" aria-hidden="true" />
           ) : (
             <ShieldCheck className="size-6" aria-hidden="true" />
           )}
         </div>
-        <h2 className="text-2xl font-black">
+        <CardTitle>
           {challenge ? authMessages.sentTitle : authMessages.requestTitle}
-        </h2>
+        </CardTitle>
         {challenge ? (
-          <p className="leading-7 text-muted-foreground">
+          <CardDescription>
             {authMessages.sentDescription.replace(
               "{destination}",
               challenge.maskedDestination,
             )}
-          </p>
+          </CardDescription>
         ) : null}
       </CardHeader>
 
       <CardContent className="space-y-5">
-        <Alert variant="info">{authMessages.syntheticNotice}</Alert>
+        <Alert variant="info">
+          <AlertDescription>{authMessages.syntheticNotice}</AlertDescription>
+        </Alert>
 
         {apiError ? (
           <ApiErrorSummary

@@ -1,11 +1,18 @@
-import { ArrowRight, CircleAlert, Inbox } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  CircleAlert,
+  CircleMinus,
+  Inbox,
+  TriangleAlert,
+} from "lucide-react";
 import Link from "next/link";
 import type { ReactNode } from "react";
 
 import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
 
 export function LoadingState({ message }: Readonly<{ message: string }>) {
   return (
@@ -34,11 +41,11 @@ export function EmptyState({
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-        <span className="grid size-12 place-items-center rounded-full bg-muted text-muted-foreground">
+        <span className="grid size-12 place-items-center rounded-md border border-border bg-muted text-foreground">
           <Inbox className="size-6" aria-hidden="true" />
         </span>
         <h2 className="text-xl font-extrabold">{title}</h2>
-        <p className="max-w-lg leading-7 text-muted-foreground">{description}</p>
+        <p className="max-w-lg leading-6 text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
   );
@@ -64,17 +71,17 @@ export function ErrorState({
   const Heading = headingLevel === 1 ? "h1" : "h2";
 
   return (
-    <Card className="border-error/30" role="alert">
+    <Card className="border-foreground" role="alert">
       <CardContent className="flex flex-col items-start gap-4 py-8">
-        <span className="grid size-11 place-items-center rounded-full bg-error/10 text-error">
+        <span className="grid size-11 place-items-center rounded-md bg-primary text-primary-foreground">
           <CircleAlert className="size-6" aria-hidden="true" />
         </span>
         <div className="space-y-2">
           <Heading className="text-xl font-extrabold">{title}</Heading>
-          <p className="max-w-xl leading-7 text-muted-foreground">{description}</p>
+          <p className="max-w-xl leading-6 text-muted-foreground">{description}</p>
         </div>
         {correlationId && correlationLabel ? (
-          <p className="rounded-lg bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
+          <p className="rounded-sm border border-border bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
             {correlationLabel}: {correlationId}
           </p>
         ) : null}
@@ -89,10 +96,17 @@ export function ErrorState({
 }
 
 const badgeTones = {
-  neutral: "bg-muted text-muted-foreground",
-  success: "bg-success/10 text-success",
-  warning: "bg-warning/10 text-warning",
-  error: "bg-error/10 text-error",
+  neutral: "default",
+  success: "outline",
+  warning: "warning",
+  error: "inverse",
+} as const;
+
+const badgeIcons = {
+  neutral: CircleMinus,
+  success: Check,
+  warning: TriangleAlert,
+  error: CircleAlert,
 } as const;
 
 export function StatusBadge({
@@ -102,16 +116,13 @@ export function StatusBadge({
   children: ReactNode;
   tone?: keyof typeof badgeTones;
 }>) {
+  const Icon = badgeIcons[tone];
+
   return (
-    <span
-      className={cn(
-        "inline-flex min-h-7 items-center gap-2 rounded-full px-3 py-1 text-xs font-extrabold",
-        badgeTones[tone],
-      )}
-    >
-      <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+    <Badge variant={badgeTones[tone]} className="gap-2">
+      <Icon className="size-3.5" aria-hidden="true" />
       {children}
-    </span>
+    </Badge>
   );
 }
 
@@ -127,11 +138,11 @@ export function NextActionCard({
   actionHref?: string;
 }>) {
   return (
-    <Card className="overflow-hidden border-primary/20 bg-primary text-primary-foreground">
-      <CardContent className="grid gap-6 py-7 sm:grid-cols-[1fr_auto] sm:items-center sm:py-8">
+    <Card className="overflow-hidden border-primary bg-primary text-primary-foreground">
+      <CardContent className="grid gap-5 py-5 sm:grid-cols-[1fr_auto] sm:items-center sm:py-6">
         <div className="space-y-2">
-          <h2 className="text-2xl font-black tracking-tight">{title}</h2>
-          <p className="max-w-2xl leading-7 text-primary-foreground/80">
+          <h2 className="text-xl font-black leading-snug tracking-tight">{title}</h2>
+          <p className="max-w-2xl text-sm leading-6 text-primary-foreground/80 sm:text-base">
             {description}
           </p>
         </div>

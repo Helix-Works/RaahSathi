@@ -3,122 +3,293 @@
 import {
   applicationSectionOrder,
   type ApplicationDetail,
+  type ApplicationSectionData,
   type ApplicationSectionKey,
 } from "@raahsathi/contracts/applications";
-import { CheckCircle2, LoaderCircle } from "lucide-react";
+import type { IdentityContext } from "@raahsathi/contracts/identity";
+import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { completeSection, saveSection } from "@/features/applications/api";
-import type { Locale } from "@/i18n";
+import { StatusBadge } from "@/components/shared/state-presentations";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { completeSection, getApplication, saveSection } from "@/features/applications/api";
+import {
+  ApplicationSectionForm,
+  type SectionSubmitAction,
+} from "@/features/applications/components/application-section-form";
+import { IdentityRecoveryPanel } from "@/features/identity/components/identity-recovery-panel";
+import type { Locale, MessageDictionary } from "@/i18n";
 
-const copy = {
-  en: {
-    title: "Durable application", saved: "Draft saved in PostgreSQL.", save: "Save draft", complete: "Complete saved section",
-    progress: "Application progress", history: "Application history", personal: "Personal details", address: "Delhi address",
-    service: "Service details", declaration: "Declaration", name: "Synthetic full name", dob: "Synthetic date of birth",
-    district: "Delhi district", postal: "Synthetic postal code", vehicle: "Vehicle class", learner: "Synthetic learner licence reference",
-    accept: "I confirm this application uses synthetic data only.", error: "The change was not saved. Reload if another page updated this application.",
-    blocked: "Application sections are complete. Continue with the next step below.", completed: "Completed",
-  },
-  hi: {
-    title: "स्थायी आवेदन", saved: "ड्राफ्ट PostgreSQL में सहेजा गया।", save: "ड्राफ्ट सहेजें", complete: "सहेजा हुआ भाग पूरा करें",
-    progress: "आवेदन की प्रगति", history: "आवेदन का इतिहास", personal: "व्यक्तिगत विवरण", address: "दिल्ली का पता",
-    service: "सेवा विवरण", declaration: "घोषणा", name: "कृत्रिम पूरा नाम", dob: "कृत्रिम जन्मतिथि",
-    district: "दिल्ली जिला", postal: "कृत्रिम पिन कोड", vehicle: "वाहन वर्ग", learner: "कृत्रिम लर्नर लाइसेंस संदर्भ",
-    accept: "मैं पुष्टि करता/करती हूँ कि यह आवेदन केवल कृत्रिम डेटा का उपयोग करता है।", error: "बदलाव सहेजा नहीं गया। यदि किसी अन्य पेज ने आवेदन बदला है तो फिर लोड करें।",
-    blocked: "आवेदन के भाग पूरे हैं। नीचे दिए गए अगले चरण पर आगे बढ़ें।", completed: "पूरा",
-  },
-} as const;
+type ApplicationMessages = MessageDictionary["applications"];
+type SectionNames = Readonly<Record<ApplicationSectionKey, string>>;
 
-type ApplicationCopy = { [Key in keyof typeof copy.en]: string };
+const nextSection: Readonly<Partial<Record<ApplicationDetail["nextActionCode"], ApplicationSectionKey>>> = {
+  COMPLETE_PERSONAL_DETAILS: "PERSONAL_DETAILS",
+  COMPLETE_ADDRESS: "ADDRESS",
+  COMPLETE_SERVICE_DETAILS: "SERVICE_DETAILS",
+  COMPLETE_DECLARATION: "DECLARATION",
+};
 
-function sectionTitle(key: ApplicationSectionKey, messages: ApplicationCopy): string {
-  return key === "PERSONAL_DETAILS" ? messages.personal : key === "ADDRESS" ? messages.address : key === "SERVICE_DETAILS" ? messages.service : messages.declaration;
+function formatDelhiDate(value: string, locale: Locale): string {
+  return new Date(value).toLocaleString(locale === "hi" ? "hi-IN" : "en-IN", {
+    timeZone: "Asia/Kolkata",
+  });
 }
 
-function nextSection(application: ApplicationDetail): ApplicationSectionKey | undefined {
-  return applicationSectionOrder.find((key) => !application.sections.find((section) => section.sectionKey === key)?.completed);
+function ApplicationStatusCard({
+  application,
+  locale,
+  messages,
+}: Readonly<{
+  application: ApplicationDetail;
+  locale: Locale;
+  messages: ApplicationMessages;
+}>) {
+  const statuses = {
+    DRAFT: messages.statusDraft,
+    IN_PROGRESS: messages.statusInProgress,
+    READY_FOR_IDENTITY: messages.statusReadyForIdentity,
+    READY_FOR_PAYMENT: messages.statusReadyForPayment,
+  };
+  const actions = {
+    COMPLETE_PERSONAL_DETAILS: messages.nextPersonalDetails,
+    COMPLETE_ADDRESS: messages.nextAddress,
+    COMPLETE_SERVICE_DETAILS: messages.nextServiceDetails,
+    COMPLETE_DECLARATION: messages.nextDeclaration,
+    VERIFY_IDENTITY: messages.nextIdentity,
+    PAY_FEES: messages.nextPayment,
+  };
+  const blocking = application.blockingReasonCode === "IDENTITY_VERIFICATION_REQUIRED"
+    ? messages.blockingIdentity
+    : application.blockingReasonCode === "PAYMENT_REQUIRED"
+      ? messages.blockingPayment
+      : undefined;
+
+  return (
+    <Card>
+      <CardHeader>
+        <p className="text-sm font-bold uppercase tracking-widest">{messages.eyebrow}</p>
+        <h1 className="text-3xl font-black">{messages.detailTitle}</h1>
+        <p className="text-muted-foreground">{messages.detailDescription}</p>
+      </CardHeader>
+      <CardContent className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <p className="text-sm text-muted-foreground">{messages.statusLabel}</p>
+          <StatusBadge tone="neutral">{statuses[application.statusCode]}</StatusBadge>
+        </div>
+        <div>
+          <p className="text-sm text-muted-foreground">{messages.updatedLabel}</p>
+          <p className="font-bold">{formatDelhiDate(application.updatedAt, locale)}</p>
+        </div>
+        <div className="sm:col-span-2">
+          <div className="mb-2 flex justify-between font-bold">
+            <span>{messages.progressLabel}</span>
+            <span>{application.progressPercent}%</span>
+          </div>
+          <Progress value={application.progressPercent} label={messages.progressLabel} />
+        </div>
+        <div className="sm:col-span-2">
+          <p className="text-sm text-muted-foreground">{messages.nextActionLabel}</p>
+          <p className="font-bold">{actions[application.nextActionCode]}</p>
+        </div>
+        {blocking ? (
+          <Alert className="sm:col-span-2">
+            <AlertTitle>{messages.blockingTitle}</AlertTitle>
+            <AlertDescription>{blocking}</AlertDescription>
+          </Alert>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
 }
 
-function draftFor(application: ApplicationDetail, key: ApplicationSectionKey | undefined): Record<string, unknown> {
-  if (!key) return {};
-  const stored = application.sections.find((section) => section.sectionKey === key);
-  if (stored) return stored.data as Record<string, unknown>;
-  if (key === "ADDRESS") return { district: "CENTRAL" };
-  if (key === "SERVICE_DETAILS") return { vehicleClass: "LMV" };
-  return {};
+function ApplicationSectionsCard({
+  application,
+  currentKey,
+  messages,
+  sectionNames,
+}: Readonly<{
+  application: ApplicationDetail;
+  currentKey?: ApplicationSectionKey;
+  messages: ApplicationMessages;
+  sectionNames: SectionNames;
+}>) {
+  return (
+    <Card>
+      <CardHeader><CardTitle>{messages.sectionsTitle}</CardTitle></CardHeader>
+      <CardContent>
+        <ol className="grid gap-3 sm:grid-cols-2">
+          {applicationSectionOrder.map((key) => {
+            const completed = application.sections.some(
+              (section) => section.sectionKey === key && section.completed,
+            );
+            const state = completed
+              ? messages.completedSection
+              : key === currentKey
+                ? messages.currentSection
+                : messages.upcomingSection;
+
+            return (
+              <li key={key} className="rounded-xl border p-4">
+                <p className="font-bold">{sectionNames[key]}</p>
+                <p className="text-sm text-muted-foreground">{state}</p>
+              </li>
+            );
+          })}
+        </ol>
+      </CardContent>
+    </Card>
+  );
 }
 
-export function ApplicationEditor({ initialApplication, locale }: Readonly<{ initialApplication: ApplicationDetail; locale: Locale }>) {
-  const messages = copy[locale];
-  const [application, setApplication] = useState(initialApplication);
-  const currentKey = nextSection(application);
-  const stored = currentKey ? application.sections.find((section) => section.sectionKey === currentKey) : undefined;
-  const [data, setData] = useState<Record<string, unknown>>(() => draftFor(initialApplication, nextSection(initialApplication)));
-  const [pending, setPending] = useState(false);
-  const [notice, setNotice] = useState<string>();
-
-  const run = async (action: "save" | "complete") => {
-    if (!currentKey) return;
-    setPending(true);
-    setNotice(undefined);
-    try {
-      const updated = action === "save"
-        ? await saveSection({ applicationId: application.id, sectionKey: currentKey, expectedRevision: stored?.revision ?? 0, data })
-        : await completeSection(application.id, currentKey);
-      setApplication(updated);
-      setData(draftFor(updated, nextSection(updated)));
-      setNotice(action === "save" ? messages.saved : messages.completed);
-    } catch {
-      setNotice(messages.error);
-    } finally {
-      setPending(false);
-    }
+function ApplicationHistoryCard({
+  application,
+  locale,
+  messages,
+  sectionNames,
+}: Readonly<{
+  application: ApplicationDetail;
+  locale: Locale;
+  messages: ApplicationMessages;
+  sectionNames: SectionNames;
+}>) {
+  const historyLabels: Readonly<Record<ApplicationDetail["history"][number]["eventType"], string>> = {
+    APPLICATION_CREATED: messages.historyApplicationCreated,
+    SECTION_SAVED: messages.historySectionSaved,
+    SECTION_COMPLETED: messages.historySectionCompleted,
+    WORKFLOW_ADVANCED: messages.historyWorkflowAdvanced,
+    IDENTITY_STARTED: messages.historyIdentityStarted,
+    IDENTITY_RETRY_STARTED: messages.historyIdentityRetryStarted,
+    IDENTITY_VERIFIED: messages.historyIdentityVerified,
   };
 
   return (
+    <Card>
+      <CardHeader><CardTitle>{messages.historyTitle}</CardTitle></CardHeader>
+      <CardContent>
+        {application.history.length ? (
+          <ol className="space-y-3">
+            {application.history.slice(-6).reverse().map((event) => (
+              <li key={event.id} className="border-l-2 pl-3 text-sm">
+                <strong>{historyLabels[event.eventType] ?? messages.historyGeneric}</strong>
+                {event.sectionKey ? ` — ${sectionNames[event.sectionKey]}` : ""}
+                <br />
+                <span className="text-muted-foreground">
+                  {formatDelhiDate(event.createdAt, locale)}
+                </span>
+              </li>
+            ))}
+          </ol>
+        ) : <p>{messages.historyEmpty}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+export function ApplicationEditor({
+  initialApplication,
+  initialIdentity,
+  locale,
+  messages,
+}: Readonly<{
+  initialApplication: ApplicationDetail;
+  initialIdentity: IdentityContext;
+  locale: Locale;
+  messages: MessageDictionary;
+}>) {
+  const applicationMessages = messages.applications;
+  const [application, setApplication] = useState(initialApplication);
+  const [notice, setNotice] = useState<string>();
+  const currentKey = nextSection[application.nextActionCode];
+  const stored = currentKey
+    ? application.sections.find((section) => section.sectionKey === currentKey)
+    : undefined;
+  const sectionNames: SectionNames = {
+    PERSONAL_DETAILS: applicationMessages.personalDetails,
+    ADDRESS: applicationMessages.address,
+    SERVICE_DETAILS: applicationMessages.serviceDetails,
+    DECLARATION: applicationMessages.declaration,
+  };
+
+  const persist = async (
+    data: ApplicationSectionData,
+    action: SectionSubmitAction,
+    dirty: boolean,
+  ) => {
+    if (!currentKey) return;
+    let updated = application;
+    if (dirty || !stored) {
+      updated = await saveSection({
+        applicationId: application.id,
+        sectionKey: currentKey,
+        expectedRevision: stored?.revision ?? 0,
+        data,
+      });
+    }
+    if (action === "complete") updated = await completeSection(application.id, currentKey);
+    setApplication(updated);
+    setNotice(action === "save" ? applicationMessages.saved : applicationMessages.completed);
+  };
+  const refresh = async () => setApplication(await getApplication(application.id));
+
+  return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader><h1 className="text-3xl font-black">{messages.title}</h1></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex justify-between text-sm font-bold"><span id="application-progress-label">{messages.progress}</span><span>{application.progressPercent}%</span></div>
-          <div className="h-2 rounded-full bg-muted" role="progressbar" aria-labelledby="application-progress-label" aria-valuenow={application.progressPercent} aria-valuemin={0} aria-valuemax={100}>
-            <div className="h-full rounded-full bg-primary" style={{ width: `${application.progressPercent}%` }} />
-          </div>
-        </CardContent>
-      </Card>
+      <ApplicationStatusCard application={application} locale={locale} messages={applicationMessages} />
+      <ApplicationSectionsCard
+        application={application}
+        currentKey={currentKey}
+        messages={applicationMessages}
+        sectionNames={sectionNames}
+      />
 
       {currentKey ? (
         <Card>
-          <CardHeader><h2 className="text-2xl font-black">{sectionTitle(currentKey, messages)}</h2></CardHeader>
-          <CardContent className="space-y-5">
-            {currentKey === "PERSONAL_DETAILS" ? <>
-              <div className="space-y-2"><Label htmlFor="fullName">{messages.name}</Label><Input id="fullName" value={String(data.fullName ?? "")} onChange={(event) => setData({ ...data, fullName: event.target.value })} /></div>
-              <div className="space-y-2"><Label htmlFor="dateOfBirth">{messages.dob}</Label><Input id="dateOfBirth" type="date" value={String(data.dateOfBirth ?? "")} onChange={(event) => setData({ ...data, dateOfBirth: event.target.value })} /></div>
-            </> : null}
-            {currentKey === "ADDRESS" ? <>
-              <div className="space-y-2"><Label htmlFor="district">{messages.district}</Label><select id="district" className="h-11 w-full rounded-md border bg-background px-3" value={String(data.district ?? "CENTRAL")} onChange={(event) => setData({ ...data, district: event.target.value })}><option value="CENTRAL">Central Delhi</option><option value="EAST">East Delhi</option><option value="NEW_DELHI">New Delhi</option><option value="NORTH">North Delhi</option><option value="NORTH_WEST">North West Delhi</option><option value="SOUTH">South Delhi</option><option value="SOUTH_WEST">South West Delhi</option><option value="WEST">West Delhi</option></select></div>
-              <div className="space-y-2"><Label htmlFor="postalCode">{messages.postal}</Label><Input id="postalCode" inputMode="numeric" value={String(data.postalCode ?? "")} onChange={(event) => setData({ ...data, district: data.district ?? "CENTRAL", postalCode: event.target.value })} /></div>
-            </> : null}
-            {currentKey === "SERVICE_DETAILS" ? <>
-              <div className="space-y-2"><Label htmlFor="vehicleClass">{messages.vehicle}</Label><Input id="vehicleClass" value="LMV" readOnly /></div>
-              {application.serviceKey === "PERMANENT_DRIVING_LICENCE" ? <div className="space-y-2"><Label htmlFor="learnerReference">{messages.learner}</Label><Input id="learnerReference" value={String(data.learnerLicenceReference ?? "")} onChange={(event) => setData({ vehicleClass: "LMV", learnerLicenceReference: event.target.value })} /></div> : null}
-            </> : null}
-            {currentKey === "DECLARATION" ? <label className="flex gap-3"><input type="checkbox" checked={data.accepted === true} onChange={(event) => setData({ accepted: event.target.checked })} /><span>{messages.accept}</span></label> : null}
-            {notice ? <p role="status" className="text-sm font-semibold">{notice}</p> : null}
-            <div className="flex flex-wrap gap-3">
-              <Button type="button" variant="secondary" disabled={pending} onClick={() => run("save")}>{pending ? <LoaderCircle className="size-4 animate-spin" /> : null}{messages.save}</Button>
-              <Button type="button" disabled={pending || !stored} onClick={() => run("complete")}>{messages.complete}</Button>
-            </div>
+          <CardHeader><CardTitle>{sectionNames[currentKey]}</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            {notice ? <Alert role="status"><AlertDescription>{notice}</AlertDescription></Alert> : null}
+            <ApplicationSectionForm
+              key={`${currentKey}-${stored?.revision ?? 0}`}
+              applicationId={application.id}
+              sectionKey={currentKey}
+              serviceKey={application.serviceKey}
+              initialData={stored?.data}
+              locale={locale}
+              messages={messages}
+              onPersist={persist}
+            />
           </CardContent>
         </Card>
-      ) : <Card><CardContent className="space-y-3 py-6"><CheckCircle2 className="size-8 text-success" /><p className="font-bold">{messages.blocked}</p></CardContent></Card>}
+      ) : (
+        <Alert>
+          <CheckCircle2 className="size-5" aria-hidden="true" />
+          <AlertDescription>{applicationMessages.allSectionsComplete}</AlertDescription>
+        </Alert>
+      )}
 
-      <Card><CardHeader><h2 className="text-xl font-black">{messages.history}</h2></CardHeader><CardContent><ol className="space-y-2">{application.history.map((event) => <li key={event.id} className="border-l-2 pl-3 text-sm"><strong>{event.eventType.replaceAll("_", " ")}</strong><br /><span className="text-muted-foreground">{new Date(event.createdAt).toLocaleString(locale === "hi" ? "hi-IN" : "en-IN")}</span></li>)}</ol></CardContent></Card>
+      {application.progressPercent === 100 ? (
+        <IdentityRecoveryPanel
+          applicationId={application.id}
+          initialContext={initialIdentity}
+          messages={messages}
+          onApplicationChanged={refresh}
+        />
+      ) : null}
+
+      {application.statusCode === "READY_FOR_PAYMENT" ? (
+        <Alert>
+          <AlertTitle>{applicationMessages.paymentUnavailableTitle}</AlertTitle>
+          <AlertDescription>{applicationMessages.paymentUnavailableDescription}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <ApplicationHistoryCard
+        application={application}
+        locale={locale}
+        messages={applicationMessages}
+        sectionNames={sectionNames}
+      />
     </div>
   );
 }
