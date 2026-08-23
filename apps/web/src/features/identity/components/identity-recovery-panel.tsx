@@ -8,7 +8,7 @@ import { StatusBadge } from "@/components/shared/state-presentations";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { retryIdentity, startIdentity } from "@/features/identity/api";
-import type { Locale } from "@/i18n";
+import type { Locale, MessageDictionary } from "@/i18n";
 
 const copy = {
   en: {
@@ -73,11 +73,14 @@ function outcomeTone(outcome: IdentityOutcome): "success" | "warning" | "neutral
   return outcome === "VERIFIED" ? "success" : outcome === "USER_MISMATCH" ? "neutral" : "warning";
 }
 
-export function IdentityRecoveryPanel({ applicationId, initialContext, locale }: Readonly<{
+export function IdentityRecoveryPanel({ applicationId, initialContext, locale, messages: dictionary, onApplicationChanged }: Readonly<{
   applicationId: string;
   initialContext: IdentityContext;
   locale: Locale;
+  messages: MessageDictionary;
+  onApplicationChanged: () => Promise<void>;
 }>) {
+  void dictionary;
   const messages = copy[locale];
   const [context, setContext] = useState(initialContext);
   const [pending, setPending] = useState(false);
@@ -91,6 +94,7 @@ export function IdentityRecoveryPanel({ applicationId, initialContext, locale }:
         ? await startIdentity(applicationId)
         : await retryIdentity(applicationId, context.attempt.id);
       setContext(updated);
+      await onApplicationChanged();
     } catch {
       setFailed(true);
     } finally {

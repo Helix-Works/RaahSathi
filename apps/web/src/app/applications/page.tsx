@@ -29,6 +29,20 @@ export default async function ApplicationsPage() {
 
   const applications = await listApplications(session.context);
   const hindi = locale === "hi";
+  const statusLabels = {
+    DRAFT: messages.applications.statusDraft,
+    IN_PROGRESS: messages.applications.statusInProgress,
+    READY_FOR_IDENTITY: messages.applications.statusReadyForIdentity,
+    READY_FOR_PAYMENT: messages.applications.statusReadyForPayment,
+  };
+  const actionLabels = {
+    COMPLETE_PERSONAL_DETAILS: messages.applications.nextPersonalDetails,
+    COMPLETE_ADDRESS: messages.applications.nextAddress,
+    COMPLETE_SERVICE_DETAILS: messages.applications.nextServiceDetails,
+    COMPLETE_DECLARATION: messages.applications.nextDeclaration,
+    VERIFY_IDENTITY: messages.applications.nextIdentity,
+    PAY_FEES: messages.applications.nextPayment,
+  };
 
   return (
     <div className="mx-auto max-w-[80rem] space-y-8 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
@@ -60,8 +74,11 @@ export default async function ApplicationsPage() {
               key={application.id}
               className="grid gap-4 rounded-none border-x-0 border-t-0 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6"
             >
-              <CardHeader className="p-0">
+              <CardHeader className="space-y-2 p-0">
                 <CardTitle>{serviceName(application.serviceKey, messages)}</CardTitle>
+                <p className="text-sm font-bold">{statusLabels[application.statusCode]}</p>
+                <p className="text-sm text-muted-foreground">{actionLabels[application.nextActionCode]}</p>
+                <p className="text-xs text-muted-foreground">{messages.applications.updatedLabel}: {new Date(application.updatedAt).toLocaleString(hindi ? "hi-IN" : "en-IN")}</p>
               </CardHeader>
               <CardContent className="flex flex-wrap items-center gap-4 p-0 sm:justify-end">
                 <span className="text-sm font-black">

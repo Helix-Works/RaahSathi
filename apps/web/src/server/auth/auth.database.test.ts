@@ -3,6 +3,7 @@ import { randomUUID } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
 
+import { acquireAuthTransactionLock } from "./auth-service";
 import { isDisposableDatabaseApproved } from "./database-test-safety";
 
 const testUrl = process.env.TEST_DATABASE_URL;
@@ -27,6 +28,14 @@ describe.skipIf(!database)("Phase 1 disposable PostgreSQL persistence", () => {
     await database.authAttempt.deleteMany({ where: { applicantId } });
     await database.applicant.deleteMany({ where: { id: applicantId } });
     await database.$disconnect();
+  });
+
+  it("acquires the transaction-scoped auth advisory lock through a deserializable result", async () => {
+    if (!database) return;
+
+    await expect(database.$transaction(async (transaction) => {
+      await acquireAuthTransactionLock(transaction, `auth-lock-${applicantId}`);
+    })).resolves.toBeUndefined();
   });
 
   it("persists and revokes an opaque session across clients", async () => {

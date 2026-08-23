@@ -4,8 +4,8 @@ import { z } from "zod";
 import type { ApplicationDetail } from "@raahsathi/contracts/applications";
 
 import { ApplicationEditor } from "@/features/applications/components/application-editor";
-import { IdentityRecoveryPanel } from "@/features/identity/components/identity-recovery-panel";
 import { LicenceContextCard } from "@/features/identity/components/licence-context-card";
+import { getDictionary } from "@/i18n";
 import { getRequestLocale } from "@/i18n/locale";
 import { getApplication } from "@/server/applications/application-service";
 import { resolveSessionFromCookie } from "@/server/auth/session-service";
@@ -45,6 +45,7 @@ export default async function ApplicationPage({
   }
 
   const locale = await getRequestLocale();
+  const messages = getDictionary(locale);
 
   const [identity, licences] = await Promise.all([
     getIdentityContext(session.context, id),
@@ -55,16 +56,10 @@ export default async function ApplicationPage({
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
       <ApplicationEditor
         initialApplication={application}
+        initialIdentity={identity}
         locale={locale}
+        messages={messages}
       />
-
-      {application.progressPercent === 100 ? (
-        <IdentityRecoveryPanel
-          applicationId={id}
-          initialContext={identity}
-          locale={locale}
-        />
-      ) : null}
 
       <LicenceContextCard
         licences={licences}

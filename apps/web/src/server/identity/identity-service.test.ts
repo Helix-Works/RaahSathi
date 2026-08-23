@@ -22,14 +22,37 @@ describe("synthetic identity provider policy", () => {
     expect(isRetryableIdentityOutcome("VERIFIED")).toBe(false);
   });
 
-  it("recognizes only Prisma transaction and uniqueness conflicts as recoverable concurrency failures", () => {
-    const prismaError = (code: string) => new Prisma.PrismaClientKnownRequestError("conflict", {
+  it("recognizes Prisma transaction, uniqueness, and raw PostgreSQL serialization conflicts", () => {
+    const prismaError = (code: string, meta?: Record<string, unknown>) => new Prisma.PrismaClientKnownRequestError("conflict", {
       code,
       clientVersion: Prisma.prismaVersion.client,
+      meta,
     });
-    expect(isIdentityConcurrencyConflict(prismaError("P2034"))).toBe(true);
     expect(isIdentityConcurrencyConflict(prismaError("P2002"))).toBe(true);
+    expect(isIdentityConcurrencyConflict(prismaError("P2034"))).toBe(true);
+    expect(isIdentityConcurrencyConflict(prismaError("P2010", {
+      code: "40001",
+      message: "could not serialize access due to concurrent update",
+    }))).toBe(true);
+  });
+
+  it("does not classify unrelated Prisma or raw-query failures as identity concurrency conflicts", () => {
+    const prismaError = (code: string, meta?: Record<string, unknown>) => new Prisma.PrismaClientKnownRequestError("database failure", {
+      code,
+      clientVersion: Prisma.prismaVersion.client,
+      meta,
+    });
+
     expect(isIdentityConcurrencyConflict(prismaError("P2025"))).toBe(false);
+    expect(isIdentityConcurrencyConflict(prismaError("P2010", {
+      code: "23505",
+      message: "duplicate key value violates unique constraint",
+    }))).toBe(false);
+    expect(isIdentityConcurrencyConflict(prismaError("P2010", {
+      code: "42601",
+      message: "syntax error",
+    }))).toBe(false);
+    expect(isIdentityConcurrencyConflict(prismaError("P2010"))).toBe(false);
     expect(isIdentityConcurrencyConflict(new Error("conflict"))).toBe(false);
   });
 });

@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 
 import { PrismaClient } from "@prisma/client";
+import { applicationListSchema } from "@raahsathi/contracts/applications";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { isDisposableDatabaseApproved } from "@/server/auth/database-test-safety";
+import { getApplication, listApplications } from "@/server/applications/application-service";
 
 const testUrl = process.env.TEST_DATABASE_URL;
 const approved = isDisposableDatabaseApproved({
@@ -20,6 +22,7 @@ describe.skipIf(!database)("Phase 2 disposable PostgreSQL persistence", () => {
   const applicantA = randomUUID();
   const applicantB = randomUUID();
   const applicationId = randomUUID();
+  const contextA = { sessionId: randomUUID(), applicantId: applicantA };
 
   afterAll(async () => {
     if (!database) return;
@@ -45,6 +48,15 @@ describe.skipIf(!database)("Phase 2 disposable PostgreSQL persistence", () => {
       expect(resumed?.sections).toHaveLength(1);
       expect(resumed?.events.map((event) => event.eventType)).toEqual(["APPLICATION_CREATED"]);
       expect(await restarted.application.findFirst({ where: { id: applicationId, applicantId: applicantB } })).toBeNull();
+
+      const applications = await listApplications(contextA, restarted);
+      expect(applicationListSchema.parse({ applications }).applications).toHaveLength(1);
+      expect(applications[0]).not.toHaveProperty("sections");
+      expect(applications[0]).not.toHaveProperty("history");
+
+      const detail = await getApplication(contextA, applicationId, restarted);
+      expect(detail.sections).toHaveLength(1);
+      expect(detail.history.map((event) => event.eventType)).toEqual(["APPLICATION_CREATED"]);
     } finally {
       await restarted.$disconnect();
     }

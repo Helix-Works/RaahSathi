@@ -7,10 +7,11 @@ import {
   ErrorState,
 } from "@/components/shared/state-presentations";
 import { StartApplicationButton } from "@/features/applications/components/start-application-button";
-import { getServices } from "@/features/services/api";
+import { getMockServices } from "@/features/services/api/mock";
 import { getDictionary, type MessageDictionary } from "@/i18n";
 import { getRequestLocale } from "@/i18n/locale";
-import { ApiClientError } from "@/lib/api";
+import { dataSource } from "@/lib/data-source";
+import { listAvailableServices } from "@/server/applications/service-catalogue";
 
 function getServiceCopy(
   serviceKey: ServiceKey,
@@ -36,11 +37,10 @@ export default async function ServicesPage() {
   let services: readonly ServiceSummary[];
 
   try {
-    services = await getServices();
-  } catch (error) {
-    const correlationId =
-      error instanceof ApiClientError ? error.correlationId : undefined;
-
+    services = dataSource === "real"
+      ? listAvailableServices()
+      : await getMockServices();
+  } catch {
     return (
       <div className="mx-auto max-w-[80rem] space-y-8 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
         <PageHeader
@@ -53,7 +53,6 @@ export default async function ServicesPage() {
           description={messages.errors.servicesDescription}
           retryLabel={messages.common.retry}
           retryHref="/services"
-          correlationId={correlationId}
           correlationLabel={messages.errors.correlationLabel}
         />
       </div>
