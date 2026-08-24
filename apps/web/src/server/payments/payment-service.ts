@@ -206,13 +206,18 @@ export async function applyPaymentProviderEvent(
       if (transition.advanceApplication) {
         const occurredAt = new Date(event.occurredAt);
         await database.paymentAttempt.update({ where: { id: payment.id }, data: { status: "SUCCEEDED", succeededAt: occurredAt } });
-        await database.application.update({ where: { id: payment.applicationId }, data: { status: "READY_FOR_APPOINTMENT" } });
-        await database.applicationEvent.create({ data: {
-          applicationId: payment.applicationId,
-          actorApplicantId: payment.application.applicantId,
-          eventType: "PAYMENT_SUCCEEDED",
-          correlationId,
-        } });
+        const advancement = await database.application.updateMany({
+          where: { id: payment.applicationId, status: "READY_FOR_PAYMENT" },
+          data: { status: "READY_FOR_APPOINTMENT" },
+        });
+        if (advancement.count === 1) {
+          await database.applicationEvent.create({ data: {
+            applicationId: payment.applicationId,
+            actorApplicantId: payment.application.applicantId,
+            eventType: "PAYMENT_SUCCEEDED",
+            correlationId,
+          } });
+        }
       }
 
       return toPaymentContext(await database.application.findUniqueOrThrow({
@@ -320,9 +325,10 @@ export async function startPayment(
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {
       const existing = await databaseClient.paymentAttempt.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
-      if (existing) return getPayment(context, existing.id, databaseClient);
+      if (existing?.applicationId === input.applicationId) return getPayment(context, existing.id, databaseClient);
       const persisted = await getPaymentContextForApplication(context, input.applicationId, databaseClient);
       if (persisted.attempt) return persisted;
+      if (existing) throw apiErrors.validation({ idempotencyKey: ["already_used"] });
     }
     throw error;
   }
