@@ -8,6 +8,7 @@ import { isDisposableDatabaseApproved } from "@/server/auth/database-test-safety
 
 import {
   getPayment,
+  getPaymentContextForApplication,
   processSignedPaymentProviderEvent,
   signPaymentProviderEvent,
   startPayment,
@@ -30,14 +31,17 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
   const applicationId = randomUUID();
   const secondApplicationId = randomUUID();
   const identityAttemptId = randomUUID();
+  const projectionApplicantId = randomUUID();
+  const projectionApplicationId = randomUUID();
   const contextA = { sessionId: randomUUID(), applicantId: applicantA };
   const contextB = { sessionId: randomUUID(), applicantId: applicantB };
+  const projectionContext = { sessionId: randomUUID(), applicantId: projectionApplicantId };
   const secret = "phase-4-database-provider-secret-at-least-32-characters";
 
   afterAll(async () => {
     if (!database) return;
-    await database.application.deleteMany({ where: { id: { in: [applicationId, secondApplicationId] } } });
-    await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB] } } });
+    await database.application.deleteMany({ where: { id: { in: [applicationId, secondApplicationId, projectionApplicationId] } } });
+    await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, projectionApplicantId] } } });
     await database.$disconnect();
   });
 
@@ -161,6 +165,14 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
     expect((await database.paymentAttempt.findUniqueOrThrow({ where: { id: newerPendingAttempt.id } })).status).toBe("PENDING");
     expect((await database.application.findUniqueOrThrow({ where: { id: applicationId } })).status).toBe("READY_FOR_APPOINTMENT");
     expect(await database.applicationEvent.count({ where: { applicationId, eventType: "PAYMENT_SUCCEEDED" } })).toBe(1);
+    expect((await getPaymentContextForApplication(contextA, applicationId, database)).attempt).toMatchObject({
+      id: lateAttempt.id,
+      status: "SUCCEEDED",
+    });
+    expect((await getPayment(contextA, newerPendingAttempt.id, database)).attempt).toMatchObject({
+      id: newerPendingAttempt.id,
+      status: "PENDING",
+    });
 
     await database.application.create({ data: {
       id: secondApplicationId,
@@ -187,4 +199,70 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
     }, database)).rejects.toThrowError(/VALIDATION_FAILED/);
     expect(await database.paymentAttempt.count({ where: { applicationId: secondApplicationId } })).toBe(1);
   });
+
+  it("reconstructs a successful application payment ahead of a newer pending attempt", async () => {
+    if (!database) return;
+    await database.applicant.create({ data: {
+      id: projectionApplicantId,
+      mobileLookupHash: `phase4-projection-${projectionApplicantId}`,
+      mobileLast4: "0002",
+      displayName: "Phase 4 Projection",
+    } });
+    await database.application.create({ data: {
+      id: projectionApplicationId,
+      applicantId: projectionApplicantId,
+      serviceKey: "LEARNER_LICENCE",
+      status: "READY_FOR_PAYMENT",
+    } });
+    const feeSnapshot = await database.feeSnapshot.create({ data: {
+      applicationId: projectionApplicationId,
+      baseFeeMinor: 50_000,
+      serviceChargeMinor: 5_000,
+      totalAmountMinor: 55_000,
+      currency: "INR",
+    } });
+    const attemptA = await database.paymentAttempt.create({ data: {
+      applicationId: projectionApplicationId,
+      feeSnapshotId: feeSnapshot.id,
+      attemptNumber: 1,
+      idempotencyKey: randomUUID(),
+      providerReference: `SYN-PAY-${randomUUID().toUpperCase()}`,
+      status: "FAILED",
+      amountMinor: feeSnapshot.totalAmountMinor,
+    } });
+    const attemptB = await database.paymentAttempt.create({ data: {
+      applicationId: projectionApplicationId,
+      feeSnapshotId: feeSnapshot.id,
+      attemptNumber: 2,
+      idempotencyKey: randomUUID(),
+      providerReference: `SYN-PAY-${randomUUID().toUpperCase()}`,
+      status: "PENDING",
+      amountMinor: feeSnapshot.totalAmountMinor,
+    } });
+    const event = {
+      eventId: `evt_${randomUUID().replaceAll("-", "")}`,
+      providerReference: attemptA.providerReference,
+      outcome: "SUCCESS" as const,
+      amountMinor: feeSnapshot.totalAmountMinor,
+      occurredAt: "2026-08-23T14:00:00.000Z",
+    };
+    const signature = signPaymentProviderEvent(event, secret);
+
+    await processSignedPaymentProviderEvent(event, signature, "phase4-projection-success", { secret, database });
+    await processSignedPaymentProviderEvent(event, signature, "phase4-projection-duplicate", { secret, database });
+
+    expect((await database.application.findUniqueOrThrow({ where: { id: projectionApplicationId } })).status).toBe("READY_FOR_APPOINTMENT");
+    expect((await getPaymentContextForApplication(projectionContext, projectionApplicationId, database)).attempt).toMatchObject({
+      id: attemptA.id,
+      status: "SUCCEEDED",
+    });
+    expect((await getPayment(projectionContext, attemptB.id, database)).attempt).toMatchObject({
+      id: attemptB.id,
+      status: "PENDING",
+    });
+    expect(await database.applicationEvent.count({
+      where: { applicationId: projectionApplicationId, eventType: "PAYMENT_SUCCEEDED" },
+    })).toBe(1);
+    expect(await database.paymentProviderEvent.count({ where: { paymentAttemptId: attemptA.id } })).toBe(1);
+  }, 20_000);
 });

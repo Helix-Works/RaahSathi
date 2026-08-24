@@ -1,12 +1,15 @@
 import { createPaymentRequestSchema } from "@raahsathi/contracts/payments";
-import type { PrismaClient } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
+import { isRetryableTransactionConflict } from "@/server/database/prisma-errors";
 import { ApiError } from "@/server/http/api-error";
 
 import {
+  applyPaymentProviderEvent,
   feeForService,
   getPayment,
+  getPaymentContextForApplication,
   paymentDecisionForScenario,
   paymentTransition,
   providerEventCanonicalValue,
@@ -23,6 +26,77 @@ const event = {
 };
 
 describe("payment convergence foundation", () => {
+  it("classifies only established Prisma transaction serialization conflicts as retryable", () => {
+    const prismaError = (code: string, meta?: Record<string, unknown>) => new Prisma.PrismaClientKnownRequestError("database failure", {
+      code,
+      clientVersion: Prisma.prismaVersion.client,
+      meta,
+    });
+
+    expect(isRetryableTransactionConflict(prismaError("P2034"))).toBe(true);
+    expect(isRetryableTransactionConflict(prismaError("P2010", {
+      code: "40001",
+      message: "could not serialize access due to concurrent update",
+    }))).toBe(true);
+    expect(isRetryableTransactionConflict(prismaError("P2010", {
+      code: "23505",
+      message: "duplicate key value violates unique constraint",
+    }))).toBe(false);
+    expect(isRetryableTransactionConflict(prismaError("P2010", { code: "N/A" }))).toBe(false);
+    expect(isRetryableTransactionConflict(prismaError("P2024"))).toBe(false);
+    expect(isRetryableTransactionConflict(new Error("database failure"))).toBe(false);
+  });
+
+  it("retries a raw PostgreSQL serialization conflict once and lets a repeated conflict escape", async () => {
+    const serializationConflict = new Prisma.PrismaClientKnownRequestError("Raw query failed", {
+      code: "P2010",
+      clientVersion: Prisma.prismaVersion.client,
+      meta: {
+        code: "40001",
+        message: "could not serialize access due to concurrent update",
+      },
+    });
+    let transactionAttempts = 0;
+    const database = {
+      $transaction: async () => {
+        transactionAttempts += 1;
+        throw serializationConflict;
+      },
+    } as unknown as PrismaClient;
+
+    await expect(applyPaymentProviderEvent(
+      event,
+      "phase4-serialization-retry",
+      database,
+    )).rejects.toBe(serializationConflict);
+    expect(transactionAttempts).toBe(2);
+  });
+
+  it("does not retry or swallow an unrelated raw-query failure", async () => {
+    const syntaxError = new Prisma.PrismaClientKnownRequestError("Raw query failed", {
+      code: "P2010",
+      clientVersion: Prisma.prismaVersion.client,
+      meta: {
+        code: "42601",
+        message: "syntax error",
+      },
+    });
+    let transactionAttempts = 0;
+    const database = {
+      $transaction: async () => {
+        transactionAttempts += 1;
+        throw syntaxError;
+      },
+    } as unknown as PrismaClient;
+
+    await expect(applyPaymentProviderEvent(
+      event,
+      "phase4-non-retryable-error",
+      database,
+    )).rejects.toBe(syntaxError);
+    expect(transactionAttempts).toBe(1);
+  });
+
   it("calculates immutable INR fees from the service rather than client input", () => {
     expect(feeForService("LEARNER_LICENCE")).toEqual({
       baseFeeMinor: 50_000,
@@ -96,16 +170,75 @@ describe("payment convergence foundation", () => {
       },
     } as unknown as PrismaClient;
 
+    const context = { sessionId: crypto.randomUUID(), applicantId: crypto.randomUUID() };
+    const applicationPayment = await getPaymentContextForApplication(
+      context,
+      applicationId,
+      database,
+    );
     const payment = await getPayment(
-      { sessionId: crypto.randomUUID(), applicantId: crypto.randomUUID() },
+      context,
       requestedPaymentId,
       database,
     );
 
+    expect(applicationPayment.attempt).toMatchObject({
+      id: requestedPaymentId,
+      status: "SUCCEEDED",
+      providerReference: "SYN-PAY-REQUESTED-ATTEMPT",
+    });
     expect(payment.attempt).toMatchObject({
       id: requestedPaymentId,
       status: "SUCCEEDED",
       providerReference: "SYN-PAY-REQUESTED-ATTEMPT",
+    });
+  });
+
+  it("returns the newest attempt when no payment has succeeded", async () => {
+    const applicationId = "30000000-0000-4000-8000-000000000001";
+    const newestPaymentId = "30000000-0000-4000-8000-000000000003";
+    const olderPaymentId = "30000000-0000-4000-8000-000000000002";
+    const createdAt = new Date("2026-08-23T12:00:00.000Z");
+    const database = {
+      application: {
+        findFirst: async () => ({
+          id: applicationId,
+          serviceKey: "LEARNER_LICENCE",
+          feeSnapshot: null,
+          paymentAttempts: [
+            {
+              id: newestPaymentId,
+              status: "PENDING",
+              attemptNumber: 2,
+              providerReference: "SYN-PAY-NEWEST-ATTEMPT",
+              createdAt,
+              updatedAt: createdAt,
+              succeededAt: null,
+            },
+            {
+              id: olderPaymentId,
+              status: "FAILED",
+              attemptNumber: 1,
+              providerReference: "SYN-PAY-OLDER-ATTEMPT",
+              createdAt,
+              updatedAt: createdAt,
+              succeededAt: null,
+            },
+          ],
+        }),
+      },
+    } as unknown as PrismaClient;
+
+    const payment = await getPaymentContextForApplication(
+      { sessionId: crypto.randomUUID(), applicantId: crypto.randomUUID() },
+      applicationId,
+      database,
+    );
+
+    expect(payment.attempt).toMatchObject({
+      id: newestPaymentId,
+      status: "PENDING",
+      providerReference: "SYN-PAY-NEWEST-ATTEMPT",
     });
   });
 });
