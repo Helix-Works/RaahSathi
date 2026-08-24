@@ -128,6 +128,15 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
       status: "FAILED",
       amountMinor: feeSnapshot.totalAmountMinor,
     } });
+    const newerPendingAttempt = await database.paymentAttempt.create({ data: {
+      applicationId,
+      feeSnapshotId: feeSnapshot.id,
+      attemptNumber: 3,
+      idempotencyKey: randomUUID(),
+      providerReference: `SYN-PAY-${randomUUID().toUpperCase()}`,
+      status: "PENDING",
+      amountMinor: feeSnapshot.totalAmountMinor,
+    } });
     const lateSuccess = {
       eventId: `evt_${randomUUID().replaceAll("-", "")}`,
       providerReference: lateAttempt.providerReference,
@@ -135,12 +144,21 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
       amountMinor: feeSnapshot.totalAmountMinor,
       occurredAt: "2026-08-23T13:00:00.000Z",
     };
-    await processSignedPaymentProviderEvent(
+    const lateResult = await processSignedPaymentProviderEvent(
       lateSuccess,
       signPaymentProviderEvent(lateSuccess, secret),
       "phase4-late-success",
       { secret, database },
     );
+    expect(lateResult.attempt).toMatchObject({ id: lateAttempt.id, status: "SUCCEEDED" });
+    const duplicateLateResult = await processSignedPaymentProviderEvent(
+      lateSuccess,
+      signPaymentProviderEvent(lateSuccess, secret),
+      "phase4-late-success-duplicate",
+      { secret, database },
+    );
+    expect(duplicateLateResult.attempt).toMatchObject({ id: lateAttempt.id, status: "SUCCEEDED" });
+    expect((await database.paymentAttempt.findUniqueOrThrow({ where: { id: newerPendingAttempt.id } })).status).toBe("PENDING");
     expect((await database.application.findUniqueOrThrow({ where: { id: applicationId } })).status).toBe("READY_FOR_APPOINTMENT");
     expect(await database.applicationEvent.count({ where: { applicationId, eventType: "PAYMENT_SUCCEEDED" } })).toBe(1);
 
@@ -149,17 +167,24 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
       applicantId: applicantA,
       serviceKey: "PERMANENT_DRIVING_LICENCE",
       status: "READY_FOR_PAYMENT",
+      paymentScenario: "FAILED",
       identityAttempts: { create: {
         outcome: "VERIFIED",
         attemptNumber: 1,
         correlationId: "phase4-second-identity",
       } },
     } });
+    const secondApplicationAttempt = await startPayment(contextA, {
+      applicationId: secondApplicationId,
+      idempotencyKey: randomUUID(),
+      correlationId: "phase4-second-application-payment",
+    }, database);
+    expect(secondApplicationAttempt.attempt?.status).toBe("FAILED");
     await expect(startPayment(contextA, {
       applicationId: secondApplicationId,
       idempotencyKey,
       correlationId: "phase4-cross-application-key",
     }, database)).rejects.toThrowError(/VALIDATION_FAILED/);
-    expect(await database.paymentAttempt.count({ where: { applicationId: secondApplicationId } })).toBe(0);
+    expect(await database.paymentAttempt.count({ where: { applicationId: secondApplicationId } })).toBe(1);
   });
 });

@@ -162,7 +162,7 @@ async function contextForProviderReference(database: PrismaClient, providerRefer
     include: { feeSnapshot: true, paymentAttempts: { orderBy: [{ attemptNumber: "desc" }, { id: "desc" }] } },
   });
   if (!application) throw apiErrors.notFound();
-  return toPaymentContext(application);
+  return toPaymentContext(application, payment.id);
 }
 
 export async function applyPaymentProviderEvent(
@@ -220,10 +220,13 @@ export async function applyPaymentProviderEvent(
         }
       }
 
-      return toPaymentContext(await database.application.findUniqueOrThrow({
-        where: { id: payment.applicationId },
-        include: { feeSnapshot: true, paymentAttempts: { orderBy: [{ attemptNumber: "desc" }, { id: "desc" }] } },
-      }));
+      return toPaymentContext(
+        await database.application.findUniqueOrThrow({
+          where: { id: payment.applicationId },
+          include: { feeSnapshot: true, paymentAttempts: { orderBy: [{ attemptNumber: "desc" }, { id: "desc" }] } },
+        }),
+        payment.id,
+      );
     }, { isolationLevel: "Serializable" });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
@@ -325,10 +328,12 @@ export async function startPayment(
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {
       const existing = await databaseClient.paymentAttempt.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
-      if (existing?.applicationId === input.applicationId) return getPayment(context, existing.id, databaseClient);
+      if (existing) {
+        if (existing.applicationId === input.applicationId) return getPayment(context, existing.id, databaseClient);
+        throw apiErrors.validation({ idempotencyKey: ["already_used"] });
+      }
       const persisted = await getPaymentContextForApplication(context, input.applicationId, databaseClient);
       if (persisted.attempt) return persisted;
-      if (existing) throw apiErrors.validation({ idempotencyKey: ["already_used"] });
     }
     throw error;
   }
