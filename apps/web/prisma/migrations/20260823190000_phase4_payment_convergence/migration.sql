@@ -54,6 +54,7 @@ CREATE TABLE "PaymentProviderEvent" (
 );
 
 CREATE UNIQUE INDEX "FeeSnapshot_applicationId_key" ON "FeeSnapshot"("applicationId");
+CREATE UNIQUE INDEX "FeeSnapshot_id_applicationId_key" ON "FeeSnapshot"("id", "applicationId");
 CREATE UNIQUE INDEX "PaymentAttempt_idempotencyKey_key" ON "PaymentAttempt"("idempotencyKey");
 CREATE UNIQUE INDEX "PaymentAttempt_providerReference_key" ON "PaymentAttempt"("providerReference");
 CREATE UNIQUE INDEX "PaymentAttempt_applicationId_attemptNumber_key" ON "PaymentAttempt"("applicationId", "attemptNumber");
@@ -63,5 +64,5 @@ CREATE INDEX "PaymentProviderEvent_paymentAttemptId_receivedAt_id_idx" ON "Payme
 
 ALTER TABLE "FeeSnapshot" ADD CONSTRAINT "FeeSnapshot_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "Application"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 ALTER TABLE "PaymentAttempt" ADD CONSTRAINT "PaymentAttempt_applicationId_fkey" FOREIGN KEY ("applicationId") REFERENCES "Application"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "PaymentAttempt" ADD CONSTRAINT "PaymentAttempt_feeSnapshotId_fkey" FOREIGN KEY ("feeSnapshotId") REFERENCES "FeeSnapshot"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "PaymentAttempt" ADD CONSTRAINT "PaymentAttempt_feeSnapshotId_applicationId_fkey" FOREIGN KEY ("feeSnapshotId", "applicationId") REFERENCES "FeeSnapshot"("id", "applicationId") ON DELETE RESTRICT ON UPDATE CASCADE;
 ALTER TABLE "PaymentProviderEvent" ADD CONSTRAINT "PaymentProviderEvent_paymentAttemptId_fkey" FOREIGN KEY ("paymentAttemptId") REFERENCES "PaymentAttempt"("id") ON DELETE CASCADE ON UPDATE CASCADE;

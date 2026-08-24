@@ -19,6 +19,14 @@ describe("dashboard next-action presentation", () => {
     }, copy)).toEqual({ description: "payment complete" });
   });
 
+  it("keeps appointment selection non-actionable until its Phase 5 route exists", () => {
+    expect(resolveNextActionCard({
+      id: "application-id",
+      statusCode: "READY_FOR_APPOINTMENT",
+      nextActionCode: "SELECT_APPOINTMENT",
+    }, copy)).toEqual({ description: "payment complete" });
+  });
+
   it("does not reuse payment copy for an already-booked appointment", () => {
     expect(resolveNextActionCard({
       id: "application-id",

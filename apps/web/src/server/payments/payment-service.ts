@@ -278,12 +278,12 @@ export async function startPayment(
       }
       const keyed = application.paymentAttempts.find((attempt) => attempt.idempotencyKey === input.idempotencyKey);
       if (keyed) return {
-        context: toPaymentContext(application),
+        context: toPaymentContext(application, keyed.id),
         ...(keyed.status === "PENDING" ? { scenario: paymentDecisionForScenario(application.paymentScenario, keyed.attemptNumber).scenario } : {}),
       };
       const pending = application.paymentAttempts.find((attempt) => attempt.status === "PENDING");
       if (pending) return {
-        context: toPaymentContext(application),
+        context: toPaymentContext(application, pending.id),
         scenario: paymentDecisionForScenario(application.paymentScenario, pending.attemptNumber).scenario,
       };
 
@@ -315,7 +315,7 @@ export async function startPayment(
         where: { id: application.id },
         include: { feeSnapshot: true, paymentAttempts: { orderBy: [{ attemptNumber: "desc" }, { id: "desc" }] } },
       });
-      return { context: toPaymentContext(refreshed), scenario: decision.scenario, payment };
+      return { context: toPaymentContext(refreshed, payment.id), scenario: decision.scenario };
     }, { isolationLevel: "Serializable" });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {

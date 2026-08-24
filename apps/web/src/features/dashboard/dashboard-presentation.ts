@@ -18,6 +18,10 @@ export function resolveNextActionCard(
   application: Pick<DashboardApplicationSummary, "id" | "statusCode" | "nextActionCode">,
   copy: NextActionCopy,
 ): NextActionCardPresentation {
+  if (application.nextActionCode === "SELECT_APPOINTMENT") {
+    return { description: copy.readyForAppointmentDescription };
+  }
+
   if (application.nextActionCode !== "NONE") {
     return {
       description: copy.defaultDescription,

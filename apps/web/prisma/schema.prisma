@@ -212,6 +212,8 @@ model FeeSnapshot {
   createdAt          DateTime         @default(now()) @db.Timestamptz(3)
   application        Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   paymentAttempts    PaymentAttempt[]
+
+  @@unique([id, applicationId])
 }
 
 model PaymentAttempt {
@@ -227,7 +229,7 @@ model PaymentAttempt {
   createdAt         DateTime                @default(now()) @db.Timestamptz(3)
   updatedAt         DateTime                @updatedAt @db.Timestamptz(3)
   application       Application             @relation(fields: [applicationId], references: [id], onDelete: Cascade)
-  feeSnapshot       FeeSnapshot             @relation(fields: [feeSnapshotId], references: [id], onDelete: Restrict)
+  feeSnapshot       FeeSnapshot             @relation(fields: [feeSnapshotId, applicationId], references: [id, applicationId], onDelete: Restrict)
   providerEvents    PaymentProviderEvent[]
 
   @@unique([applicationId, attemptNumber])
