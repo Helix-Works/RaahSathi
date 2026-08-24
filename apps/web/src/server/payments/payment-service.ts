@@ -22,6 +22,7 @@ import {
 import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { safeEqual } from "@/server/auth/crypto";
 import { getServerEnvironment } from "@/server/config/environment";
+import { isRetryableTransactionConflict } from "@/server/database/prisma-errors";
 import { prisma } from "@/server/database/prisma";
 import { apiErrors } from "@/server/http/api-error";
 
@@ -59,7 +60,8 @@ function toPaymentContext(record: PaymentApplicationRecord, paymentId?: string):
   const fee = record.feeSnapshot ?? { id: null, ...feeForService(record.serviceKey) };
   const attempt = paymentId
     ? record.paymentAttempts.find((candidate) => candidate.id === paymentId)
-    : record.paymentAttempts[0];
+    : record.paymentAttempts.find((candidate) => candidate.status === "SUCCEEDED")
+      ?? record.paymentAttempts[0];
   if (paymentId && !attempt) throw apiErrors.notFound();
   return paymentContextSchema.parse({
     applicationId: record.id,
@@ -243,7 +245,7 @@ export async function applyPaymentProviderEvent(
       }
       throw apiErrors.paymentEventInvalid();
     }
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && retryOnSerializationConflict) {
+    if (isRetryableTransactionConflict(error) && retryOnSerializationConflict) {
       return applyPaymentProviderEvent(event, correlationId, databaseClient, false);
     }
     throw error;

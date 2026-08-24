@@ -16,6 +16,7 @@ import {
 } from "@prisma/client";
 
 import type { AuthenticatedContext } from "@/server/auth/auth-types";
+import { isRetryableTransactionConflict } from "@/server/database/prisma-errors";
 import { prisma } from "@/server/database/prisma";
 import { apiErrors } from "@/server/http/api-error";
 
@@ -39,9 +40,7 @@ export function isRetryableIdentityOutcome(outcome: IdentityOutcome): boolean {
 export function isIdentityConcurrencyConflict(error: unknown): boolean {
   if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
 
-  return error.code === "P2002"
-    || error.code === "P2034"
-    || (error.code === "P2010" && error.meta?.code === "40001");
+  return error.code === "P2002" || isRetryableTransactionConflict(error);
 }
 
 function toContext(record: IdentityRecord): IdentityContext {
