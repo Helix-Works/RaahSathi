@@ -16,6 +16,8 @@ const freshApplication = {
   eventId: "32000000-0000-4000-8000-000000000003",
 } as const;
 
+const freshJourneySeedLockKey = "raahsathi:seed:fresh-journey";
+
 function lookupHash(mobileNumber: string, pepper: string): string {
   return createHmac("sha256", pepper).update(`+91${mobileNumber}`, "utf8").digest("hex");
 }
@@ -28,6 +30,8 @@ async function main() {
 
   const mobileLookupHash = lookupHash(freshApplicant.mobile, pepper);
   const created = await database.$transaction(async (transaction) => {
+    await transaction.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${freshJourneySeedLockKey}))::text`;
+
     const existingApplicant = await transaction.applicant.findFirst({
       where: {
         OR: [
