@@ -1,17 +1,32 @@
 "use client";
 
 import type { PaymentContext, PaymentStatus } from "@raahsathi/contracts/payments";
-import { CheckCircle2, CreditCard, LoaderCircle, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { CreditCard, LoaderCircle, RefreshCw } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 import { StatusBadge } from "@/components/shared/state-presentations";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { refreshPayment, startPayment } from "@/features/payments/api";
+import {
+  getPaymentErrorPresentation,
+  type PaymentErrorPresentation,
+} from "@/features/payments/payment-errors";
+import {
+  beginPaymentOperation,
+  endPaymentOperation,
+  getOrCreatePaymentInitiation,
+  synchronizePaymentResponse,
+  type PaymentInitiation,
+} from "@/features/payments/payment-flow";
 import type { Locale, MessageDictionary } from "@/i18n";
 
-function statusTone(status: PaymentStatus): "success" | "warning" | "neutral" {
-  return status === "SUCCEEDED" ? "success" : status === "PENDING" ? "warning" : "neutral";
+function statusTone(status: PaymentStatus): "error" | "success" | "warning" {
+  if (status === "SUCCEEDED") return "success";
+  if (status === "FAILED") return "error";
+  return "warning";
 }
 
 export function PaymentPanel({
@@ -25,28 +40,66 @@ export function PaymentPanel({
   messages: MessageDictionary["payments"];
   onApplicationChanged: () => Promise<void>;
 }>) {
+  const router = useRouter();
   const [context, setContext] = useState(initialContext);
-  const [pending, setPending] = useState(false);
-  const [failed, setFailed] = useState(false);
-  const money = new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN", { style: "currency", currency: "INR" });
+  const [pendingAction, setPendingAction] = useState<"refresh" | "start">();
+  const [error, setError] = useState<PaymentErrorPresentation>();
+  const errorRef = useRef<HTMLDivElement>(null);
+  const initiationRef = useRef<PaymentInitiation | undefined>(undefined);
+  const operationLock = useRef(false);
+  const money = new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN", {
+    style: "currency",
+    currency: context.fee.currency,
+  });
+
+  useEffect(() => {
+    if (error) errorRef.current?.focus();
+  }, [error]);
 
   const update = async (action: "start" | "refresh") => {
-    setPending(true);
-    setFailed(false);
+    if (!beginPaymentOperation(operationLock)) return;
+    setPendingAction(action);
+    setError(undefined);
     try {
-      const updated = action === "refresh" && context.attempt
-        ? await refreshPayment(context.attempt.id)
-        : await startPayment(context.applicationId, crypto.randomUUID());
-      setContext(updated);
-      if (updated.attempt?.status === "SUCCEEDED") await onApplicationChanged();
-    } catch {
-      setFailed(true);
+      let updated: PaymentContext;
+      if (action === "refresh" && context.attempt) {
+        updated = await refreshPayment(context.attempt.id);
+      } else {
+        const initiation = getOrCreatePaymentInitiation(
+          initiationRef.current,
+          context.applicationId,
+        );
+        initiationRef.current = initiation;
+        updated = await startPayment(context.applicationId, initiation.idempotencyKey);
+        initiationRef.current = undefined;
+      }
+      try {
+        await synchronizePaymentResponse(updated, setContext, onApplicationChanged);
+      } catch {
+        setError({ message: messages.applicationRefreshError, action: "reload" });
+      }
+    } catch (reason: unknown) {
+      const presentation = getPaymentErrorPresentation(reason, messages);
+      if (presentation.discardInitiation) initiationRef.current = undefined;
+      setError(presentation);
     } finally {
-      setPending(false);
+      setPendingAction(undefined);
+      endPaymentOperation(operationLock);
     }
   };
 
   const status = context.attempt?.status;
+  const paymentActionBlocked = error?.blocksPaymentAction === true;
+  const actionLabel = pendingAction
+    ? pendingAction === "refresh" ? messages.refreshing : messages.starting
+    : status === "PENDING"
+      ? messages.refresh
+      : error?.retrySameInitiation
+        ? messages.retryRequest
+        : status === "FAILED" || status === "PROVIDER_UNAVAILABLE"
+          ? messages.newAttempt
+          : messages.pay;
+
   return <Card>
     <CardHeader className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -61,13 +114,66 @@ export function PaymentPanel({
         <div><dt className="text-sm text-muted-foreground">{messages.serviceCharge}</dt><dd className="font-black">{money.format(context.fee.serviceChargeMinor / 100)}</dd></div>
         <div><dt className="text-sm text-muted-foreground">{messages.total}</dt><dd className="font-black">{money.format(context.fee.totalAmountMinor / 100)}</dd></div>
       </dl>
-      {status ? <p role="status" className="rounded-xl bg-muted/50 p-4 font-semibold">{messages.explanations[status]}</p> : null}
-      {context.attempt ? <p className="break-all text-sm text-muted-foreground">{messages.reference}: {context.attempt.providerReference}</p> : null}
-      {failed ? <p role="alert" className="text-sm font-semibold text-destructive">{messages.updateError}</p> : null}
-      {status === "SUCCEEDED" ? <CheckCircle2 className="size-8 text-success" aria-hidden="true" /> : (
-        <Button type="button" disabled={pending} onClick={() => update(status === "PENDING" ? "refresh" : "start")}>
-          {pending ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : status === "PENDING" ? <RefreshCw className="size-4" aria-hidden="true" /> : <CreditCard className="size-4" aria-hidden="true" />}
-          {pending ? messages.pendingAction : status === "PENDING" ? messages.refresh : status ? messages.retry : messages.pay}
+      {status ? (
+        <Alert variant={status === "SUCCEEDED" ? "success" : status === "FAILED" ? "error" : "warning"} role="status" aria-live="polite">
+          <AlertTitle>{messages.statuses[status]}</AlertTitle>
+          <AlertDescription>{messages.explanations[status]}</AlertDescription>
+        </Alert>
+      ) : (
+        <p className="rounded-xl border bg-muted/40 p-4 font-semibold">{messages.notStarted}</p>
+      )}
+      {context.attempt ? (
+        <dl className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2">
+          <div>
+            <dt className="text-sm text-muted-foreground">{messages.reference}</dt>
+            <dd className="break-all font-mono text-sm font-semibold">{context.attempt.providerReference}</dd>
+          </div>
+          <div>
+            <dt className="text-sm text-muted-foreground">{messages.attempt}</dt>
+            <dd className="font-semibold">{new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(context.attempt.attemptNumber)}</dd>
+          </div>
+        </dl>
+      ) : null}
+      {error ? (
+        <div ref={errorRef} tabIndex={-1}>
+          <Alert variant="error" role="alert">
+            <AlertTitle>{messages.errorTitle}</AlertTitle>
+            <AlertDescription>{error.message}</AlertDescription>
+            {error.correlationId ? (
+              <p className="mt-2 font-mono text-xs text-muted-foreground">
+                {messages.referenceLabel}: {error.correlationId}
+              </p>
+            ) : null}
+            {error.action ? (
+              <Button
+                className="mt-3"
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (error.action === "reload") {
+                    window.location.reload();
+                    return;
+                  }
+                  router.push(`/login?returnTo=${encodeURIComponent(`/applications/${context.applicationId}`)}`);
+                }}
+              >
+                {error.action === "reload" ? messages.reloadLatest : messages.signInAgain}
+              </Button>
+            ) : null}
+          </Alert>
+        </div>
+      ) : null}
+      {status === "SUCCEEDED" ? (
+        <p className="font-semibold">{messages.readyForAppointment}</p>
+      ) : paymentActionBlocked ? null : (
+        <Button
+          type="button"
+          disabled={Boolean(pendingAction)}
+          aria-busy={Boolean(pendingAction)}
+          onClick={() => update(status === "PENDING" ? "refresh" : "start")}
+        >
+          {pendingAction ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : status === "PENDING" ? <RefreshCw className="size-4" aria-hidden="true" /> : <CreditCard className="size-4" aria-hidden="true" />}
+          {actionLabel}
         </Button>
       )}
     </CardContent>
