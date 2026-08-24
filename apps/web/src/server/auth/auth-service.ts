@@ -95,7 +95,7 @@ export async function requestOtp(
       metadata: providerFailed ? { reasonCode: "PROVIDER_UNAVAILABLE" } : undefined,
     });
     return { kind: providerFailed ? "provider-failed" as const : "issued" as const, attempt, expiresAt, resendAvailableAt };
-  });
+  }, { maxWait: 15_000 });
 
   if (result.kind === "rate-limited") throw apiErrors.authRateLimited(result.retryAfter);
   if (result.kind === "provider-failed") throw apiErrors.authProviderUnavailable();

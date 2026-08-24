@@ -24,6 +24,7 @@ import { safeEqual } from "@/server/auth/crypto";
 import { getServerEnvironment } from "@/server/config/environment";
 import { isRetryableTransactionConflict } from "@/server/database/prisma-errors";
 import { prisma } from "@/server/database/prisma";
+import { retryTransientConnectionRead } from "@/server/database/read-retry";
 import { apiErrors } from "@/server/http/api-error";
 
 type PaymentApplicationRecord = Application & {
@@ -100,7 +101,7 @@ async function ownedPaymentApplication(
   return application;
 }
 
-export async function getPaymentContextForApplication(
+async function getPaymentContextForApplicationWithoutRetry(
   context: AuthenticatedContext,
   applicationId: string,
   database: PrismaClient = prisma,
@@ -108,7 +109,17 @@ export async function getPaymentContextForApplication(
   return toPaymentContext(await ownedPaymentApplication(database, context, applicationId));
 }
 
-export async function getPayment(
+export async function getPaymentContextForApplication(
+  context: AuthenticatedContext,
+  applicationId: string,
+  database: PrismaClient = prisma,
+): Promise<PaymentContext> {
+  return retryTransientConnectionRead(
+    () => getPaymentContextForApplicationWithoutRetry(context, applicationId, database),
+  );
+}
+
+async function getPaymentWithoutRetry(
   context: AuthenticatedContext,
   paymentId: string,
   database: PrismaClient = prisma,
@@ -121,6 +132,16 @@ export async function getPayment(
   return toPaymentContext(
     await ownedPaymentApplication(database, context, payment.applicationId),
     paymentId,
+  );
+}
+
+export async function getPayment(
+  context: AuthenticatedContext,
+  paymentId: string,
+  database: PrismaClient = prisma,
+): Promise<PaymentContext> {
+  return retryTransientConnectionRead(
+    () => getPaymentWithoutRetry(context, paymentId, database),
   );
 }
 
@@ -331,10 +352,10 @@ export async function startPayment(
     if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {
       const existing = await databaseClient.paymentAttempt.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
       if (existing) {
-        if (existing.applicationId === input.applicationId) return getPayment(context, existing.id, databaseClient);
+        if (existing.applicationId === input.applicationId) return getPaymentWithoutRetry(context, existing.id, databaseClient);
         throw apiErrors.validation({ idempotencyKey: ["already_used"] });
       }
-      const persisted = await getPaymentContextForApplication(context, input.applicationId, databaseClient);
+      const persisted = await getPaymentContextForApplicationWithoutRetry(context, input.applicationId, databaseClient);
       if (persisted.attempt) return persisted;
     }
     throw error;
