@@ -7,6 +7,7 @@ describe("server environment", () => {
     AUTH_MOBILE_LOOKUP_PEPPER: "development-mobile-pepper-32-characters",
     AUTH_OTP_PEPPER: "development-otp-pepper-at-least-32-chars",
     AUTH_DEMO_OTP: "123456",
+    PAYMENT_PROVIDER_WEBHOOK_SECRET: "development-payment-webhook-secret-32-chars",
   };
 
   it("accepts PostgreSQL development configuration", () => {

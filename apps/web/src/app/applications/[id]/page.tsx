@@ -12,6 +12,7 @@ import { resolveSessionFromCookie } from "@/server/auth/session-service";
 import { ApiError } from "@/server/http/api-error";
 import { getIdentityContext } from "@/server/identity/identity-service";
 import { listLicences } from "@/server/licences/licence-service";
+import { getPaymentContextForApplication } from "@/server/payments/payment-service";
 
 export default async function ApplicationPage({
   params,
@@ -47,9 +48,10 @@ export default async function ApplicationPage({
   const locale = await getRequestLocale();
   const messages = getDictionary(locale);
 
-  const [identity, licences] = await Promise.all([
+  const [identity, licences, payment] = await Promise.all([
     getIdentityContext(session.context, id),
     listLicences(session.context),
+    getPaymentContextForApplication(session.context, id),
   ]);
 
   return (
@@ -57,6 +59,7 @@ export default async function ApplicationPage({
       <ApplicationEditor
         initialApplication={application}
         initialIdentity={identity}
+        initialPayment={payment}
         locale={locale}
         messages={messages}
       />

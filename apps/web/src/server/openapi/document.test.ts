@@ -26,6 +26,11 @@ describe("OpenAPI", () => {
         "/api/v1/applications/{id}/identity-attempts/{attemptId}/retry": { post: { responses: { 200: {}, 409: {} } } },
         "/api/v1/licences": { get: { responses: { 200: {}, 401: {} } } },
         "/api/v1/licences/{id}": { get: { responses: { 200: {}, 404: {} } } },
+        "/api/v1/applications/{id}/payments": { post: { responses: { 200: {}, 409: {} } } },
+        "/api/v1/payments/{id}": { get: { responses: { 200: {}, 404: {} } } },
+        "/api/v1/payment-provider/events": {
+          post: { responses: { 200: {}, 400: {} }, security: [{ providerSignatureAuth: [] }] },
+        },
         "/api/v1/health/ready": {
           get: {
             responses: {
@@ -35,7 +40,16 @@ describe("OpenAPI", () => {
           },
         },
       },
-      components: { headers: { RequestId: {} } },
+      components: {
+        headers: { RequestId: {} },
+        securitySchemes: {
+          providerSignatureAuth: {
+            type: "apiKey",
+            in: "header",
+            name: "x-raahsathi-provider-signature",
+          },
+        },
+      },
     });
   });
 
@@ -44,6 +58,20 @@ describe("OpenAPI", () => {
       .toEqual({ status: "ready", database: "up" });
     expect(() => readinessEndpointContract.success.schema.parse({ status: "degraded", database: "up" }))
       .toThrow();
+  });
+
+  it("documents the exact payment-provider signature format", () => {
+    const document = createOpenApiDocument();
+    expect(document.paths["/api/v1/payment-provider/events"]).toMatchObject({
+      post: {
+        parameters: [{
+          name: "x-raahsathi-provider-signature",
+          in: "header",
+          required: true,
+          schema: { type: "string", pattern: "^sha256=[0-9a-f]{64}$" },
+        }],
+      },
+    });
   });
 
   it("matches the committed generated artifact", async () => {

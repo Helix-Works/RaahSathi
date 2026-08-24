@@ -42,4 +42,5 @@ export const apiErrors = {
   authAttemptsExhausted: () => new ApiError(429, "AUTH_ATTEMPTS_EXHAUSTED", "auth.errors.attemptsExhausted"),
   authRateLimited: (retryAfter: number) => new ApiError(429, "AUTH_RATE_LIMITED", "auth.errors.rateLimited", { retryable: true, retryAfter }),
   authProviderUnavailable: () => new ApiError(503, "AUTH_PROVIDER_UNAVAILABLE", "auth.errors.providerUnavailable", { retryable: true }),
+  paymentEventInvalid: () => new ApiError(400, "PAYMENT_EVENT_INVALID", "payments.errors.invalidProviderEvent"),
 };

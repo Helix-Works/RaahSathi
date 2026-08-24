@@ -23,5 +23,5 @@ export interface EndpointContract {
   pathParameters?: ReadonlyArray<Readonly<{ name: string; description: string; schema: z.ZodType }>>;
   success: (JsonResponseContract & { status: 200 | 201 | 202 }) | Readonly<{ status: 204; description: string; headers: Record<string, ResponseHeaderContract> }>;
   errors: ReadonlyArray<{ status: number; description: string; headers?: Record<string, ResponseHeaderContract> }>;
-  security?: readonly "cookieAuth"[];
+  security?: readonly ("cookieAuth" | "providerSignatureAuth")[];
 }

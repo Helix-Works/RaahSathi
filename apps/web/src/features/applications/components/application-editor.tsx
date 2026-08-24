@@ -7,6 +7,7 @@ import {
   type ApplicationSectionKey,
 } from "@raahsathi/contracts/applications";
 import type { IdentityContext } from "@raahsathi/contracts/identity";
+import type { PaymentContext } from "@raahsathi/contracts/payments";
 import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 
@@ -20,6 +21,7 @@ import {
   type SectionSubmitAction,
 } from "@/features/applications/components/application-section-form";
 import { IdentityRecoveryPanel } from "@/features/identity/components/identity-recovery-panel";
+import { PaymentPanel } from "@/features/payments/components/payment-panel";
 import type { Locale, MessageDictionary } from "@/i18n";
 
 type ApplicationMessages = MessageDictionary["applications"];
@@ -52,6 +54,7 @@ function ApplicationStatusCard({
     IN_PROGRESS: messages.statusInProgress,
     READY_FOR_IDENTITY: messages.statusReadyForIdentity,
     READY_FOR_PAYMENT: messages.statusReadyForPayment,
+    READY_FOR_APPOINTMENT: messages.statusReadyForAppointment,
   };
   const actions = {
     COMPLETE_PERSONAL_DETAILS: messages.nextPersonalDetails,
@@ -60,6 +63,8 @@ function ApplicationStatusCard({
     COMPLETE_DECLARATION: messages.nextDeclaration,
     VERIFY_IDENTITY: messages.nextIdentity,
     PAY_FEES: messages.nextPayment,
+    SELECT_APPOINTMENT: messages.nextAppointment,
+    NONE: messages.nextActionNone,
   };
   const blocking = application.blockingReasonCode === "IDENTITY_VERIFICATION_REQUIRED"
     ? messages.blockingIdentity
@@ -163,6 +168,9 @@ function ApplicationHistoryCard({
     IDENTITY_STARTED: messages.historyIdentityStarted,
     IDENTITY_RETRY_STARTED: messages.historyIdentityRetryStarted,
     IDENTITY_VERIFIED: messages.historyIdentityVerified,
+    PAYMENT_STARTED: messages.historyPaymentStarted,
+    PAYMENT_FAILED: messages.historyPaymentFailed,
+    PAYMENT_SUCCEEDED: messages.historyPaymentSucceeded,
   };
 
   return (
@@ -191,11 +199,13 @@ function ApplicationHistoryCard({
 export function ApplicationEditor({
   initialApplication,
   initialIdentity,
+  initialPayment,
   locale,
   messages,
 }: Readonly<{
   initialApplication: ApplicationDetail;
   initialIdentity: IdentityContext;
+  initialPayment: PaymentContext;
   locale: Locale;
   messages: MessageDictionary;
 }>) {
@@ -277,11 +287,13 @@ export function ApplicationEditor({
         />
       ) : null}
 
-      {application.statusCode === "READY_FOR_PAYMENT" ? (
-        <Alert>
-          <AlertTitle>{applicationMessages.paymentUnavailableTitle}</AlertTitle>
-          <AlertDescription>{applicationMessages.paymentUnavailableDescription}</AlertDescription>
-        </Alert>
+      {application.statusCode === "READY_FOR_PAYMENT" || application.statusCode === "READY_FOR_APPOINTMENT" ? (
+        <PaymentPanel
+          initialContext={initialPayment}
+          locale={locale}
+          messages={messages.payments}
+          onApplicationChanged={refresh}
+        />
       ) : null}
 
       <ApplicationHistoryCard
