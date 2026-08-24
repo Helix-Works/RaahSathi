@@ -10,6 +10,8 @@ import { GET as getServices } from "./services/route";
 import { POST as createApplication } from "./applications/route";
 import { POST as startIdentity } from "./applications/[id]/identity-attempts/route";
 import { POST as retryIdentity } from "./applications/[id]/identity-attempts/[attemptId]/retry/route";
+import { POST as startPayment } from "./applications/[id]/payments/route";
+import { createPaymentProviderEventHandler } from "./payment-provider/events/route";
 
 describe("Route Handlers", () => {
   it("serves health with a correlation ID and no permissive CORS", async () => {
@@ -71,6 +73,37 @@ describe("Route Handlers", () => {
       id: ["invalid_format"],
       attemptId: ["invalid_format"],
     } } });
+  });
+
+  it("blocks cross-origin payment creation before database access", async () => {
+    const response = await startPayment(new Request("http://localhost/api/v1/applications/30000000-0000-4000-8000-000000000001/payments", {
+      method: "POST",
+      headers: { origin: "https://attacker.invalid", "content-type": "application/json" },
+      body: JSON.stringify({ idempotencyKey: "40000000-0000-4000-8000-000000000001" }),
+    }), { params: Promise.resolve({ id: "30000000-0000-4000-8000-000000000001" }) });
+    expect(response.status).toBe(403);
+  });
+
+  it("validates and transports synthetic provider events through the registered contract", async () => {
+    const applicationId = "30000000-0000-4000-8000-000000000001";
+    const paymentId = "40000000-0000-4000-8000-000000000001";
+    const validSignature = `sha256=${"a".repeat(64)}`;
+    const handler = createPaymentProviderEventHandler(async (event, signature) => {
+      expect(event.amountMinor).toBe(55_000);
+      expect(signature).toBe(`sha256=${"a".repeat(64)}`);
+      return {
+        applicationId,
+        fee: { snapshotId: "41000000-0000-4000-8000-000000000001", baseFeeMinor: 50_000, serviceChargeMinor: 5_000, totalAmountMinor: 55_000, currency: "INR" },
+        attempt: { id: paymentId, status: "SUCCEEDED", attemptNumber: 1, providerReference: "SYN-PAY-40000000-0000-4000-8000-000000000001", createdAt: "2026-08-23T12:00:00.000Z", updatedAt: "2026-08-23T12:00:00.000Z", succeededAt: "2026-08-23T12:00:00.000Z" },
+      };
+    });
+    const response = await handler(new Request("http://localhost/api/v1/payment-provider/events", {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-raahsathi-provider-signature": validSignature },
+      body: JSON.stringify({ eventId: "evt_phase4_route_0001", providerReference: "SYN-PAY-40000000-0000-4000-8000-000000000001", outcome: "SUCCESS", amountMinor: 55_000, occurredAt: "2026-08-23T12:00:00.000Z" }),
+    }));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ attempt: { status: "SUCCEEDED" } });
   });
 
   it("rejects cross-origin and malformed OTP requests before database work", async () => {

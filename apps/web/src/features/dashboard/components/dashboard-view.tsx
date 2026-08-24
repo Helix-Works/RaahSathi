@@ -16,6 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { resolveNextActionCard } from "@/features/dashboard/dashboard-presentation";
 import type { DashboardSummary } from "@/features/dashboard/types";
 import type { Locale, MessageDictionary } from "@/i18n";
 
@@ -50,6 +51,7 @@ function statusPresentation(
   if (code === "IN_PROGRESS") return { label: messages.statusInProgress, tone: "warning" };
   if (code === "READY_FOR_IDENTITY") return { label: messages.statusReadyForIdentity, tone: "success" };
   if (code === "READY_FOR_PAYMENT") return { label: messages.statusReadyForPayment, tone: "success" };
+  if (code === "READY_FOR_APPOINTMENT") return { label: messages.statusReadyForAppointment, tone: "success" };
 
   return { label: messages.statusUnknown, tone: "neutral" };
 }
@@ -69,6 +71,7 @@ function nextActionPresentation(
   if (code.startsWith("COMPLETE_")) return messages.nextActionResumeApplication;
   if (code === "VERIFY_IDENTITY") return messages.nextActionVerifyIdentity;
   if (code === "PAY_FEES") return messages.nextActionPayFees;
+  if (code === "SELECT_APPOINTMENT") return messages.nextActionSelectAppointment;
 
   return messages.nextActionUnknown;
 }
@@ -125,6 +128,15 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
   const applicationProgress = application
     ? Math.min(100, Math.max(0, application.progressPercent))
     : 0;
+  const nextActionCard = application
+    ? resolveNextActionCard(application, {
+        defaultDescription: dashboard.nextActionDescription,
+        readyForAppointmentDescription: dashboard.nextActionUnavailableDescription,
+        appointmentBookedDescription: dashboard.nextActionBookedDescription,
+        noActionDescription: dashboard.nextActionNoneDescription,
+        continueLabel: messages.common.continue,
+      })
+    : undefined;
 
   return (
     <div className="mx-auto max-w-[80rem] space-y-9 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
@@ -196,9 +208,9 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
           <div className="space-y-5">
             <NextActionCard
               title={nextActionPresentation(application.nextActionCode, dashboard)}
-              description={dashboard.nextActionDescription}
-              actionLabel={messages.common.continue}
-              actionHref={`/applications/${application.id}`}
+              description={nextActionCard?.description ?? dashboard.nextActionDescription}
+              actionLabel={nextActionCard?.actionLabel}
+              actionHref={nextActionCard?.actionHref}
             />
             {application.blockingReasonCode ? (
               <BlockingReasonAlert

@@ -20,6 +20,10 @@
     "./identity": {
       "types": "./src/identity.ts",
       "import": "./src/identity.ts"
+    },
+    "./payments": {
+      "types": "./src/payments.ts",
+      "import": "./src/payments.ts"
     }
   },
   "scripts": {

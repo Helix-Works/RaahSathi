@@ -44,10 +44,17 @@ POST /api/v1/applications/:id/identity-attempts
 POST /api/v1/applications/:id/identity-attempts/:attemptId/retry
 GET  /api/v1/licences
 GET  /api/v1/licences/:id
+POST /api/v1/applications/:id/payments
+GET  /api/v1/payments/:id
+POST /api/v1/payment-provider/events
 ```
 
 Application mutations use optimistic `expectedRevision` values for safe multi-page draft editing. Completion is ordered and idempotent. Responses derive `statusCode`, `progressPercent`, `nextActionCode`, and `blockingReasonCode` on the server and include immutable history events.
 
 Identity start and retry accept no browser-selected provider outcome. The server derives deterministic synthetic outcomes from persisted scenario state, preserves application sections on failure, and advances verified applications exactly once. Document responses contain metadata only; licence queries are owner scoped.
+
+Payment creation accepts only an idempotency key. Fee amounts come from an immutable server-created snapshot. Synthetic provider events require an HMAC signature and stable event ID; duplicate, delayed, and reordered events converge transactionally without trusting a browser redirect.
+
+`POST /api/v1/payment-provider/events` is a server-to-server exception to cookie authentication. It requires the `x-raahsathi-provider-signature` HMAC-SHA-256 header and does not use a citizen session cookie or CSRF token.
 
 Mutation schemas are strict. Cookies are same-origin, opaque, HttpOnly, and server managed. Cookie-authenticated mutations require a session-bound CSRF token and exact Origin validation. Ownership filtering occurs in server services and database queries, never in client code.

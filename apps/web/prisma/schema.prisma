@@ -38,6 +38,7 @@ enum ApplicationStatus {
   IN_PROGRESS
   READY_FOR_IDENTITY
   READY_FOR_PAYMENT
+  READY_FOR_APPOINTMENT
 }
 
 enum ApplicationSectionKey {
@@ -55,6 +56,29 @@ enum ApplicationEventType {
   IDENTITY_STARTED
   IDENTITY_RETRY_STARTED
   IDENTITY_VERIFIED
+  PAYMENT_STARTED
+  PAYMENT_FAILED
+  PAYMENT_SUCCEEDED
+}
+
+enum PaymentProviderScenario {
+  SUCCESS
+  DELAYED_SUCCESS
+  DUPLICATE_CALLBACK
+  FAILED
+  PROVIDER_UNAVAILABLE
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  PROVIDER_UNAVAILABLE
+}
+
+enum PaymentProviderOutcome {
+  SUCCESS
+  FAILED
 }
 
 enum IdentityProviderScenario {
@@ -163,6 +187,7 @@ model Application {
   serviceKey       ServiceKey
   status           ApplicationStatus        @default(DRAFT)
   identityScenario IdentityProviderScenario @default(SUCCESS)
+  paymentScenario  PaymentProviderScenario  @default(SUCCESS)
   createdAt        DateTime                 @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime                 @updatedAt @db.Timestamptz(3)
   applicant        Applicant                @relation(fields: [applicantId], references: [id], onDelete: Restrict)
@@ -170,9 +195,58 @@ model Application {
   events           ApplicationEvent[]
   documents        DocumentRecord[]
   identityAttempts IdentityAttempt[]
+  feeSnapshot      FeeSnapshot?
+  paymentAttempts  PaymentAttempt[]
 
   @@unique([applicantId, serviceKey])
   @@index([applicantId, updatedAt])
+}
+
+model FeeSnapshot {
+  id                 String           @id @default(uuid()) @db.Uuid
+  applicationId      String           @unique @db.Uuid
+  baseFeeMinor       Int
+  serviceChargeMinor Int
+  totalAmountMinor   Int
+  currency           String           @db.Char(3)
+  createdAt          DateTime         @default(now()) @db.Timestamptz(3)
+  application        Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  paymentAttempts    PaymentAttempt[]
+
+  @@unique([id, applicationId])
+}
+
+model PaymentAttempt {
+  id                String                 @id @default(uuid()) @db.Uuid
+  applicationId     String                 @db.Uuid
+  feeSnapshotId     String                 @db.Uuid
+  attemptNumber     Int
+  idempotencyKey    String                 @unique
+  providerReference String                 @unique
+  status            PaymentStatus          @default(PENDING)
+  amountMinor       Int
+  succeededAt       DateTime?               @db.Timestamptz(3)
+  createdAt         DateTime                @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime                @updatedAt @db.Timestamptz(3)
+  application       Application             @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  feeSnapshot       FeeSnapshot             @relation(fields: [feeSnapshotId, applicationId], references: [id, applicationId], onDelete: Restrict)
+  providerEvents    PaymentProviderEvent[]
+
+  @@unique([applicationId, attemptNumber])
+  @@index([applicationId, createdAt, id])
+}
+
+model PaymentProviderEvent {
+  id               String                 @id @default(uuid()) @db.Uuid
+  paymentAttemptId String                 @db.Uuid
+  providerEventId  String                 @unique
+  outcome          PaymentProviderOutcome
+  amountMinor      Int
+  occurredAt       DateTime               @db.Timestamptz(3)
+  receivedAt       DateTime               @default(now()) @db.Timestamptz(3)
+  paymentAttempt   PaymentAttempt         @relation(fields: [paymentAttemptId], references: [id], onDelete: Cascade)
+
+  @@index([paymentAttemptId, receivedAt, id])
 }
 
 model ApplicationSection {
