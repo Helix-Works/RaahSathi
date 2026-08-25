@@ -29,14 +29,14 @@ export default async function RootLayout({
   const navigation =
     session.kind === "authenticated"
       ? ([
-          { href: "/dashboard", label: messages.navigation.dashboard },
-          { href: "/applications", label: messages.navigation.applications },
-          { href: "/services", label: messages.navigation.services },
+          { href: "/dashboard", label: messages.navigation.dashboard, icon: "dashboard" },
+          { href: "/applications", label: messages.navigation.applications, icon: "applications" },
+          { href: "/services", label: messages.navigation.services, icon: "services" },
         ] satisfies readonly NavigationItem[])
       : ([
-          { href: "/", label: messages.navigation.home },
-          { href: "/services", label: messages.navigation.services },
-          { href: "/login", label: messages.common.logIn },
+          { href: "/", label: messages.navigation.home, icon: "home" },
+          { href: "/services", label: messages.navigation.services, icon: "services" },
+          { href: "/login", label: messages.common.logIn, icon: "login" },
         ] satisfies readonly NavigationItem[]);
   const account =
     session.kind === "authenticated"

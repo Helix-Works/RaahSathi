@@ -21,6 +21,9 @@
   --warning: #464640;
   --error: #11110f;
   --focus: #11110f;
+  --brand-accent: #d8ff52;
+  --brand-accent-foreground: #11110f;
+  --brand-glow: rgba(216, 255, 82, 0.22);
 }
 
 @theme inline {
@@ -43,6 +46,8 @@
   --color-warning: var(--warning);
   --color-error: var(--error);
   --color-focus: var(--focus);
+  --color-brand-accent: var(--brand-accent);
+  --color-brand-accent-foreground: var(--brand-accent-foreground);
 }
 
 * {
@@ -148,6 +153,118 @@ html:lang(hi) [role="button"] {
   outline-offset: 0.22rem;
 }
 
+.brand-mark-shell,
+.brand-endpoint,
+.brand-wordmark,
+.brand-wordmark::after,
+.nav-entry-icon,
+.nav-entry-label::after,
+.language-toggle-indicator {
+  transition-duration: 180ms;
+  transition-timing-function: ease-out;
+}
+
+.brand-mark-shell {
+  transform-origin: center;
+  transition-property: transform, filter;
+}
+
+.brand-endpoint {
+  transition-property: fill, filter;
+}
+
+.brand-wordmark {
+  transition-property: color;
+}
+
+.brand-wordmark::after,
+.nav-entry-label::after {
+  position: absolute;
+  right: 0;
+  bottom: -0.24rem;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--brand-accent);
+  content: "";
+  transform: scaleX(0);
+  transform-origin: left;
+  transition-property: transform;
+}
+
+.brand-link:hover .brand-mark-shell,
+.brand-link:focus-visible .brand-mark-shell {
+  filter: drop-shadow(0 0 0.65rem var(--brand-glow));
+  transform: translateY(-1px) scale(1.08);
+}
+
+.brand-link:hover .brand-endpoint,
+.brand-link:focus-visible .brand-endpoint {
+  fill: #efffb3;
+  filter: drop-shadow(0 0 4px var(--brand-accent));
+}
+
+.brand-link:hover .brand-wordmark,
+.brand-link:focus-visible .brand-wordmark {
+  color: var(--brand-accent);
+}
+
+.brand-link:hover .brand-wordmark::after,
+.brand-link:focus-visible .brand-wordmark::after {
+  transform: scaleX(1);
+}
+
+.nav-entry-icon {
+  transform-origin: center;
+  transition-property: color, transform;
+}
+
+.nav-entry:hover .nav-entry-icon,
+.nav-entry:focus-visible .nav-entry-icon {
+  color: var(--brand-accent);
+  transform: scale(1.12);
+}
+
+.nav-entry:hover .nav-entry-label::after,
+.nav-entry:focus-visible .nav-entry-label::after,
+.nav-entry[data-active="true"] .nav-entry-label::after {
+  transform: scaleX(1);
+}
+
+.nav-entry[data-variant="cta"]:hover .nav-entry-icon,
+.nav-entry[data-variant="cta"]:focus-visible .nav-entry-icon {
+  color: var(--brand-accent-foreground);
+}
+
+.nav-entry[data-variant="cta"] .nav-entry-label::after {
+  background: var(--brand-accent-foreground);
+}
+
+.language-toggle-indicator {
+  transition-property: transform;
+}
+
+@media (forced-colors: active) {
+  .brand-wordmark::after,
+  .nav-entry-label::after {
+    background: Highlight;
+  }
+
+  .language-toggle {
+    border: 1px solid ButtonText;
+  }
+
+  .language-toggle-indicator {
+    border: 2px solid Highlight;
+    background: Canvas;
+  }
+
+  .language-toggle button[aria-pressed="true"] {
+    color: Highlight;
+    forced-color-adjust: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -156,5 +273,12 @@ html:lang(hi) [role="button"] {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .brand-link:hover .brand-mark-shell,
+  .brand-link:focus-visible .brand-mark-shell,
+  .nav-entry:hover .nav-entry-icon,
+  .nav-entry:focus-visible .nav-entry-icon {
+    transform: none;
   }
 }

@@ -1,6 +1,6 @@
-import { Route } from "lucide-react";
 import Link from "next/link";
 
+import { RaahSathiLogo } from "@/components/brand/raahsathi-logo";
 import {
   DesktopNavigation,
   MobileNavigation,
@@ -22,23 +22,21 @@ type AppHeaderProps = Readonly<{
 
 export function AppHeader({ locale, messages, navigation, account }: AppHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-primary-foreground/20 bg-primary text-primary-foreground">
-      <div className="relative mx-auto flex min-h-16 max-w-[80rem] items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 border-b border-primary-foreground/15 bg-primary/95 text-primary-foreground shadow-[0_10px_30px_rgba(17,17,15,0.12)] backdrop-blur-xl">
+      <div className="relative mx-auto flex min-h-[4.5rem] max-w-[80rem] items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
         <Link
           href="/"
-          className="flex min-h-11 shrink-0 items-center gap-2 rounded-sm font-black tracking-tight"
-          aria-label={`${messages.landing.name} · ${messages.navigation.home}`}
+          className="brand-link group/brand flex min-h-11 shrink-0 items-center rounded-xl focus-visible:outline-brand-accent"
+          aria-label={`RaahSathi · ${messages.navigation.home}`}
         >
-          <span
-            className="grid size-9 place-items-center border border-primary-foreground/45"
-            aria-hidden="true"
-          >
-            <Route className="size-4.5" strokeWidth={2.25} />
-          </span>
-          <span className="hidden text-lg min-[370px]:inline">{messages.landing.name}</span>
+          <RaahSathiLogo
+            name="RaahSathi"
+            descriptor={messages.navigation.brandDescriptor}
+            compact
+          />
         </Link>
 
-        <div className="ml-auto">
+        <div className="ml-auto min-w-0">
           <DesktopNavigation
             items={navigation}
             primaryLabel={messages.navigation.primaryLabel}
@@ -53,13 +51,13 @@ export function AppHeader({ locale, messages, navigation, account }: AppHeaderPr
         />
 
         {account ? (
-          <div className="hidden items-center gap-1 border-l border-primary-foreground/25 pl-2 lg:flex">
-            <span className="hidden max-w-36 px-2 text-right text-xs font-bold leading-4 text-primary-foreground/70 xl:block">
+          <div className="hidden items-center gap-1 border-l border-primary-foreground/15 pl-2 lg:flex">
+            <span className="hidden max-w-36 px-2 text-right text-xs font-bold leading-4 text-primary-foreground/65 xl:block">
               {account.label}
             </span>
             <LogoutButton
               presentation={account}
-              buttonClassName="text-primary-foreground! hover:bg-primary-foreground/10 hover:text-primary-foreground!"
+              buttonClassName="text-primary-foreground! hover:bg-primary-foreground/10 hover:text-brand-accent!"
             />
           </div>
         ) : null}
