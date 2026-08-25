@@ -35,6 +35,12 @@ type AppointmentRecord = Prisma.AppointmentGetPayload<{
 
 type SlotRecord = AppointmentSlot & { rto: Rto };
 
+function isSerializationConflict(error: unknown): boolean {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
+  if (error.code === "P2034") return true;
+  return error.code === "P2010" && error.meta?.code === "40001";
+}
+
 function dateKey(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
@@ -296,7 +302,7 @@ export async function bookAppointment(
     }, { isolationLevel: "Serializable" });
     return appointmentOutput(record);
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && retryOnSerializationConflict) {
+    if (isSerializationConflict(error) && retryOnSerializationConflict) {
       return bookAppointment(context, input, databaseClient, false);
     }
     throw error;
@@ -360,7 +366,7 @@ export async function cancelAppointment(
     }, { isolationLevel: "Serializable" });
     return appointmentOutput(record);
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2034" && retryOnSerializationConflict) {
+    if (isSerializationConflict(error) && retryOnSerializationConflict) {
       return cancelAppointment(context, input, databaseClient, false);
     }
     throw error;
