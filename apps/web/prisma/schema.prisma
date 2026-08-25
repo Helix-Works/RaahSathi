@@ -39,6 +39,7 @@ enum ApplicationStatus {
   READY_FOR_IDENTITY
   READY_FOR_PAYMENT
   READY_FOR_APPOINTMENT
+  APPOINTMENT_BOOKED
 }
 
 enum ApplicationSectionKey {
@@ -59,6 +60,28 @@ enum ApplicationEventType {
   PAYMENT_STARTED
   PAYMENT_FAILED
   PAYMENT_SUCCEEDED
+  APPOINTMENT_BOOKED
+  APPOINTMENT_CANCELLED
+}
+
+enum RtoOperationalStatus {
+  AVAILABLE
+  CENTER_UNAVAILABLE
+}
+
+enum BookingServiceStatus {
+  AVAILABLE
+  BOOKING_SERVICE_UNAVAILABLE
+}
+
+enum AppointmentStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+enum AppointmentRateLimitAction {
+  BOOK
+  CANCEL
 }
 
 enum PaymentProviderScenario {
@@ -113,20 +136,22 @@ enum VehicleClass {
 }
 
 model Applicant {
-  id                String                @id @default(uuid()) @db.Uuid
-  mobileLookupHash  String                @unique
-  mobileLast4       String                @db.Char(4)
+  id                String                       @id @default(uuid()) @db.Uuid
+  mobileLookupHash  String                       @unique
+  mobileLast4       String                       @db.Char(4)
   displayName       String
-  authScenario      SyntheticAuthScenario @default(STANDARD)
-  preferredLocale   PreferredLocale       @default(EN)
-  createdAt         DateTime              @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime              @updatedAt @db.Timestamptz(3)
+  authScenario      SyntheticAuthScenario        @default(STANDARD)
+  preferredLocale   PreferredLocale              @default(EN)
+  createdAt         DateTime                     @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime                     @updatedAt @db.Timestamptz(3)
   authAttempts      AuthAttempt[]
   sessions          Session[]
-  auditEvents       AuditEvent[]          @relation("AuditActor")
+  auditEvents       AuditEvent[]                 @relation("AuditActor")
   applications      Application[]
-  applicationEvents ApplicationEvent[]    @relation("ApplicationEventActor")
+  applicationEvents ApplicationEvent[]           @relation("ApplicationEventActor")
   licences          LicenceRecord[]
+  appointments      Appointment[]
+  appointmentLimits AppointmentRateLimitBucket[]
 }
 
 model AuthAttempt {
@@ -197,6 +222,7 @@ model Application {
   identityAttempts IdentityAttempt[]
   feeSnapshot      FeeSnapshot?
   paymentAttempts  PaymentAttempt[]
+  appointment      Appointment?
 
   @@unique([applicantId, serviceKey])
   @@index([applicantId, updatedAt])
@@ -293,14 +319,14 @@ model DocumentRecord {
 }
 
 model IdentityAttempt {
-  id            String          @id @default(uuid()) @db.Uuid
-  applicationId String          @db.Uuid
+  id            String           @id @default(uuid()) @db.Uuid
+  applicationId String           @db.Uuid
   outcome       IdentityOutcome
   attemptNumber Int
-  retryOfId     String?         @unique @db.Uuid
+  retryOfId     String?          @unique @db.Uuid
   correlationId String
-  createdAt     DateTime        @default(now()) @db.Timestamptz(3)
-  application   Application     @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  createdAt     DateTime         @default(now()) @db.Timestamptz(3)
+  application   Application      @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   retryOf       IdentityAttempt? @relation("IdentityAttemptRetry", fields: [retryOfId], references: [id], onDelete: Restrict)
   retry         IdentityAttempt? @relation("IdentityAttemptRetry")
 
@@ -321,4 +347,70 @@ model LicenceRecord {
 
   @@unique([applicantId, kind])
   @@index([applicantId, validUntil])
+}
+
+model Rto {
+  id                   String               @id @default(uuid()) @db.Uuid
+  code                 String               @unique
+  nameEn               String
+  nameHi               String
+  district             String
+  operationalStatus    RtoOperationalStatus @default(AVAILABLE)
+  bookingServiceStatus BookingServiceStatus @default(AVAILABLE)
+  createdAt            DateTime             @default(now()) @db.Timestamptz(3)
+  updatedAt            DateTime             @updatedAt @db.Timestamptz(3)
+  slots                AppointmentSlot[]
+
+  @@index([operationalStatus, bookingServiceStatus])
+}
+
+model AppointmentSlot {
+  id           String        @id @default(uuid()) @db.Uuid
+  rtoId        String        @db.Uuid
+  serviceKey   ServiceKey
+  date         DateTime      @db.Date
+  startTime    String        @db.Char(5)
+  endTime      String        @db.Char(5)
+  capacity     Int
+  bookedCount  Int           @default(0)
+  releasedAt   DateTime?     @db.Timestamptz(3)
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(3)
+  rto          Rto           @relation(fields: [rtoId], references: [id], onDelete: Restrict)
+  appointments Appointment[]
+
+  @@unique([rtoId, serviceKey, date, startTime])
+  @@index([rtoId, serviceKey, date, releasedAt])
+}
+
+model Appointment {
+  id            String            @id @default(uuid()) @db.Uuid
+  applicationId String            @unique @db.Uuid
+  applicantId   String            @db.Uuid
+  slotId        String            @db.Uuid
+  status        AppointmentStatus @default(CONFIRMED)
+  bookedAt      DateTime          @default(now()) @db.Timestamptz(3)
+  cancelledAt   DateTime?         @db.Timestamptz(3)
+  createdAt     DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime          @updatedAt @db.Timestamptz(3)
+  application   Application       @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  applicant     Applicant         @relation(fields: [applicantId], references: [id], onDelete: Restrict)
+  slot          AppointmentSlot   @relation(fields: [slotId], references: [id], onDelete: Restrict)
+
+  @@index([applicantId, status, bookedAt])
+  @@index([slotId, status])
+}
+
+model AppointmentRateLimitBucket {
+  id          String                     @id @default(uuid()) @db.Uuid
+  applicantId String                     @db.Uuid
+  action      AppointmentRateLimitAction
+  bucketStart DateTime                   @db.Timestamptz(3)
+  count       Int                        @default(1)
+  createdAt   DateTime                   @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime                   @updatedAt @db.Timestamptz(3)
+  applicant   Applicant                  @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+
+  @@unique([applicantId, action, bucketStart])
+  @@index([bucketStart])
 }

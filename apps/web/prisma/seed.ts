@@ -3,6 +3,7 @@ import { createHmac } from "node:crypto";
 import { PrismaClient } from "@prisma/client";
 
 import { seedSyntheticApplication } from "./seed-application";
+import { seedSyntheticAppointments } from "./seed-appointments";
 
 const database = new PrismaClient();
 
@@ -38,6 +39,7 @@ async function main() {
     });
   }
   await seedSyntheticApplication(database, applicants[0].id);
+  await seedSyntheticAppointments(database);
   await database.licenceRecord.upsert({
     where: { applicantId_kind: { applicantId: applicants[0].id, kind: "LEARNER" } },
     create: {
@@ -51,7 +53,7 @@ async function main() {
     },
     update: {},
   });
-  console.info("Seeded synthetic applicants and one resumable learner application.");
+  console.info("Seeded synthetic applicants, a resumable learner application, Delhi RTOs, and appointment states.");
 }
 
 void main()

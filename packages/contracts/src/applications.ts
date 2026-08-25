@@ -3,9 +3,9 @@ import { z } from "zod";
 export const serviceKeySchema = z.enum(["LEARNER_LICENCE", "PERMANENT_DRIVING_LICENCE"]);
 export const applicationSectionOrder = ["PERSONAL_DETAILS", "ADDRESS", "SERVICE_DETAILS", "DECLARATION"] as const;
 export const applicationSectionKeySchema = z.enum(applicationSectionOrder);
-export const applicationStatusCodeSchema = z.enum(["DRAFT", "IN_PROGRESS", "READY_FOR_IDENTITY", "READY_FOR_PAYMENT", "READY_FOR_APPOINTMENT"]);
+export const applicationStatusCodeSchema = z.enum(["DRAFT", "IN_PROGRESS", "READY_FOR_IDENTITY", "READY_FOR_PAYMENT", "READY_FOR_APPOINTMENT", "APPOINTMENT_BOOKED"]);
 export const applicationNextActionCodeSchema = z.enum([
-  "COMPLETE_PERSONAL_DETAILS", "COMPLETE_ADDRESS", "COMPLETE_SERVICE_DETAILS", "COMPLETE_DECLARATION", "VERIFY_IDENTITY", "PAY_FEES", "SELECT_APPOINTMENT", "NONE",
+  "COMPLETE_PERSONAL_DETAILS", "COMPLETE_ADDRESS", "COMPLETE_SERVICE_DETAILS", "COMPLETE_DECLARATION", "VERIFY_IDENTITY", "PAY_FEES", "SELECT_APPOINTMENT", "REVIEW_APPOINTMENT", "NONE",
 ]);
 export const applicationBlockingReasonCodeSchema = z.enum(["IDENTITY_VERIFICATION_REQUIRED", "PAYMENT_REQUIRED"]);
 
@@ -43,7 +43,7 @@ export const applicationSectionSchema = z.object({
 export const applicationEventSchema = z.object({
   id: z.uuid(), eventType: z.enum([
     "APPLICATION_CREATED", "SECTION_SAVED", "SECTION_COMPLETED", "WORKFLOW_ADVANCED",
-    "IDENTITY_STARTED", "IDENTITY_RETRY_STARTED", "IDENTITY_VERIFIED", "PAYMENT_STARTED", "PAYMENT_FAILED", "PAYMENT_SUCCEEDED",
+    "IDENTITY_STARTED", "IDENTITY_RETRY_STARTED", "IDENTITY_VERIFIED", "PAYMENT_STARTED", "PAYMENT_FAILED", "PAYMENT_SUCCEEDED", "APPOINTMENT_BOOKED", "APPOINTMENT_CANCELLED",
   ]),
   sectionKey: applicationSectionKeySchema.optional(), createdAt: z.iso.datetime(),
 }).strict();

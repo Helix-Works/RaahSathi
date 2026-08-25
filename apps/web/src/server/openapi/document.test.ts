@@ -40,6 +40,20 @@ describe("OpenAPI", () => {
             }],
           },
         },
+        "/api/v1/rtos": { get: { responses: { 200: {} } } },
+        "/api/v1/rtos/{id}/availability": {
+          get: { parameters: [
+            { name: "id", in: "path", required: true },
+            { name: "month", in: "query", required: true },
+            { name: "service", in: "query", required: true },
+          ] },
+        },
+        "/api/v1/rtos/{id}/slots": { get: { responses: { 200: {}, 404: {} } } },
+        "/api/v1/appointments": {
+          get: { responses: { 200: {}, 401: {} } },
+          post: { responses: { 201: {}, 409: {}, 429: {} }, security: [{ cookieAuth: [] }] },
+        },
+        "/api/v1/appointments/{id}/cancel": { post: { responses: { 200: {}, 409: {} } } },
         "/api/v1/health/ready": {
           get: {
             responses: {

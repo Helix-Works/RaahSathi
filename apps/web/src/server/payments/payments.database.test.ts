@@ -101,7 +101,7 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
     expect(await listApplications(contextA, database)).toMatchObject([{
       id: applicationId,
       statusCode: "READY_FOR_APPOINTMENT",
-      nextActionCode: "NONE",
+      nextActionCode: "SELECT_APPOINTMENT",
     }]);
 
     const conflictingReplay = { ...event, outcome: "FAILED" as const };
