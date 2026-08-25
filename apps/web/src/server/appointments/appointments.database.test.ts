@@ -5,6 +5,7 @@ import { afterAll, describe, expect, it } from "vitest";
 
 import { isDisposableDatabaseApproved } from "@/server/auth/database-test-safety";
 
+import { seedSyntheticAppointments } from "../../../prisma/seed-appointments";
 import { bookAppointment, cancelAppointment, getDaySlots, listAppointments } from "./appointment-service";
 
 const testUrl = process.env.TEST_DATABASE_URL;
@@ -23,8 +24,20 @@ describe.skipIf(!database)("Phase 5 disposable PostgreSQL appointment capacity",
   const applicantB = randomUUID();
   const applicationA = randomUUID();
   const applicationB = randomUUID();
+  const seededApplicant = randomUUID();
+  const seededApplication = randomUUID();
   const rtoId = randomUUID();
   const slotId = randomUUID();
+  const seededRtoIds = [
+    "50000000-0000-4000-8000-000000000001",
+    "50000000-0000-4000-8000-000000000002",
+    "50000000-0000-4000-8000-000000000003",
+  ];
+  const seededSlotIds = [
+    "51000000-0000-4000-8000-000000000001",
+    "51000000-0000-4000-8000-000000000002",
+    "51000000-0000-4000-8000-000000000003",
+  ];
   const contextA = { sessionId: randomUUID(), applicantId: applicantA };
   const contextB = { sessionId: randomUUID(), applicantId: applicantB };
   const now = new Date("2026-08-25T12:00:00.000Z");
@@ -33,13 +46,14 @@ describe.skipIf(!database)("Phase 5 disposable PostgreSQL appointment capacity",
     if (!database) return;
     await database.auditEvent.deleteMany({ where: { resourceType: "Appointment", actorApplicantId: { in: [applicantA, applicantB] } } });
     await database.appointmentRateLimitBucket.deleteMany({ where: { applicantId: { in: [applicantA, applicantB] } } });
-    await database.appointment.deleteMany({ where: { applicationId: { in: [applicationA, applicationB] } } });
-    await database.paymentAttempt.deleteMany({ where: { applicationId: { in: [applicationA, applicationB] } } });
-    await database.feeSnapshot.deleteMany({ where: { applicationId: { in: [applicationA, applicationB] } } });
-    await database.application.deleteMany({ where: { id: { in: [applicationA, applicationB] } } });
-    await database.appointmentSlot.deleteMany({ where: { id: slotId } });
-    await database.rto.deleteMany({ where: { id: rtoId } });
-    await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB] } } });
+    const applicationIds = [applicationA, applicationB, seededApplication];
+    await database.appointment.deleteMany({ where: { applicationId: { in: applicationIds } } });
+    await database.paymentAttempt.deleteMany({ where: { applicationId: { in: applicationIds } } });
+    await database.feeSnapshot.deleteMany({ where: { applicationId: { in: applicationIds } } });
+    await database.application.deleteMany({ where: { id: { in: applicationIds } } });
+    await database.appointmentSlot.deleteMany({ where: { id: { in: [slotId, ...seededSlotIds] } } });
+    await database.rto.deleteMany({ where: { id: { in: [rtoId, ...seededRtoIds] } } });
+    await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, seededApplicant] } } });
     await database.$disconnect();
   });
 
@@ -166,5 +180,40 @@ describe.skipIf(!database)("Phase 5 disposable PostgreSQL appointment capacity",
       correlationId: "phase5-rate-limit",
       now: new Date("2026-08-25T12:02:30.000Z"),
     }, database)).rejects.toThrowError(/APPOINTMENT_RATE_LIMITED/);
+  });
+
+  it("preserves a referenced seeded schedule and reconciles capacity from confirmed appointments", async () => {
+    if (!database) return;
+    const seededSlotId = seededSlotIds[0];
+    if (!seededSlotId) throw new Error("The appointment seed must define a primary slot.");
+
+    await seedSyntheticAppointments(database, { seedDate: "2026-08-25" });
+    await database.applicant.create({ data: {
+      id: seededApplicant,
+      mobileLookupHash: `phase5-seed-${seededApplicant}`,
+      mobileLast4: "0002",
+      displayName: "Phase 5 Seed",
+    } });
+    await database.application.create({ data: {
+      id: seededApplication,
+      applicantId: seededApplicant,
+      serviceKey: "LEARNER_LICENCE",
+      status: "APPOINTMENT_BOOKED",
+    } });
+    await database.appointmentSlot.update({ where: { id: seededSlotId }, data: { bookedCount: 1 } });
+    await database.appointment.create({ data: {
+      applicationId: seededApplication,
+      applicantId: seededApplicant,
+      slotId: seededSlotId,
+      status: "CONFIRMED",
+      bookedAt: now,
+    } });
+
+    await seedSyntheticAppointments(database, { seedDate: "2026-09-01" });
+
+    const slot = await database.appointmentSlot.findUniqueOrThrow({ where: { id: seededSlotId } });
+    expect(slot.date.toISOString().slice(0, 10)).toBe("2026-08-26");
+    expect(slot.bookedCount).toBe(1);
+    expect(await database.appointment.count({ where: { slotId: seededSlotId, status: "CONFIRMED" } })).toBe(1);
   });
 });
