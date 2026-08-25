@@ -30,10 +30,37 @@ const rtos = [
   },
 ] as const;
 
+const delhiOffsetMinutes = 330;
+
+function dateKey(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
+
+function delhiDateKey(value: Date): string {
+  return dateKey(new Date(value.getTime() + delhiOffsetMinutes * 60_000));
+}
+
+function requireSeedDate(value: string): string {
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value) || Number.isNaN(parsed.getTime()) || dateKey(parsed) !== value) {
+    throw new Error("RAAHSATHI_DEMO_SEED_DATE must be a valid YYYY-MM-DD date.");
+  }
+  return value;
+}
+
+function addDays(value: string, days: number): string {
+  const date = new Date(`${value}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return dateKey(date);
+}
+
+const seedDate = requireSeedDate(process.env.RAAHSATHI_DEMO_SEED_DATE ?? delhiDateKey(new Date()));
+const releasedAt = new Date(`${addDays(seedDate, -1)}T00:00:00.000Z`);
+
 const slots = [
-  { id: "51000000-0000-4000-8000-000000000001", date: "2026-08-26", startTime: "09:00", endTime: "09:30", capacity: 2, bookedCount: 0, released: true },
-  { id: "51000000-0000-4000-8000-000000000002", date: "2026-08-26", startTime: "09:30", endTime: "10:00", capacity: 1, bookedCount: 1, released: true },
-  { id: "51000000-0000-4000-8000-000000000003", date: "2026-08-27", startTime: "10:00", endTime: "10:30", capacity: 2, bookedCount: 0, released: false },
+  { id: "51000000-0000-4000-8000-000000000001", date: addDays(seedDate, 1), startTime: "09:00", endTime: "09:30", capacity: 2, bookedCount: 0, released: true },
+  { id: "51000000-0000-4000-8000-000000000002", date: addDays(seedDate, 1), startTime: "09:30", endTime: "10:00", capacity: 1, bookedCount: 1, released: true },
+  { id: "51000000-0000-4000-8000-000000000003", date: addDays(seedDate, 2), startTime: "10:00", endTime: "10:30", capacity: 2, bookedCount: 0, released: false },
 ] as const;
 
 export async function seedSyntheticAppointments(database: PrismaClient): Promise<void> {
@@ -64,13 +91,17 @@ export async function seedSyntheticAppointments(database: PrismaClient): Promise
         endTime: slot.endTime,
         capacity: slot.capacity,
         bookedCount: slot.bookedCount,
-        releasedAt: slot.released ? new Date("2026-08-24T00:00:00.000Z") : null,
+        releasedAt: slot.released ? releasedAt : null,
       },
       update: {
+        rtoId: rtos[0].id,
+        serviceKey: "LEARNER_LICENCE",
+        date: new Date(`${slot.date}T00:00:00.000Z`),
         startTime: slot.startTime,
         endTime: slot.endTime,
         capacity: slot.capacity,
-        releasedAt: slot.released ? new Date("2026-08-24T00:00:00.000Z") : null,
+        bookedCount: slot.bookedCount,
+        releasedAt: slot.released ? releasedAt : null,
       },
     });
   }

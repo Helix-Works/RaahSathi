@@ -6,12 +6,14 @@ export const availabilityReasonCodeSchema = z.enum([
   "AVAILABLE",
   "CAPACITY_FULL",
   "SLOTS_NOT_RELEASED",
+  "SLOT_ELAPSED",
   "CENTER_UNAVAILABLE",
   "BOOKING_SERVICE_UNAVAILABLE",
 ]);
 
 export const monthParameterSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 export const appointmentDateSchema = z.iso.date();
+export const appointmentTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 
 export const rtoSchema = z.object({
   id: z.uuid(),
@@ -39,8 +41,8 @@ export const monthAvailabilitySchema = z.object({
 
 export const appointmentSlotSchema = z.object({
   slotId: z.uuid(),
-  startTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
-  endTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  startTime: appointmentTimeSchema,
+  endTime: appointmentTimeSchema,
   capacity: z.number().int().positive(),
   remaining: z.number().int().min(0),
   status: availabilityReasonCodeSchema,
@@ -67,8 +69,8 @@ export const appointmentSchema = z.object({
   status: z.enum(["CONFIRMED", "CANCELLED"]),
   rto: rtoSchema,
   date: appointmentDateSchema,
-  startTime: z.string(),
-  endTime: z.string(),
+  startTime: appointmentTimeSchema,
+  endTime: appointmentTimeSchema,
   bookedAt: z.iso.datetime(),
   cancelledAt: z.iso.datetime().nullable(),
 }).strict();

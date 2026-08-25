@@ -13,19 +13,32 @@ import {
 
 describe("Phase 5 appointment availability", () => {
   const now = new Date("2026-08-25T12:00:00.000Z");
+  const futureSlotTime = { date: new Date("2026-08-26T00:00:00.000Z"), startTime: "09:00" };
 
   it("keeps every availability reason semantically distinct", () => {
     expect(dependencyAvailabilityStatus({ operationalStatus: "CENTER_UNAVAILABLE", bookingServiceStatus: "AVAILABLE" }))
       .toBe("CENTER_UNAVAILABLE");
     expect(dependencyAvailabilityStatus({ operationalStatus: "AVAILABLE", bookingServiceStatus: "BOOKING_SERVICE_UNAVAILABLE" }))
       .toBe("BOOKING_SERVICE_UNAVAILABLE");
-    expect(slotAvailabilityStatus({ capacity: 2, bookedCount: 0, releasedAt: null }, {
+    expect(slotAvailabilityStatus({ ...futureSlotTime, capacity: 2, bookedCount: 0, releasedAt: null }, {
       operationalStatus: "AVAILABLE", bookingServiceStatus: "AVAILABLE",
     }, now)).toBe("SLOTS_NOT_RELEASED");
-    expect(slotAvailabilityStatus({ capacity: 2, bookedCount: 2, releasedAt: new Date("2026-08-24T00:00:00.000Z") }, {
+    expect(slotAvailabilityStatus({ ...futureSlotTime, capacity: 2, bookedCount: 2, releasedAt: new Date("2026-08-24T00:00:00.000Z") }, {
       operationalStatus: "AVAILABLE", bookingServiceStatus: "AVAILABLE",
     }, now)).toBe("CAPACITY_FULL");
-    expect(slotAvailabilityStatus({ capacity: 2, bookedCount: 1, releasedAt: new Date("2026-08-24T00:00:00.000Z") }, {
+    expect(slotAvailabilityStatus({ ...futureSlotTime, capacity: 2, bookedCount: 1, releasedAt: new Date("2026-08-24T00:00:00.000Z") }, {
+      operationalStatus: "AVAILABLE", bookingServiceStatus: "AVAILABLE",
+    }, now)).toBe("AVAILABLE");
+    expect(slotAvailabilityStatus({
+      date: new Date("2026-08-25T00:00:00.000Z"), startTime: "17:29",
+      capacity: 2, bookedCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z"),
+    }, {
+      operationalStatus: "AVAILABLE", bookingServiceStatus: "AVAILABLE",
+    }, now)).toBe("SLOT_ELAPSED");
+    expect(slotAvailabilityStatus({
+      date: new Date("2026-08-25T00:00:00.000Z"), startTime: "17:31",
+      capacity: 2, bookedCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z"),
+    }, {
       operationalStatus: "AVAILABLE", bookingServiceStatus: "AVAILABLE",
     }, now)).toBe("AVAILABLE");
   });
@@ -45,6 +58,7 @@ describe("Phase 5 appointment availability", () => {
     for (const reason of [
       "CAPACITY_FULL",
       "SLOTS_NOT_RELEASED",
+      "SLOT_ELAPSED",
       "CENTER_UNAVAILABLE",
       "BOOKING_SERVICE_UNAVAILABLE",
     ] as const) {
@@ -70,6 +84,12 @@ describe("Phase 5 appointment availability", () => {
       updatedAt: createdAt,
     };
     const slots = [
+      {
+        id: crypto.randomUUID(), rtoId, serviceKey: "LEARNER_LICENCE" as const,
+        date: new Date("2026-08-25T00:00:00.000Z"), startTime: "11:00", endTime: "11:30",
+        capacity: 2, bookedCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z"),
+        createdAt, updatedAt, rto,
+      },
       {
         id: crypto.randomUUID(), rtoId, serviceKey: "LEARNER_LICENCE" as const,
         date: new Date("2026-08-26T00:00:00.000Z"), startTime: "09:00", endTime: "09:30",
@@ -99,6 +119,9 @@ describe("Phase 5 appointment availability", () => {
       rtoId, month: "2026-08", serviceKey: "LEARNER_LICENCE", now,
     }, database);
     expect(month.days).toHaveLength(31);
+    expect(month.days.find((day) => day.date === "2026-08-25")).toEqual({
+      date: "2026-08-25", status: "SLOT_ELAPSED", availableSlots: 0,
+    });
     expect(month.days.find((day) => day.date === "2026-08-26")).toEqual({
       date: "2026-08-26", status: "AVAILABLE", availableSlots: 1,
     });
@@ -108,5 +131,13 @@ describe("Phase 5 appointment availability", () => {
       rtoId, date: "2026-08-26", serviceKey: "LEARNER_LICENCE", now,
     }, database);
     expect(day).toMatchObject({ status: "AVAILABLE", slots: [{ remaining: 1, status: "AVAILABLE" }] });
+
+    const elapsedDay = await getDaySlots({
+      rtoId, date: "2026-08-25", serviceKey: "LEARNER_LICENCE", now,
+    }, database);
+    expect(elapsedDay).toMatchObject({
+      status: "SLOT_ELAPSED",
+      slots: [{ remaining: 2, status: "SLOT_ELAPSED" }],
+    });
   });
 });

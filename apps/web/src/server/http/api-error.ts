@@ -45,7 +45,7 @@ export const apiErrors = {
   paymentEventInvalid: () => new ApiError(400, "PAYMENT_EVENT_INVALID", "payments.errors.invalidProviderEvent"),
   appointmentNotEligible: () => new ApiError(409, "APPOINTMENT_NOT_ELIGIBLE", "appointments.errors.notEligible"),
   appointmentAlreadyBooked: () => new ApiError(409, "APPOINTMENT_ALREADY_BOOKED", "appointments.errors.alreadyBooked"),
-  appointmentUnavailable: (reason: "CAPACITY_FULL" | "SLOTS_NOT_RELEASED" | "CENTER_UNAVAILABLE" | "BOOKING_SERVICE_UNAVAILABLE") =>
+  appointmentUnavailable: (reason: "CAPACITY_FULL" | "SLOTS_NOT_RELEASED" | "SLOT_ELAPSED" | "CENTER_UNAVAILABLE" | "BOOKING_SERVICE_UNAVAILABLE") =>
     new ApiError(409, reason, `appointments.reasons.${reason}`),
   appointmentRateLimited: () => new ApiError(429, "APPOINTMENT_RATE_LIMITED", "appointments.errors.rateLimited", { retryable: true, retryAfter: 60 }),
   appointmentCapacityInvariant: () => new ApiError(500, "APPOINTMENT_CAPACITY_INVARIANT", "errors.internalServerError"),

@@ -34,6 +34,8 @@ describe.skipIf(!database)("Phase 5 disposable PostgreSQL appointment capacity",
     await database.auditEvent.deleteMany({ where: { resourceType: "Appointment", actorApplicantId: { in: [applicantA, applicantB] } } });
     await database.appointmentRateLimitBucket.deleteMany({ where: { applicantId: { in: [applicantA, applicantB] } } });
     await database.appointment.deleteMany({ where: { applicationId: { in: [applicationA, applicationB] } } });
+    await database.paymentAttempt.deleteMany({ where: { applicationId: { in: [applicationA, applicationB] } } });
+    await database.feeSnapshot.deleteMany({ where: { applicationId: { in: [applicationA, applicationB] } } });
     await database.application.deleteMany({ where: { id: { in: [applicationA, applicationB] } } });
     await database.appointmentSlot.deleteMany({ where: { id: slotId } });
     await database.rto.deleteMany({ where: { id: rtoId } });

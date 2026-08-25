@@ -27,6 +27,7 @@ import { prisma } from "@/server/database/prisma";
 import { apiErrors } from "@/server/http/api-error";
 
 const appointmentMutationLimitPerMinute = 20;
+const delhiUtcOffset = "+05:30";
 
 type AppointmentRecord = Prisma.AppointmentGetPayload<{
   include: { application: true; slot: { include: { rto: true } } };
@@ -36,6 +37,11 @@ type SlotRecord = AppointmentSlot & { rto: Rto };
 
 function dateKey(value: Date): string {
   return value.toISOString().slice(0, 10);
+}
+
+function slotHasElapsed(slot: Pick<AppointmentSlot, "date" | "startTime">, now: Date): boolean {
+  const start = new Date(`${dateKey(slot.date)}T${slot.startTime}:00${delhiUtcOffset}`);
+  return start <= now;
 }
 
 function monthBounds(month: string): Readonly<{ start: Date; end: Date; dayCount: number }> {
@@ -57,12 +63,13 @@ export function dependencyAvailabilityStatus(input: Readonly<{
 }
 
 export function slotAvailabilityStatus(
-  slot: Pick<AppointmentSlot, "capacity" | "bookedCount" | "releasedAt">,
+  slot: Pick<AppointmentSlot, "capacity" | "bookedCount" | "releasedAt" | "date" | "startTime">,
   rto: Pick<Rto, "operationalStatus" | "bookingServiceStatus">,
   now: Date,
 ): AvailabilityReasonCode {
   const dependencyStatus = dependencyAvailabilityStatus(rto);
   if (dependencyStatus !== "AVAILABLE") return dependencyStatus;
+  if (slotHasElapsed(slot, now)) return "SLOT_ELAPSED";
   if (!slot.releasedAt || slot.releasedAt > now) return "SLOTS_NOT_RELEASED";
   return slot.bookedCount >= slot.capacity ? "CAPACITY_FULL" : "AVAILABLE";
 }
@@ -116,10 +123,18 @@ function dayStatus(slots: readonly SlotRecord[], rto: Rto, now: Date): Readonly<
 }> {
   const dependencyStatus = dependencyAvailabilityStatus(rto);
   if (dependencyStatus !== "AVAILABLE") return { status: dependencyStatus, availableSlots: 0 };
-  const released = slots.filter((slot) => slot.releasedAt && slot.releasedAt <= now);
-  if (released.length === 0) return { status: "SLOTS_NOT_RELEASED", availableSlots: 0 };
-  const availableSlots = released.reduce((total, slot) => total + Math.max(0, slot.capacity - slot.bookedCount), 0);
-  return { status: availableSlots > 0 ? "AVAILABLE" : "CAPACITY_FULL", availableSlots };
+  if (slots.length === 0) return { status: "SLOTS_NOT_RELEASED", availableSlots: 0 };
+  const statuses = slots.map((slot) => slotAvailabilityStatus(slot, rto, now));
+  const availableSlots = slots.reduce(
+    (total, slot, index) => statuses[index] === "AVAILABLE"
+      ? total + Math.max(0, slot.capacity - slot.bookedCount)
+      : total,
+    0,
+  );
+  if (availableSlots > 0) return { status: "AVAILABLE", availableSlots };
+  if (statuses.includes("SLOTS_NOT_RELEASED")) return { status: "SLOTS_NOT_RELEASED", availableSlots: 0 };
+  if (statuses.includes("CAPACITY_FULL")) return { status: "CAPACITY_FULL", availableSlots: 0 };
+  return { status: "SLOT_ELAPSED", availableSlots: 0 };
 }
 
 export async function getMonthAvailability(
@@ -243,10 +258,9 @@ export async function bookAppointment(
       if (application.status !== "READY_FOR_APPOINTMENT") throw apiErrors.appointmentNotEligible();
 
       await database.$queryRaw(Prisma.sql`SELECT "id" FROM "AppointmentSlot" WHERE "id" = ${input.slotId}::uuid FOR UPDATE`);
-      const candidate = await database.appointmentSlot.findUnique({ where: { id: input.slotId } });
-      if (!candidate) throw apiErrors.notFound();
-      await database.$queryRaw(Prisma.sql`SELECT "id" FROM "Rto" WHERE "id" = ${candidate.rtoId}::uuid FOR UPDATE`);
-      const slot = await database.appointmentSlot.findUniqueOrThrow({ where: { id: input.slotId }, include: { rto: true } });
+      const slot = await database.appointmentSlot.findUnique({ where: { id: input.slotId }, include: { rto: true } });
+      if (!slot) throw apiErrors.notFound();
+      await database.$queryRaw(Prisma.sql`SELECT "id" FROM "Rto" WHERE "id" = ${slot.rtoId}::uuid FOR SHARE`);
       if (slot.serviceKey !== application.serviceKey) throw apiErrors.appointmentNotEligible();
       assertSlotBookable(slot, now);
 

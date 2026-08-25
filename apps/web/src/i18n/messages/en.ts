@@ -341,6 +341,21 @@ export const enMessages = {
       invalidProviderEvent: "The payment provider event is invalid.",
     },
   },
+  appointments: {
+    errors: {
+      notEligible: "This application is not ready for appointment booking.",
+      alreadyBooked: "This application already has a confirmed appointment.",
+      rateLimited: "Too many appointment changes were requested. Wait briefly and try again.",
+    },
+    reasons: {
+      AVAILABLE: "This appointment slot is available.",
+      CAPACITY_FULL: "This appointment slot is full.",
+      SLOTS_NOT_RELEASED: "Appointment slots have not been released yet.",
+      SLOT_ELAPSED: "This appointment time has already passed.",
+      CENTER_UNAVAILABLE: "This center is currently unavailable.",
+      BOOKING_SERVICE_UNAVAILABLE: "Appointment booking is temporarily unavailable.",
+    },
+  },
   dashboard: {
     eyebrow: "Citizen dashboard",
     title: "Your next step, at a glance",
