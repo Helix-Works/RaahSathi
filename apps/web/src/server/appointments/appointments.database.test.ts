@@ -200,7 +200,7 @@ describe.skipIf(!database)("Phase 5 disposable PostgreSQL appointment capacity",
       serviceKey: "LEARNER_LICENCE",
       status: "APPOINTMENT_BOOKED",
     } });
-    await database.appointmentSlot.update({ where: { id: seededSlotId }, data: { bookedCount: 1 } });
+    await database.appointmentSlot.update({ where: { id: seededSlotId }, data: { bookedCount: 0 } });
     await database.appointment.create({ data: {
       applicationId: seededApplication,
       applicantId: seededApplicant,
