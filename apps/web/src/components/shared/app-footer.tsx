@@ -12,9 +12,9 @@ export function AppFooter({ messages }: Readonly<{ messages: MessageDictionary }
           <Link
             href="/"
             className="brand-link inline-flex min-h-11 items-center rounded-xl focus-visible:outline-brand-accent"
-            aria-label={`RaahSathi · ${messages.navigation.home}`}
+            aria-label={`${messages.landing.name} · ${messages.navigation.home}`}
           >
-            <RaahSathiLogo name="RaahSathi" />
+            <RaahSathiLogo name={messages.landing.name} />
           </Link>
           <p className="max-w-sm text-sm leading-6 text-primary-foreground/70">
             {messages.footer.tagline}

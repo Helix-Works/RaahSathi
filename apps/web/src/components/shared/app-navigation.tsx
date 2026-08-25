@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -148,12 +148,17 @@ export function MobileNavigation({
 >) {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setIsOpen(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setIsOpen(false);
+        requestAnimationFrame(() => menuButtonRef.current?.focus());
+      }
     };
 
     window.addEventListener("keydown", closeOnEscape);
@@ -163,6 +168,7 @@ export function MobileNavigation({
   return (
     <div className="lg:hidden">
       <Button
+        ref={menuButtonRef}
         variant="ghost"
         size="icon"
         className="border border-primary-foreground/20 text-primary-foreground! hover:border-brand-accent/50 hover:bg-brand-accent/10 hover:text-brand-accent!"
