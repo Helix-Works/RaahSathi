@@ -22,6 +22,7 @@ import {
 } from "@/features/applications/components/application-section-form";
 import { IdentityRecoveryPanel } from "@/features/identity/components/identity-recovery-panel";
 import { PaymentPanel } from "@/features/payments/components/payment-panel";
+import { isPaymentRelevantApplicationStatus } from "@/features/payments/payment-flow";
 import type { Locale, MessageDictionary } from "@/i18n";
 
 type ApplicationMessages = MessageDictionary["applications"];
@@ -287,7 +288,7 @@ export function ApplicationEditor({
         />
       ) : null}
 
-      {application.statusCode === "READY_FOR_PAYMENT" || application.statusCode === "READY_FOR_APPOINTMENT" ? (
+      {isPaymentRelevantApplicationStatus(application.statusCode) ? (
         <PaymentPanel
           initialContext={initialPayment}
           locale={locale}

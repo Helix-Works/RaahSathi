@@ -1,7 +1,12 @@
-import { Prisma } from "@prisma/client";
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { describe, expect, it } from "vitest";
 
-import { isIdentityConcurrencyConflict, isRetryableIdentityOutcome, providerOutcomeForAttempt } from "./identity-service";
+import {
+  getIdentityContext,
+  isIdentityConcurrencyConflict,
+  isRetryableIdentityOutcome,
+  providerOutcomeForAttempt,
+} from "./identity-service";
 
 describe("synthetic identity provider policy", () => {
   it("models every required deterministic first-attempt outcome", () => {
@@ -54,5 +59,30 @@ describe("synthetic identity provider policy", () => {
     }))).toBe(false);
     expect(isIdentityConcurrencyConflict(prismaError("P2010"))).toBe(false);
     expect(isIdentityConcurrencyConflict(new Error("conflict"))).toBe(false);
+  });
+
+  it("retries identity reconstruction once after P1017", async () => {
+    let executions = 0;
+    const database = {
+      application: {
+        findFirst: async () => {
+          executions += 1;
+          if (executions === 1) {
+            throw new Prisma.PrismaClientKnownRequestError("Server has closed the connection.", {
+              code: "P1017",
+              clientVersion: Prisma.prismaVersion.client,
+            });
+          }
+          return { documents: [], identityAttempts: [] };
+        },
+      },
+    } as unknown as PrismaClient;
+
+    await expect(getIdentityContext(
+      { sessionId: crypto.randomUUID(), applicantId: crypto.randomUUID() },
+      crypto.randomUUID(),
+      database,
+    )).resolves.toEqual({ attempt: null, documents: [] });
+    expect(executions).toBe(2);
   });
 });

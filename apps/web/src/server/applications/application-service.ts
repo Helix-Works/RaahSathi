@@ -26,6 +26,7 @@ import {
 
 import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { prisma } from "@/server/database/prisma";
+import { retryTransientConnectionRead } from "@/server/database/read-retry";
 import { apiErrors } from "@/server/http/api-error";
 
 type ApplicationSummaryRecord = Pick<Application, "id" | "serviceKey" | "updatedAt"> & {
@@ -171,7 +172,7 @@ export async function listApplications(
   context: AuthenticatedContext,
   databaseClient: PrismaClient = prisma,
 ): Promise<readonly ApplicationSummary[]> {
-  const records = await databaseClient.application.findMany({
+  const records = await retryTransientConnectionRead(() => databaseClient.application.findMany({
     where: { applicantId: context.applicantId },
     select: {
       id: true,
@@ -182,7 +183,7 @@ export async function listApplications(
       paymentAttempts: { select: { status: true } },
     },
     orderBy: { updatedAt: "desc" },
-  });
+  }));
   return applicationListSchema.parse({ applications: records.map(deriveSummary) }).applications;
 }
 
@@ -191,7 +192,9 @@ export async function getApplication(
   id: string,
   databaseClient: PrismaClient = prisma,
 ): Promise<ApplicationDetail> {
-  return derive(await ownedRecord(databaseClient, context, id));
+  return derive(await retryTransientConnectionRead(
+    () => ownedRecord(databaseClient, context, id),
+  ));
 }
 
 export async function saveApplicationSection(

@@ -15,6 +15,7 @@
     "prisma:generate": "prisma generate --schema prisma/schema.prisma",
     "prisma:validate": "prisma validate --schema prisma/schema.prisma",
     "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:seed:fresh-journey": "node --env-file=.env --import tsx prisma/seed-fresh-journey.ts",
     "openapi:generate": "tsx src/server/openapi/write-openapi.ts",
     "openapi:check": "tsx src/server/openapi/check-openapi.ts"
   },

@@ -3,6 +3,7 @@ import "server-only";
 import type { PreferredLocale, Prisma } from "@prisma/client";
 
 import { prisma } from "@/server/database/prisma";
+import { retryTransientConnectionRead } from "@/server/database/read-retry";
 
 import { authPolicy } from "./auth-policy";
 import type { IssuedSession, ResolvedSession } from "./auth-types";
@@ -69,10 +70,10 @@ export async function resolveSessionFromCookie(
   if (!rawToken) return { kind: "anonymous" };
 
   const now = options.now ?? new Date();
-  const session = await prisma.session.findUnique({
+  const session = await retryTransientConnectionRead(() => prisma.session.findUnique({
     where: { tokenHash: sha256(rawToken) },
     include: { applicant: true },
-  });
+  }));
   if (!session) return { kind: "anonymous" };
   if (session.revokedAt) return { kind: "expired" };
 

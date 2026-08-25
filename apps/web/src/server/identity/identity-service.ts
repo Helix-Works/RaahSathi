@@ -18,6 +18,7 @@ import {
 import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { isRetryableTransactionConflict } from "@/server/database/prisma-errors";
 import { prisma } from "@/server/database/prisma";
+import { retryTransientConnectionRead } from "@/server/database/read-retry";
 import { apiErrors } from "@/server/http/api-error";
 
 type IdentityRecord = Application & {
@@ -83,7 +84,9 @@ export async function getIdentityContext(
   applicationId: string,
   database: PrismaClient = prisma,
 ): Promise<IdentityContext> {
-  return toContext(await ownedIdentityRecord(database, context, applicationId));
+  return toContext(await retryTransientConnectionRead(
+    () => ownedIdentityRecord(database, context, applicationId),
+  ));
 }
 
 function syntheticDocumentReference(applicationId: string, suffix: "ID" | "ADDRESS"): string {

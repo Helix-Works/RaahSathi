@@ -5,6 +5,7 @@ import type { PrismaClient } from "@prisma/client";
 
 import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { prisma } from "@/server/database/prisma";
+import { retryTransientConnectionRead } from "@/server/database/read-retry";
 import { apiErrors } from "@/server/http/api-error";
 
 function toSummary(record: Readonly<{
@@ -26,15 +27,17 @@ function toSummary(record: Readonly<{
 }
 
 export async function listLicences(context: AuthenticatedContext, database: PrismaClient = prisma): Promise<readonly LicenceRecordSummary[]> {
-  const records = await database.licenceRecord.findMany({
+  const records = await retryTransientConnectionRead(() => database.licenceRecord.findMany({
     where: { applicantId: context.applicantId },
     orderBy: [{ validUntil: "desc" }, { id: "asc" }],
-  });
+  }));
   return licenceListSchema.parse({ licences: records.map(toSummary) }).licences;
 }
 
 export async function getLicence(context: AuthenticatedContext, id: string, database: PrismaClient = prisma): Promise<LicenceRecordSummary> {
-  const record = await database.licenceRecord.findFirst({ where: { id, applicantId: context.applicantId } });
+  const record = await retryTransientConnectionRead(
+    () => database.licenceRecord.findFirst({ where: { id, applicantId: context.applicantId } }),
+  );
   if (!record) throw apiErrors.notFound();
   return toSummary(record);
 }
