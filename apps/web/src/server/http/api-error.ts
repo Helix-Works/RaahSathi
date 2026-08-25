@@ -49,4 +49,11 @@ export const apiErrors = {
     new ApiError(409, reason, `appointments.reasons.${reason}`),
   appointmentRateLimited: () => new ApiError(429, "APPOINTMENT_RATE_LIMITED", "appointments.errors.rateLimited", { retryable: true, retryAfter: 60 }),
   appointmentCapacityInvariant: () => new ApiError(500, "APPOINTMENT_CAPACITY_INVARIANT", "errors.internalServerError"),
+  waitlistNotEligible: () => new ApiError(409, "WAITLIST_NOT_ELIGIBLE", "waitlist.errors.notEligible"),
+  waitlistAlreadyActive: () => new ApiError(409, "WAITLIST_ALREADY_ACTIVE", "waitlist.errors.alreadyActive"),
+  waitlistOfferActive: () => new ApiError(409, "WAITLIST_OFFER_ACTIVE", "waitlist.errors.offerActive"),
+  waitlistRateLimited: () => new ApiError(429, "WAITLIST_RATE_LIMITED", "waitlist.errors.rateLimited", { retryable: true, retryAfter: 60 }),
+  offerExpired: () => new ApiError(409, "OFFER_EXPIRED", "waitlist.errors.offerExpired"),
+  offerAlreadyConsumed: () => new ApiError(409, "OFFER_ALREADY_CONSUMED", "waitlist.errors.offerConsumed"),
+  offerStateConflict: () => new ApiError(409, "OFFER_STATE_CONFLICT", "waitlist.errors.offerConflict"),
 };

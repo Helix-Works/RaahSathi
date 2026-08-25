@@ -14,7 +14,7 @@ export interface JsonResponseContract {
 }
 
 export interface EndpointContract {
-  method: "get" | "post" | "patch";
+  method: "get" | "post" | "patch" | "delete";
   path: string;
   operationId: string;
   summary: string;

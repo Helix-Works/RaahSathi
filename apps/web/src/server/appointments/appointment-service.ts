@@ -29,7 +29,7 @@ import { apiErrors } from "@/server/http/api-error";
 const appointmentMutationLimitPerMinute = 20;
 const delhiUtcOffset = "+05:30";
 
-type AppointmentRecord = Prisma.AppointmentGetPayload<{
+export type AppointmentRecord = Prisma.AppointmentGetPayload<{
   include: { application: true; slot: { include: { rto: true } } };
 }>;
 
@@ -69,7 +69,7 @@ export function dependencyAvailabilityStatus(input: Readonly<{
 }
 
 export function slotAvailabilityStatus(
-  slot: Pick<AppointmentSlot, "capacity" | "bookedCount" | "releasedAt" | "date" | "startTime">,
+  slot: Pick<AppointmentSlot, "capacity" | "bookedCount" | "releasedAt" | "date" | "startTime"> & { heldCount?: number },
   rto: Pick<Rto, "operationalStatus" | "bookingServiceStatus">,
   now: Date,
 ): AvailabilityReasonCode {
@@ -77,7 +77,7 @@ export function slotAvailabilityStatus(
   if (dependencyStatus !== "AVAILABLE") return dependencyStatus;
   if (slotHasElapsed(slot, now)) return "SLOT_ELAPSED";
   if (!slot.releasedAt || slot.releasedAt > now) return "SLOTS_NOT_RELEASED";
-  return slot.bookedCount >= slot.capacity ? "CAPACITY_FULL" : "AVAILABLE";
+  return slot.bookedCount + (slot.heldCount ?? 0) >= slot.capacity ? "CAPACITY_FULL" : "AVAILABLE";
 }
 
 function rtoOutput(rto: Rto) {
@@ -91,7 +91,7 @@ function rtoOutput(rto: Rto) {
   };
 }
 
-function appointmentOutput(record: AppointmentRecord): Appointment {
+export function appointmentOutputForWaitlist(record: AppointmentRecord): Appointment {
   return appointmentSchema.parse({
     id: record.id,
     applicationId: record.applicationId,
@@ -133,7 +133,7 @@ function dayStatus(slots: readonly SlotRecord[], rto: Rto, now: Date): Readonly<
   const statuses = slots.map((slot) => slotAvailabilityStatus(slot, rto, now));
   const availableSlots = slots.reduce(
     (total, slot, index) => statuses[index] === "AVAILABLE"
-      ? total + Math.max(0, slot.capacity - slot.bookedCount)
+      ? total + Math.max(0, slot.capacity - slot.bookedCount - (slot.heldCount ?? 0))
       : total,
     0,
   );
@@ -191,7 +191,7 @@ export async function getDaySlots(
       startTime: slot.startTime,
       endTime: slot.endTime,
       capacity: slot.capacity,
-      remaining: Math.max(0, slot.capacity - slot.bookedCount),
+      remaining: Math.max(0, slot.capacity - slot.bookedCount - (slot.heldCount ?? 0)),
       status: slotAvailabilityStatus(slot, rto, now),
     })),
   });
@@ -261,7 +261,7 @@ export async function bookAppointment(
         if (application.appointment.slotId === input.slotId) return application.appointment;
         throw apiErrors.appointmentAlreadyBooked();
       }
-      if (application.status !== "READY_FOR_APPOINTMENT") throw apiErrors.appointmentNotEligible();
+      if (application.status !== "READY_FOR_APPOINTMENT" && application.status !== "WAITLISTED") throw apiErrors.appointmentNotEligible();
 
       await database.$queryRaw(Prisma.sql`SELECT "id" FROM "AppointmentSlot" WHERE "id" = ${input.slotId}::uuid FOR UPDATE`);
       const slot = await database.appointmentSlot.findUnique({ where: { id: input.slotId }, include: { rto: true } });
@@ -271,7 +271,7 @@ export async function bookAppointment(
       assertSlotBookable(slot, now);
 
       const capacity = await database.appointmentSlot.updateMany({
-        where: { id: slot.id, bookedCount: { lt: slot.capacity }, releasedAt: { lte: now } },
+        where: { id: slot.id, bookedCount: { lt: slot.capacity }, heldCount: { lte: slot.capacity - slot.bookedCount - 1 }, releasedAt: { lte: now } },
         data: { bookedCount: { increment: 1 } },
       });
       if (capacity.count !== 1) throw apiErrors.appointmentUnavailable("CAPACITY_FULL");
@@ -286,6 +286,9 @@ export async function bookAppointment(
             data: { applicationId: application.id, applicantId: context.applicantId, slotId: slot.id, bookedAt: now },
             include: appointmentInclude,
           });
+      await database.waitlistEntry.updateMany({
+        where: { applicationId: application.id, status: "ACTIVE" }, data: { status: "FULFILLED" },
+      });
       await database.application.update({ where: { id: application.id }, data: { status: "APPOINTMENT_BOOKED" } });
       await database.applicationEvent.create({ data: {
         applicationId: application.id,
@@ -299,8 +302,8 @@ export async function bookAppointment(
         correlationId: input.correlationId, applicationId: application.id, slotId: slot.id,
       });
       return appointment;
-    }, { isolationLevel: "Serializable" });
-    return appointmentOutput(record);
+    }, { isolationLevel: "Serializable", maxWait: 30_000, timeout: 30_000 });
+    return appointmentOutputForWaitlist(record);
   } catch (error) {
     if (isSerializationConflict(error) && retryOnSerializationConflict) {
       return bookAppointment(context, input, databaseClient, false);
@@ -318,7 +321,7 @@ export async function listAppointments(
     include: appointmentInclude,
     orderBy: [{ bookedAt: "desc" }, { id: "desc" }],
   });
-  return appointmentListSchema.parse({ appointments: records.map(appointmentOutput) }).appointments;
+  return appointmentListSchema.parse({ appointments: records.map(appointmentOutputForWaitlist) }).appointments;
 }
 
 export async function cancelAppointment(
@@ -363,8 +366,8 @@ export async function cancelAppointment(
         correlationId: input.correlationId, applicationId: appointment.applicationId, slotId: appointment.slotId,
       });
       return cancelled;
-    }, { isolationLevel: "Serializable" });
-    return appointmentOutput(record);
+    }, { isolationLevel: "Serializable", maxWait: 30_000, timeout: 30_000 });
+    return appointmentOutputForWaitlist(record);
   } catch (error) {
     if (isSerializationConflict(error) && retryOnSerializationConflict) {
       return cancelAppointment(context, input, databaseClient, false);

@@ -28,6 +28,10 @@
     "./appointments": {
       "types": "./src/appointments.ts",
       "import": "./src/appointments.ts"
+    },
+    "./waitlist": {
+      "types": "./src/waitlist.ts",
+      "import": "./src/waitlist.ts"
     }
   },
   "scripts": {
