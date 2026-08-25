@@ -1,6 +1,16 @@
 "use client";
 
-import { LockKeyhole, Menu, X } from "lucide-react";
+import {
+  Files,
+  Gauge,
+  House,
+  LayoutGrid,
+  LockKeyhole,
+  LogIn,
+  Menu,
+  X,
+  type LucideIcon,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -12,9 +22,13 @@ import {
 } from "@/features/auth/components/logout-button";
 import { cn } from "@/lib/utils";
 
+export type NavigationIcon = "home" | "services" | "login" | "dashboard" | "applications";
+type NavigationHref = "/" | "/services" | "/login" | "/dashboard" | "/applications";
+
 export type NavigationItem = Readonly<{
   label: string;
-  href?: "/" | "/services" | "/login" | "/dashboard" | "/applications";
+  href?: NavigationHref;
+  icon: NavigationIcon;
   disabled?: boolean;
   hint?: string;
 }>;
@@ -28,6 +42,14 @@ type NavigationProps = Readonly<{
   account?: AccountPresentation;
 }>;
 
+const navigationIcons: Readonly<Record<NavigationIcon, LucideIcon>> = {
+  home: House,
+  services: LayoutGrid,
+  login: LogIn,
+  dashboard: Gauge,
+  applications: Files,
+};
+
 function NavigationEntry({
   item,
   pathname,
@@ -39,25 +61,46 @@ function NavigationEntry({
   onNavigate?: () => void;
   mobile?: boolean;
 }>) {
+  const Icon = navigationIcons[item.icon];
+  const active = Boolean(
+    item.href
+      && (pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))),
+  );
+  const login = !mobile && item.href === "/login";
   const className = cn(
-    "inline-flex min-h-11 items-center gap-2 rounded-sm px-3 text-sm font-bold transition-colors",
+    "nav-entry group/nav inline-flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-bold transition-[color,background-color,border-color] duration-200",
     mobile
-      ? "w-full justify-between px-4 text-foreground hover:bg-muted"
-      : "text-primary-foreground/75 hover:bg-primary-foreground/10 hover:text-primary-foreground",
-    item.href && pathname === item.href &&
-      (mobile
-        ? "bg-secondary text-secondary-foreground"
-        : "bg-primary-foreground text-primary!"),
-    !mobile && item.href === "/login" &&
-      "ml-2 border border-primary-foreground bg-primary-foreground px-4 text-primary! hover:bg-primary-foreground/85 hover:text-primary!",
+      ? "w-full justify-between px-4 text-foreground hover:bg-muted active:bg-secondary"
+      : "text-primary-foreground/70 hover:bg-brand-accent/10 hover:text-primary-foreground focus-visible:bg-brand-accent/10",
+    active && (mobile
+      ? "border-l-4 border-brand-accent bg-secondary text-secondary-foreground"
+      : "bg-brand-accent/12 text-primary-foreground"),
+    login
+      && "ml-1 border border-brand-accent/55 bg-brand-accent px-4 text-brand-accent-foreground! hover:bg-brand-accent/90 hover:text-brand-accent-foreground!",
+  );
+
+  const content = (
+    <span className="inline-flex min-w-0 items-center gap-2.5">
+      <Icon
+        className={cn(
+          "nav-entry-icon size-4 shrink-0",
+          active && "text-brand-accent",
+          login && "text-brand-accent-foreground",
+        )}
+        strokeWidth={2.2}
+        aria-hidden="true"
+        data-testid={`nav-icon-${item.icon}`}
+      />
+      <span className="nav-entry-label relative truncate">{item.label}</span>
+    </span>
   );
 
   if (!item.href || item.disabled) {
     return (
       <span className={cn(className, "cursor-not-allowed opacity-65")} aria-disabled="true">
-        <span className="inline-flex items-center gap-2">
+        <span className="inline-flex items-center gap-2.5">
           <LockKeyhole className="size-4" aria-hidden="true" />
-          {item.label}
+          <span>{item.label}</span>
         </span>
         {item.hint ? <span className="text-xs font-medium">{item.hint}</span> : null}
       </span>
@@ -68,10 +111,12 @@ function NavigationEntry({
     <Link
       href={item.href}
       className={className}
-      aria-current={pathname === item.href ? "page" : undefined}
+      aria-current={active ? "page" : undefined}
       onNavigate={onNavigate}
+      data-active={active ? "true" : "false"}
+      data-variant={login ? "cta" : "default"}
     >
-      {item.label}
+      {content}
     </Link>
   );
 }
@@ -83,7 +128,7 @@ export function DesktopNavigation({
   const pathname = usePathname();
 
   return (
-    <nav className="hidden items-center gap-1 lg:flex" aria-label={primaryLabel}>
+    <nav className="hidden items-center gap-0.5 lg:flex" aria-label={primaryLabel}>
       {items.map((item) => (
         <NavigationEntry key={`${item.href ?? "disabled"}-${item.label}`} item={item} pathname={pathname} />
       ))}
@@ -105,14 +150,10 @@ export function MobileNavigation({
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    if (!isOpen) {
-      return;
-    }
+    if (!isOpen) return;
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setIsOpen(false);
-      }
+      if (event.key === "Escape") setIsOpen(false);
     };
 
     window.addEventListener("keydown", closeOnEscape);
@@ -122,24 +163,21 @@ export function MobileNavigation({
   return (
     <div className="lg:hidden">
       <Button
-        variant="outline"
+        variant="ghost"
         size="icon"
+        className="border border-primary-foreground/20 text-primary-foreground! hover:border-brand-accent/50 hover:bg-brand-accent/10 hover:text-brand-accent!"
         aria-expanded={isOpen}
         aria-controls="mobile-navigation-panel"
         aria-label={isOpen ? closeMenuLabel : openMenuLabel}
         onClick={() => setIsOpen((open) => !open)}
       >
-        {isOpen ? (
-          <X className="size-5" aria-hidden="true" />
-        ) : (
-          <Menu className="size-5" aria-hidden="true" />
-        )}
+        {isOpen ? <X className="size-5" aria-hidden="true" /> : <Menu className="size-5" aria-hidden="true" />}
       </Button>
 
       {isOpen ? (
         <div
           id="mobile-navigation-panel"
-          className="absolute inset-x-0 top-full border-b border-border-strong bg-card px-4 py-4 text-foreground"
+          className="absolute inset-x-0 top-full border-b border-border-strong bg-card/98 px-4 py-4 text-foreground shadow-2xl backdrop-blur-xl"
         >
           <nav className="mx-auto grid max-w-6xl gap-1" aria-label={mobileLabel}>
             {items.map((item) => (
@@ -153,9 +191,7 @@ export function MobileNavigation({
             ))}
             {account ? (
               <div className="mt-2 border-t border-border pt-3">
-                <p className="px-4 pb-1 text-xs font-bold text-muted-foreground">
-                  {account.label}
-                </p>
+                <p className="px-4 pb-1 text-xs font-bold text-muted-foreground">{account.label}</p>
                 <LogoutButton presentation={account} className="px-1" />
               </div>
             ) : null}

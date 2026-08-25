@@ -125,6 +125,88 @@ test("skip link reaches the main content", async ({ page }, testInfo) => {
   await expect(page.locator("#main-content")).toBeFocused();
 });
 
+test("brand and desktop navigation expose active and interactive states", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium");
+  await page.goto("/services");
+
+  const brandLink = page.getByRole("link", { name: /RaahSathi/ }).first();
+  const brandMark = brandLink.getByTestId("brand-mark");
+  const brandWordmark = brandLink.locator(".brand-wordmark");
+  const servicesLink = page
+    .getByRole("navigation", { name: "Primary navigation" })
+    .getByRole("link", { name: "Services" });
+  const servicesIcon = servicesLink.getByTestId("nav-icon-services");
+
+  await expect(servicesLink).toHaveAttribute("aria-current", "page");
+  await expect(servicesLink).toHaveAttribute("data-active", "true");
+
+  await brandLink.hover();
+  await expect.poll(() => brandMark.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe("none");
+  await expect(brandWordmark).toHaveCSS("color", "rgb(216, 255, 82)");
+
+  await servicesLink.hover();
+  await expect.poll(() => servicesIcon.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe("none");
+  await expect.poll(() => servicesLink.locator(".nav-entry-label").evaluate(
+    (element) => getComputedStyle(element, "::after").transform,
+  )).not.toBe("matrix(0, 0, 0, 1, 0, 0)");
+
+  await servicesLink.focus();
+  await expect(servicesLink).toBeFocused();
+  await expect.poll(() => servicesIcon.evaluate((element) => getComputedStyle(element).transform))
+    .not.toBe("none");
+
+  await brandLink.click();
+  await expect(page).toHaveURL(/\/$/);
+});
+
+test("header remains collision-free at the acceptance viewports", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium");
+
+  for (const viewport of [
+    { width: 320, height: 720 },
+    { width: 390, height: 844 },
+    { width: 768, height: 1024 },
+    { width: 1280, height: 800 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await expect(page.getByRole("group", { name: "Choose language" })).toBeVisible();
+    await expect(page.getByRole("link", { name: /RaahSathi/ }).first()).toBeVisible();
+
+    if (viewport.width < 1024) {
+      const menuButton = page.getByRole("button", { name: "Open menu" });
+      const box = await menuButton.boundingBox();
+      expect(box?.width).toBeGreaterThanOrEqual(44);
+      expect(box?.height).toBeGreaterThanOrEqual(44);
+    }
+  }
+});
+
+test("reduced motion suppresses interactive scaling", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium");
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  const brandLink = page.getByRole("link", { name: /RaahSathi/ }).first();
+  const brandMark = brandLink.getByTestId("brand-mark");
+  await brandLink.hover();
+  await expect.poll(() => brandMark.evaluate((element) => getComputedStyle(element).transform))
+    .toBe("none");
+  await expect(brandLink.locator(".brand-wordmark")).toHaveCSS(
+    "color",
+    "rgb(216, 255, 82)",
+  );
+});
+
 test("serves the same-origin Route Handler health contract", async ({ request }) => {
   const response = await request.get("/api/v1/health", {
     headers: { "x-request-id": "playwright-health" },

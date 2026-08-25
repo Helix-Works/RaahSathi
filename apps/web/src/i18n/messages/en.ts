@@ -17,6 +17,7 @@ export const enMessages = {
     learnMore: "See how it helps",
   },
   navigation: {
+    brandDescriptor: "Citizen journeys",
     home: "Home",
     services: "Services",
     applications: "Applications",

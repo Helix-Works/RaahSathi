@@ -1,8 +1,6 @@
-import { Languages } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
 import { setLocalePreference } from "@/i18n/actions";
 import type { Locale } from "@/i18n";
+import { cn } from "@/lib/utils";
 
 type LanguageSwitcherProps = Readonly<{
   locale: Locale;
@@ -19,33 +17,39 @@ export function LanguageSwitcher({
 }: LanguageSwitcherProps) {
   return (
     <div
-      className="flex min-h-10 items-center rounded-md border border-primary-foreground/35 bg-primary-foreground p-0.5 text-primary"
+      className="language-toggle relative grid min-h-11 w-[6.8rem] shrink-0 grid-cols-2 items-stretch rounded-full border border-primary-foreground/20 bg-primary-foreground/8 p-1 shadow-inner sm:w-[10.25rem]"
       role="group"
       aria-label={label}
+      data-locale={locale}
     >
-      <Languages
-        className="mx-1 hidden size-4 text-primary/60 min-[390px]:block"
+      <span
+        className={cn(
+          "language-toggle-indicator pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-brand-accent shadow-[0_0_18px_var(--brand-glow)]",
+          locale === "hi" && "translate-x-full",
+        )}
         aria-hidden="true"
+        data-testid="language-toggle-indicator"
       />
       {([
         ["en", englishLabel],
         ["hi", hindiLabel],
       ] as const).map(([value, languageLabel]) => (
-        <form action={setLocalePreference} key={value}>
+        <form action={setLocalePreference} key={value} className="relative z-10 grid min-w-0">
           <input type="hidden" name="locale" value={value} />
-          <Button
-            className="min-h-9 rounded-sm px-2 text-xs sm:px-2.5"
-            variant={locale === value ? "secondary" : "ghost"}
-            size="sm"
+          <button
+            className={cn(
+              "min-h-9 min-w-0 rounded-full px-2 text-xs font-black transition-colors duration-200 focus-visible:outline-brand-accent sm:px-3",
+              locale === value
+                ? "text-brand-accent-foreground"
+                : "text-primary-foreground/65 hover:text-primary-foreground",
+            )}
             type="submit"
             aria-pressed={locale === value}
             aria-label={languageLabel}
           >
             <span className="hidden sm:inline">{languageLabel}</span>
-            <span className="sm:hidden" aria-hidden="true">
-              {value === "en" ? "EN" : "हि"}
-            </span>
-          </Button>
+            <span className="sm:hidden" aria-hidden="true">{value === "en" ? "EN" : "हिं"}</span>
+          </button>
         </form>
       ))}
     </div>

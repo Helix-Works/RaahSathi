@@ -13,6 +13,7 @@ export const hiMessages = {
     learnMore: "जानें कि यह कैसे मदद करता है",
   },
   navigation: {
+    brandDescriptor: "नागरिक यात्राएँ",
     home: "होम",
     services: "सेवाएँ",
     applications: "आवेदन",
