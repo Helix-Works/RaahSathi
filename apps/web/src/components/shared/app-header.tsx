@@ -27,10 +27,10 @@ export function AppHeader({ locale, messages, navigation, account }: AppHeaderPr
         <Link
           href="/"
           className="brand-link group/brand flex min-h-11 shrink-0 items-center rounded-xl focus-visible:outline-brand-accent"
-          aria-label={`RaahSathi · ${messages.navigation.home}`}
+          aria-label={`${messages.landing.name} · ${messages.navigation.home}`}
         >
           <RaahSathiLogo
-            name="RaahSathi"
+            name={messages.landing.name}
             descriptor={messages.navigation.brandDescriptor}
             compact
           />

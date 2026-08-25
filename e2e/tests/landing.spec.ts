@@ -82,6 +82,9 @@ test("switches to Hindi and preserves it during navigation", async ({ page }, te
   await expect(
     page.getByRole("heading", { level: 1, name: "अपनी ज़रूरत की यात्रा चुनें" }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("banner").getByRole("link", { name: "राहसाथी · होम" }),
+  ).toBeVisible();
   await expect(page.getByRole("contentinfo")).toContainText("स्वतंत्र प्रोटोटाइप");
 });
 
@@ -100,6 +103,13 @@ test("mobile navigation is keyboard operable at 320px without overflow", async (
   const servicesLink = page
     .getByRole("navigation", { name: "Mobile navigation" })
     .getByRole("link", { name: "Services" });
+  await servicesLink.focus();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("navigation", { name: "Mobile navigation" })).not.toBeVisible();
+  await expect(menuButton).toBeFocused();
+
+  await page.keyboard.press("Enter");
+  await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toBeVisible();
   await servicesLink.focus();
   await page.keyboard.press("Enter");
 
