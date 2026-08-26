@@ -30,7 +30,7 @@ import { prisma } from "@/server/database/prisma";
 import { retryTransientConnectionRead } from "@/server/database/read-retry";
 import { apiErrors } from "@/server/http/api-error";
 
-type ApplicationSummaryRecord = Pick<Application, "id" | "serviceKey" | "updatedAt"> & {
+type ApplicationSummaryRecord = Pick<Application, "id" | "serviceKey" | "status" | "updatedAt"> & {
   sections: Pick<ApplicationSection, "sectionKey" | "completedAt">[];
   identityAttempts: Pick<IdentityAttempt, "outcome">[];
   paymentAttempts: Pick<PaymentAttempt, "status">[];
@@ -46,7 +46,7 @@ type ApplicationRecord = Application & {
 };
 
 export function deriveApplicationPresentation(completedSectionKeys: readonly ApplicationSectionKey[], identityVerified = false, paymentSucceeded = false, appointmentBooked = false): Readonly<{
-  statusCode: "DRAFT" | "IN_PROGRESS" | "READY_FOR_IDENTITY" | "READY_FOR_PAYMENT" | "READY_FOR_APPOINTMENT" | "APPOINTMENT_BOOKED";
+  statusCode: "DRAFT" | "IN_PROGRESS" | "READY_FOR_IDENTITY" | "READY_FOR_PAYMENT" | "READY_FOR_APPOINTMENT" | "WAITLISTED" | "SLOT_OFFERED" | "APPOINTMENT_BOOKED";
   progressPercent: number;
   nextActionCode: ApplicationSummary["nextActionCode"];
   blockingReasonCode?: "IDENTITY_VERIFICATION_REQUIRED" | "PAYMENT_REQUIRED";
@@ -103,6 +103,14 @@ function validateSectionData(sectionKey: ApplicationSectionKey, serviceKey: Serv
 }
 
 function deriveSummary(record: ApplicationSummaryRecord): ApplicationSummary {
+  if (record.status === "WAITLISTED") return applicationSummarySchema.parse({
+    id: record.id, serviceKey: record.serviceKey, statusCode: "WAITLISTED", progressPercent: 100,
+    nextActionCode: "REVIEW_WAITLIST", blockingReasonCode: "NO_SUITABLE_SLOT", updatedAt: record.updatedAt.toISOString(),
+  });
+  if (record.status === "SLOT_OFFERED") return applicationSummarySchema.parse({
+    id: record.id, serviceKey: record.serviceKey, statusCode: "SLOT_OFFERED", progressPercent: 100,
+    nextActionCode: "REVIEW_OFFER", blockingReasonCode: "WAITLIST_OFFER_PENDING", updatedAt: record.updatedAt.toISOString(),
+  });
   const completed = new Set(record.sections.filter((section) => section.completedAt).map((section) => section.sectionKey));
   const presentation = deriveApplicationPresentation(
     [...completed],
@@ -186,6 +194,7 @@ export async function listApplications(
       serviceKey: true,
       updatedAt: true,
       sections: { select: { sectionKey: true, completedAt: true } },
+      status: true,
       identityAttempts: { select: { outcome: true } },
       paymentAttempts: { select: { status: true } },
       appointment: { select: { status: true } },

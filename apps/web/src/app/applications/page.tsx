@@ -35,6 +35,8 @@ export default async function ApplicationsPage() {
     READY_FOR_IDENTITY: messages.applications.statusReadyForIdentity,
     READY_FOR_PAYMENT: messages.applications.statusReadyForPayment,
     READY_FOR_APPOINTMENT: messages.applications.statusReadyForAppointment,
+    WAITLISTED: messages.applications.statusWaitlisted,
+    SLOT_OFFERED: messages.applications.statusSlotOffered,
     APPOINTMENT_BOOKED: messages.applications.statusAppointmentBooked,
   };
   const actionLabels = {
@@ -45,6 +47,8 @@ export default async function ApplicationsPage() {
     VERIFY_IDENTITY: messages.applications.nextIdentity,
     PAY_FEES: messages.applications.nextPayment,
     SELECT_APPOINTMENT: messages.applications.nextAppointment,
+    REVIEW_WAITLIST: messages.applications.nextReviewWaitlist,
+    REVIEW_OFFER: messages.applications.nextReviewOffer,
     REVIEW_APPOINTMENT: messages.applications.nextReviewAppointment,
     NONE: messages.applications.nextActionNone,
   };

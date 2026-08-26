@@ -9,6 +9,7 @@ import { applicationEndpointContracts } from "../contracts/applications";
 import { identityEndpointContracts } from "../contracts/identity";
 import { paymentEndpointContracts } from "../contracts/payments";
 import { appointmentEndpointContracts } from "../contracts/appointments";
+import { waitlistEndpointContracts } from "../contracts/waitlist";
 import type { ResponseHeaderContract } from "../contracts/endpoint";
 
 function schemaFor(schema: z.ZodType): Record<string, unknown> {
@@ -32,7 +33,7 @@ export interface OpenApiDocument extends Record<string, unknown> {
 }
 
 export function createOpenApiDocument(): OpenApiDocument {
-  const endpointContracts = [...healthEndpointContracts, ...authEndpointContracts, ...applicationEndpointContracts, ...identityEndpointContracts, ...paymentEndpointContracts, ...appointmentEndpointContracts];
+  const endpointContracts = [...healthEndpointContracts, ...authEndpointContracts, ...applicationEndpointContracts, ...identityEndpointContracts, ...paymentEndpointContracts, ...appointmentEndpointContracts, ...waitlistEndpointContracts];
   const paths: Record<string, unknown> = {};
   const successSchemas: Record<string, unknown> = {};
   const requestSchemas: Record<string, unknown> = {};

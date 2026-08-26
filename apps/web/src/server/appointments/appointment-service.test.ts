@@ -20,24 +20,24 @@ describe("Phase 5 appointment availability", () => {
       .toBe("CENTER_UNAVAILABLE");
     expect(dependencyAvailabilityStatus({ operationalStatus: "AVAILABLE", bookingServiceStatus: "BOOKING_SERVICE_UNAVAILABLE" }))
       .toBe("BOOKING_SERVICE_UNAVAILABLE");
-    expect(slotAvailabilityStatus({ ...futureSlotTime, capacity: 2, bookedCount: 0, releasedAt: null }, {
+    expect(slotAvailabilityStatus({ ...futureSlotTime, capacity: 2, bookedCount: 0, heldCount: 0, releasedAt: null }, {
       operationalStatus: "AVAILABLE", bookingServiceStatus: "AVAILABLE",
     }, now)).toBe("SLOTS_NOT_RELEASED");
-    expect(slotAvailabilityStatus({ ...futureSlotTime, capacity: 2, bookedCount: 2, releasedAt: new Date("2026-08-24T00:00:00.000Z") }, {
+    expect(slotAvailabilityStatus({ ...futureSlotTime, capacity: 2, bookedCount: 2, heldCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z") }, {
       operationalStatus: "AVAILABLE", bookingServiceStatus: "AVAILABLE",
     }, now)).toBe("CAPACITY_FULL");
-    expect(slotAvailabilityStatus({ ...futureSlotTime, capacity: 2, bookedCount: 1, releasedAt: new Date("2026-08-24T00:00:00.000Z") }, {
+    expect(slotAvailabilityStatus({ ...futureSlotTime, capacity: 2, bookedCount: 1, heldCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z") }, {
       operationalStatus: "AVAILABLE", bookingServiceStatus: "AVAILABLE",
     }, now)).toBe("AVAILABLE");
     expect(slotAvailabilityStatus({
       date: new Date("2026-08-25T00:00:00.000Z"), startTime: "17:29",
-      capacity: 2, bookedCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z"),
+      capacity: 2, bookedCount: 0, heldCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z"),
     }, {
       operationalStatus: "AVAILABLE", bookingServiceStatus: "AVAILABLE",
     }, now)).toBe("SLOT_ELAPSED");
     expect(slotAvailabilityStatus({
       date: new Date("2026-08-25T00:00:00.000Z"), startTime: "17:31",
-      capacity: 2, bookedCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z"),
+      capacity: 2, bookedCount: 0, heldCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z"),
     }, {
       operationalStatus: "AVAILABLE", bookingServiceStatus: "AVAILABLE",
     }, now)).toBe("AVAILABLE");
@@ -87,19 +87,19 @@ describe("Phase 5 appointment availability", () => {
       {
         id: crypto.randomUUID(), rtoId, serviceKey: "LEARNER_LICENCE" as const,
         date: new Date("2026-08-25T00:00:00.000Z"), startTime: "11:00", endTime: "11:30",
-        capacity: 2, bookedCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z"),
+        capacity: 2, bookedCount: 0, heldCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z"),
         createdAt, updatedAt, rto,
       },
       {
         id: crypto.randomUUID(), rtoId, serviceKey: "LEARNER_LICENCE" as const,
         date: new Date("2026-08-26T00:00:00.000Z"), startTime: "09:00", endTime: "09:30",
-        capacity: 2, bookedCount: 1, releasedAt: new Date("2026-08-24T00:00:00.000Z"),
+        capacity: 2, bookedCount: 1, heldCount: 0, releasedAt: new Date("2026-08-24T00:00:00.000Z"),
         createdAt, updatedAt, rto,
       },
       {
         id: crypto.randomUUID(), rtoId, serviceKey: "LEARNER_LICENCE" as const,
         date: new Date("2026-08-27T00:00:00.000Z"), startTime: "10:00", endTime: "10:30",
-        capacity: 2, bookedCount: 0, releasedAt: null,
+        capacity: 2, bookedCount: 0, heldCount: 0, releasedAt: null,
         createdAt, updatedAt, rto,
       },
     ];

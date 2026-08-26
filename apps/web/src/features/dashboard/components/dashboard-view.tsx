@@ -46,6 +46,8 @@ function statusPresentation(
   if (code === "APPOINTMENT_BOOKED") {
     return { label: messages.statusAppointmentBooked, tone: "success" };
   }
+  if (code === "WAITLISTED") return { label: messages.statusWaitlisted, tone: "warning" };
+  if (code === "SLOT_OFFERED") return { label: messages.statusSlotOffered, tone: "success" };
 
   if (code === "DRAFT") return { label: messages.statusDraft, tone: "neutral" };
   if (code === "IN_PROGRESS") return { label: messages.statusInProgress, tone: "warning" };
@@ -63,6 +65,7 @@ function nextActionPresentation(
   if (code === "REVIEW_OFFER") {
     return messages.nextActionReviewOffer;
   }
+  if (code === "REVIEW_WAITLIST") return messages.nextActionReviewWaitlist;
 
   if (code === "NONE") {
     return messages.nextActionNone;

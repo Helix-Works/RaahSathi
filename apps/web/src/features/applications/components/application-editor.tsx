@@ -16,11 +16,13 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { completeSection, getApplication, saveSection } from "@/features/applications/api";
+import { applicationBlockingReasonMessage } from "@/features/applications/status-presentation";
 import {
   ApplicationSectionForm,
   type SectionSubmitAction,
 } from "@/features/applications/components/application-section-form";
 import { IdentityRecoveryPanel } from "@/features/identity/components/identity-recovery-panel";
+import { AppointmentPanel } from "@/features/appointments/components/appointment-panel";
 import { PaymentPanel } from "@/features/payments/components/payment-panel";
 import { isPaymentRelevantApplicationStatus } from "@/features/payments/payment-flow";
 import type { Locale, MessageDictionary } from "@/i18n";
@@ -56,6 +58,8 @@ function ApplicationStatusCard({
     READY_FOR_IDENTITY: messages.statusReadyForIdentity,
     READY_FOR_PAYMENT: messages.statusReadyForPayment,
     READY_FOR_APPOINTMENT: messages.statusReadyForAppointment,
+    WAITLISTED: messages.statusWaitlisted,
+    SLOT_OFFERED: messages.statusSlotOffered,
     APPOINTMENT_BOOKED: messages.statusAppointmentBooked,
   };
   const actions = {
@@ -66,14 +70,14 @@ function ApplicationStatusCard({
     VERIFY_IDENTITY: messages.nextIdentity,
     PAY_FEES: messages.nextPayment,
     SELECT_APPOINTMENT: messages.nextAppointment,
+    REVIEW_WAITLIST: messages.nextReviewWaitlist,
+    REVIEW_OFFER: messages.nextReviewOffer,
     REVIEW_APPOINTMENT: messages.nextReviewAppointment,
     NONE: messages.nextActionNone,
   };
-  const blocking = application.blockingReasonCode === "IDENTITY_VERIFICATION_REQUIRED"
-    ? messages.blockingIdentity
-    : application.blockingReasonCode === "PAYMENT_REQUIRED"
-      ? messages.blockingPayment
-      : undefined;
+  const blocking = application.blockingReasonCode
+    ? applicationBlockingReasonMessage(application.blockingReasonCode, messages)
+    : undefined;
 
   return (
     <Card>
@@ -176,6 +180,13 @@ function ApplicationHistoryCard({
     PAYMENT_SUCCEEDED: messages.historyPaymentSucceeded,
     APPOINTMENT_BOOKED: messages.historyAppointmentBooked,
     APPOINTMENT_CANCELLED: messages.historyAppointmentCancelled,
+    WAITLIST_JOINED: messages.historyWaitlistJoined,
+    WAITLIST_UPDATED: messages.historyWaitlistUpdated,
+    WAITLIST_LEFT: messages.historyWaitlistLeft,
+    SLOT_OFFER_CREATED: messages.historyOfferCreated,
+    SLOT_OFFER_ACCEPTED: messages.historyOfferAccepted,
+    SLOT_OFFER_DECLINED: messages.historyOfferDeclined,
+    SLOT_OFFER_EXPIRED: messages.historyOfferExpired,
   };
 
   return (
@@ -300,6 +311,8 @@ export function ApplicationEditor({
           onApplicationChanged={refresh}
         />
       ) : null}
+
+      <AppointmentPanel application={application} locale={locale} messages={messages.appointments} onApplicationChanged={refresh} />
 
       <ApplicationHistoryCard
         application={application}
