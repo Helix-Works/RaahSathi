@@ -8,6 +8,7 @@ import { authEndpointContracts } from "../contracts/auth";
 import { applicationEndpointContracts } from "../contracts/applications";
 import { identityEndpointContracts } from "../contracts/identity";
 import { paymentEndpointContracts } from "../contracts/payments";
+import { appointmentEndpointContracts } from "../contracts/appointments";
 import type { ResponseHeaderContract } from "../contracts/endpoint";
 
 function schemaFor(schema: z.ZodType): Record<string, unknown> {
@@ -26,8 +27,12 @@ function responseHeaders(response: Readonly<{ headers: Record<string, ResponseHe
   );
 }
 
-export function createOpenApiDocument(): Record<string, unknown> {
-  const endpointContracts = [...healthEndpointContracts, ...authEndpointContracts, ...applicationEndpointContracts, ...identityEndpointContracts, ...paymentEndpointContracts];
+export interface OpenApiDocument extends Record<string, unknown> {
+  paths: Record<string, unknown>;
+}
+
+export function createOpenApiDocument(): OpenApiDocument {
+  const endpointContracts = [...healthEndpointContracts, ...authEndpointContracts, ...applicationEndpointContracts, ...identityEndpointContracts, ...paymentEndpointContracts, ...appointmentEndpointContracts];
   const paths: Record<string, unknown> = {};
   const successSchemas: Record<string, unknown> = {};
   const requestSchemas: Record<string, unknown> = {};
@@ -72,6 +77,9 @@ export function createOpenApiDocument(): Record<string, unknown> {
     const parameters = [
       ...(endpoint.pathParameters ?? []).map((parameter) => ({
         name: parameter.name, in: "path", required: true, description: parameter.description, schema: schemaFor(parameter.schema),
+      })),
+      ...(endpoint.queryParameters ?? []).map((parameter) => ({
+        name: parameter.name, in: "query", required: parameter.required, description: parameter.description, schema: schemaFor(parameter.schema),
       })),
       ...(endpoint.requestHeaders ?? []).map((header) => ({
         name: header.name, in: "header", required: header.required, description: header.description, schema: schemaFor(header.schema),

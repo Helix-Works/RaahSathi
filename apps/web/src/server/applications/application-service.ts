@@ -19,6 +19,7 @@ import {
   type Application,
   type ApplicationEvent,
   type ApplicationSection,
+  type Appointment,
   type IdentityAttempt,
   type PaymentAttempt,
   type PrismaClient,
@@ -33,6 +34,7 @@ type ApplicationSummaryRecord = Pick<Application, "id" | "serviceKey" | "updated
   sections: Pick<ApplicationSection, "sectionKey" | "completedAt">[];
   identityAttempts: Pick<IdentityAttempt, "outcome">[];
   paymentAttempts: Pick<PaymentAttempt, "status">[];
+  appointment: Pick<Appointment, "status"> | null;
 };
 
 type ApplicationRecord = Application & {
@@ -40,18 +42,22 @@ type ApplicationRecord = Application & {
   events: ApplicationEvent[];
   identityAttempts: IdentityAttempt[];
   paymentAttempts: PaymentAttempt[];
+  appointment: Appointment | null;
 };
 
-export function deriveApplicationPresentation(completedSectionKeys: readonly ApplicationSectionKey[], identityVerified = false, paymentSucceeded = false): Readonly<{
-  statusCode: "DRAFT" | "IN_PROGRESS" | "READY_FOR_IDENTITY" | "READY_FOR_PAYMENT" | "READY_FOR_APPOINTMENT";
+export function deriveApplicationPresentation(completedSectionKeys: readonly ApplicationSectionKey[], identityVerified = false, paymentSucceeded = false, appointmentBooked = false): Readonly<{
+  statusCode: "DRAFT" | "IN_PROGRESS" | "READY_FOR_IDENTITY" | "READY_FOR_PAYMENT" | "READY_FOR_APPOINTMENT" | "APPOINTMENT_BOOKED";
   progressPercent: number;
   nextActionCode: ApplicationSummary["nextActionCode"];
   blockingReasonCode?: "IDENTITY_VERIFICATION_REQUIRED" | "PAYMENT_REQUIRED";
 }> {
   const completed = new Set(completedSectionKeys);
   const nextSection = applicationSectionOrder.find((sectionKey) => !completed.has(sectionKey));
+  if (!nextSection && identityVerified && paymentSucceeded && appointmentBooked) return {
+    statusCode: "APPOINTMENT_BOOKED", progressPercent: 100, nextActionCode: "REVIEW_APPOINTMENT",
+  };
   if (!nextSection && identityVerified && paymentSucceeded) return {
-    statusCode: "READY_FOR_APPOINTMENT", progressPercent: 100, nextActionCode: "NONE",
+    statusCode: "READY_FOR_APPOINTMENT", progressPercent: 100, nextActionCode: "SELECT_APPOINTMENT",
   };
   if (!nextSection && identityVerified) return {
     statusCode: "READY_FOR_PAYMENT", progressPercent: 100, nextActionCode: "PAY_FEES", blockingReasonCode: "PAYMENT_REQUIRED",
@@ -102,6 +108,7 @@ function deriveSummary(record: ApplicationSummaryRecord): ApplicationSummary {
     [...completed],
     record.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED"),
     record.paymentAttempts.some((attempt) => attempt.status === "SUCCEEDED"),
+    record.appointment?.status === "CONFIRMED",
   );
   return applicationSummarySchema.parse({
     id: record.id,
@@ -132,7 +139,7 @@ function derive(record: ApplicationRecord): ApplicationDetail {
 
 async function ownedRecord(database: Prisma.TransactionClient | PrismaClient, context: AuthenticatedContext, id: string): Promise<ApplicationRecord> {
   const application = await database.application.findFirst({
-    where: { id, applicantId: context.applicantId }, include: { sections: { orderBy: { createdAt: "asc" } }, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true },
+    where: { id, applicantId: context.applicantId }, include: { sections: { orderBy: { createdAt: "asc" } }, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true, appointment: true },
   });
   if (!application) throw apiErrors.notFound();
   return application;
@@ -143,7 +150,7 @@ export async function createApplication(context: AuthenticatedContext, serviceKe
     return await prisma.$transaction(async (database) => {
     const existing = await database.application.findUnique({
       where: { applicantId_serviceKey: { applicantId: context.applicantId, serviceKey } },
-      include: { sections: { orderBy: { createdAt: "asc" } }, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true },
+      include: { sections: { orderBy: { createdAt: "asc" } }, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true, appointment: true },
     });
     if (existing) return derive(existing);
     const created = await database.application.create({
@@ -152,7 +159,7 @@ export async function createApplication(context: AuthenticatedContext, serviceKe
         serviceKey,
         events: { create: { actorApplicantId: context.applicantId, eventType: "APPLICATION_CREATED", correlationId } },
       },
-      include: { sections: true, events: true, identityAttempts: true, paymentAttempts: true },
+      include: { sections: true, events: true, identityAttempts: true, paymentAttempts: true, appointment: true },
     });
     return derive(created);
     }, { isolationLevel: "Serializable" });
@@ -160,7 +167,7 @@ export async function createApplication(context: AuthenticatedContext, serviceKe
     if (reason instanceof Prisma.PrismaClientKnownRequestError && reason.code === "P2002") {
       const existing = await prisma.application.findUnique({
         where: { applicantId_serviceKey: { applicantId: context.applicantId, serviceKey } },
-        include: { sections: true, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true },
+        include: { sections: true, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true, appointment: true },
       });
       if (existing) return derive(existing);
     }
@@ -181,6 +188,7 @@ export async function listApplications(
       sections: { select: { sectionKey: true, completedAt: true } },
       identityAttempts: { select: { outcome: true } },
       paymentAttempts: { select: { status: true } },
+      appointment: { select: { status: true } },
     },
     orderBy: { updatedAt: "desc" },
   }));

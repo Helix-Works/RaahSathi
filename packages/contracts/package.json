@@ -24,6 +24,10 @@
     "./payments": {
       "types": "./src/payments.ts",
       "import": "./src/payments.ts"
+    },
+    "./appointments": {
+      "types": "./src/appointments.ts",
+      "import": "./src/appointments.ts"
     }
   },
   "scripts": {

@@ -1,11 +1,23 @@
 import { fileURLToPath } from "node:url";
 
-import { defineConfig } from "vitest/config";
+import { configDefaults, defineConfig } from "vitest/config";
+
+export function createVitestBaseConfig() {
+  return {
+    resolve: {
+      alias: { "server-only": fileURLToPath(new URL("./test/server-only.ts", import.meta.url)) },
+      tsconfigPaths: true,
+    },
+    test: { environment: "node" as const },
+  };
+}
+
+const vitestBaseConfig = createVitestBaseConfig();
 
 export default defineConfig({
-  resolve: {
-    alias: { "server-only": fileURLToPath(new URL("./test/server-only.ts", import.meta.url)) },
-    tsconfigPaths: true,
+  ...vitestBaseConfig,
+  test: {
+    ...vitestBaseConfig.test,
+    exclude: [...configDefaults.exclude, "src/server/**/*.database.test.ts"],
   },
-  test: { environment: "node" },
 });

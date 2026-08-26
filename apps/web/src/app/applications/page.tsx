@@ -35,6 +35,7 @@ export default async function ApplicationsPage() {
     READY_FOR_IDENTITY: messages.applications.statusReadyForIdentity,
     READY_FOR_PAYMENT: messages.applications.statusReadyForPayment,
     READY_FOR_APPOINTMENT: messages.applications.statusReadyForAppointment,
+    APPOINTMENT_BOOKED: messages.applications.statusAppointmentBooked,
   };
   const actionLabels = {
     COMPLETE_PERSONAL_DETAILS: messages.applications.nextPersonalDetails,
@@ -44,6 +45,7 @@ export default async function ApplicationsPage() {
     VERIFY_IDENTITY: messages.applications.nextIdentity,
     PAY_FEES: messages.applications.nextPayment,
     SELECT_APPOINTMENT: messages.applications.nextAppointment,
+    REVIEW_APPOINTMENT: messages.applications.nextReviewAppointment,
     NONE: messages.applications.nextActionNone,
   };
 

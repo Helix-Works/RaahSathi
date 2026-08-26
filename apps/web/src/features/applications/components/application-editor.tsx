@@ -56,6 +56,7 @@ function ApplicationStatusCard({
     READY_FOR_IDENTITY: messages.statusReadyForIdentity,
     READY_FOR_PAYMENT: messages.statusReadyForPayment,
     READY_FOR_APPOINTMENT: messages.statusReadyForAppointment,
+    APPOINTMENT_BOOKED: messages.statusAppointmentBooked,
   };
   const actions = {
     COMPLETE_PERSONAL_DETAILS: messages.nextPersonalDetails,
@@ -65,6 +66,7 @@ function ApplicationStatusCard({
     VERIFY_IDENTITY: messages.nextIdentity,
     PAY_FEES: messages.nextPayment,
     SELECT_APPOINTMENT: messages.nextAppointment,
+    REVIEW_APPOINTMENT: messages.nextReviewAppointment,
     NONE: messages.nextActionNone,
   };
   const blocking = application.blockingReasonCode === "IDENTITY_VERIFICATION_REQUIRED"
@@ -172,6 +174,8 @@ function ApplicationHistoryCard({
     PAYMENT_STARTED: messages.historyPaymentStarted,
     PAYMENT_FAILED: messages.historyPaymentFailed,
     PAYMENT_SUCCEEDED: messages.historyPaymentSucceeded,
+    APPOINTMENT_BOOKED: messages.historyAppointmentBooked,
+    APPOINTMENT_CANCELLED: messages.historyAppointmentCancelled,
   };
 
   return (

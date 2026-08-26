@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 
-import { PrismaClient } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { listApplications } from "@/server/applications/application-service";
 import { isDisposableDatabaseApproved } from "@/server/auth/database-test-safety";
+import { createDatabaseTestClient } from "@/server/database/database-test-client";
 
 import {
   getPayment,
@@ -23,7 +23,7 @@ const approved = isDisposableDatabaseApproved({
 if ((testUrl || process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION) && !approved) {
   throw new Error("Refusing Phase 4 database tests: database identities are not safely distinct.");
 }
-const database = approved ? new PrismaClient({ datasourceUrl: testUrl }) : undefined;
+const database = approved ? createDatabaseTestClient(testUrl) : undefined;
 
 describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", () => {
   const applicantA = randomUUID();
@@ -40,9 +40,12 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
 
   afterAll(async () => {
     if (!database) return;
-    await database.application.deleteMany({ where: { id: { in: [applicationId, secondApplicationId, projectionApplicationId] } } });
-    await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, projectionApplicantId] } } });
-    await database.$disconnect();
+    try {
+      await database.application.deleteMany({ where: { id: { in: [applicationId, secondApplicationId, projectionApplicationId] } } });
+      await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, projectionApplicantId] } } });
+    } finally {
+      await database.$disconnect();
+    }
   });
 
   it("converges delayed and duplicate success once without a browser while enforcing amount and ownership", async () => {
@@ -101,7 +104,7 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
     expect(await listApplications(contextA, database)).toMatchObject([{
       id: applicationId,
       statusCode: "READY_FOR_APPOINTMENT",
-      nextActionCode: "NONE",
+      nextActionCode: "SELECT_APPOINTMENT",
     }]);
 
     const conflictingReplay = { ...event, outcome: "FAILED" as const };

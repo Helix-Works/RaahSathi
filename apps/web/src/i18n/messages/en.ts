@@ -182,6 +182,7 @@ export const enMessages = {
     statusReadyForIdentity: "Ready for identity verification",
     statusReadyForPayment: "Ready for payment",
     statusReadyForAppointment: "Ready for appointment selection",
+    statusAppointmentBooked: "Appointment booked",
     nextPersonalDetails: "Complete personal details",
     nextAddress: "Complete the Delhi address",
     nextServiceDetails: "Complete service details",
@@ -189,6 +190,7 @@ export const enMessages = {
     nextIdentity: "Complete synthetic identity verification",
     nextPayment: "Review fees and complete synthetic payment",
     nextAppointment: "Select an appointment",
+    nextReviewAppointment: "Review your appointment",
     nextActionNone: "No action is required right now",
     blockingIdentity: "Identity verification is required. All completed application sections remain saved.",
     blockingPayment: "Identity is verified. Complete the synthetic fee payment to continue.",
@@ -204,6 +206,8 @@ export const enMessages = {
     historyPaymentStarted: "Synthetic payment started",
     historyPaymentFailed: "Synthetic payment failed safely",
     historyPaymentSucceeded: "Synthetic payment confirmed",
+    historyAppointmentBooked: "Appointment booked",
+    historyAppointmentCancelled: "Appointment cancelled and capacity released",
     historyGeneric: "Application activity recorded",
   },
   identity: {
@@ -336,6 +340,21 @@ export const enMessages = {
     },
     errors: {
       invalidProviderEvent: "The payment provider event is invalid.",
+    },
+  },
+  appointments: {
+    errors: {
+      notEligible: "This application is not ready for appointment booking.",
+      alreadyBooked: "This application already has a confirmed appointment.",
+      rateLimited: "Too many appointment changes were requested. Wait briefly and try again.",
+    },
+    reasons: {
+      AVAILABLE: "This appointment slot is available.",
+      CAPACITY_FULL: "This appointment slot is full.",
+      SLOTS_NOT_RELEASED: "Appointment slots have not been released yet.",
+      SLOT_ELAPSED: "This appointment time has already passed.",
+      CENTER_UNAVAILABLE: "This center is currently unavailable.",
+      BOOKING_SERVICE_UNAVAILABLE: "Appointment booking is temporarily unavailable.",
     },
   },
   dashboard: {

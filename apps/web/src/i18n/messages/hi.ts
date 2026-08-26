@@ -178,6 +178,7 @@ export const hiMessages = {
     statusReadyForIdentity: "पहचान सत्यापन के लिए तैयार",
     statusReadyForPayment: "भुगतान के लिए तैयार",
     statusReadyForAppointment: "अपॉइंटमेंट चयन के लिए तैयार",
+    statusAppointmentBooked: "अपॉइंटमेंट बुक है",
     nextPersonalDetails: "व्यक्तिगत विवरण पूरा करें",
     nextAddress: "दिल्ली का पता पूरा करें",
     nextServiceDetails: "सेवा विवरण पूरा करें",
@@ -185,6 +186,7 @@ export const hiMessages = {
     nextIdentity: "कृत्रिम पहचान सत्यापन पूरा करें",
     nextPayment: "शुल्क देखें और कृत्रिम भुगतान पूरा करें",
     nextAppointment: "अपॉइंटमेंट चुनें",
+    nextReviewAppointment: "अपना अपॉइंटमेंट देखें",
     nextActionNone: "अभी कोई कार्रवाई आवश्यक नहीं है",
     blockingIdentity: "पहचान सत्यापन आवश्यक है। आवेदन के सभी पूरे भाग सुरक्षित हैं।",
     blockingPayment: "पहचान सत्यापित है। आगे बढ़ने के लिए कृत्रिम शुल्क भुगतान पूरा करें।",
@@ -200,6 +202,8 @@ export const hiMessages = {
     historyPaymentStarted: "कृत्रिम भुगतान शुरू हुआ",
     historyPaymentFailed: "कृत्रिम भुगतान सुरक्षित रूप से विफल हुआ",
     historyPaymentSucceeded: "कृत्रिम भुगतान की पुष्टि हुई",
+    historyAppointmentBooked: "अपॉइंटमेंट बुक हुआ",
+    historyAppointmentCancelled: "अपॉइंटमेंट रद्द हुआ और क्षमता वापस उपलब्ध हुई",
     historyGeneric: "आवेदन गतिविधि दर्ज हुई",
   },
   identity: {
@@ -332,6 +336,21 @@ export const hiMessages = {
     },
     errors: {
       invalidProviderEvent: "भुगतान प्रदाता का इवेंट अमान्य है।",
+    },
+  },
+  appointments: {
+    errors: {
+      notEligible: "यह आवेदन अभी अपॉइंटमेंट बुकिंग के लिए तैयार नहीं है।",
+      alreadyBooked: "इस आवेदन के लिए पहले से एक अपॉइंटमेंट पक्का है।",
+      rateLimited: "अपॉइंटमेंट में बहुत अधिक बदलाव माँगे गए हैं। थोड़ी देर प्रतीक्षा करके फिर कोशिश करें।",
+    },
+    reasons: {
+      AVAILABLE: "यह अपॉइंटमेंट स्लॉट उपलब्ध है।",
+      CAPACITY_FULL: "यह अपॉइंटमेंट स्लॉट भर चुका है।",
+      SLOTS_NOT_RELEASED: "अपॉइंटमेंट स्लॉट अभी जारी नहीं किए गए हैं।",
+      SLOT_ELAPSED: "इस अपॉइंटमेंट का समय बीत चुका है।",
+      CENTER_UNAVAILABLE: "यह केंद्र अभी उपलब्ध नहीं है।",
+      BOOKING_SERVICE_UNAVAILABLE: "अपॉइंटमेंट बुकिंग अस्थायी रूप से उपलब्ध नहीं है।",
     },
   },
   dashboard: {

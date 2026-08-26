@@ -12,6 +12,8 @@ import { POST as startIdentity } from "./applications/[id]/identity-attempts/rou
 import { POST as retryIdentity } from "./applications/[id]/identity-attempts/[attemptId]/retry/route";
 import { POST as startPayment } from "./applications/[id]/payments/route";
 import { createPaymentProviderEventHandler } from "./payment-provider/events/route";
+import { POST as bookAppointment } from "./appointments/route";
+import { GET as getAvailability } from "./rtos/[id]/availability/route";
 
 describe("Route Handlers", () => {
   it("serves health with a correlation ID and no permissive CORS", async () => {
@@ -82,6 +84,26 @@ describe("Route Handlers", () => {
       body: JSON.stringify({ idempotencyKey: "40000000-0000-4000-8000-000000000001" }),
     }), { params: Promise.resolve({ id: "30000000-0000-4000-8000-000000000001" }) });
     expect(response.status).toBe(403);
+  });
+
+  it("validates appointment queries and blocks cross-origin booking before database access", async () => {
+    const invalidQuery = await getAvailability(new Request("http://localhost/api/v1/rtos/not-an-id/availability?month=2026-13&service=INVALID"), {
+      params: Promise.resolve({ id: "not-an-id" }),
+    });
+    expect(invalidQuery.status).toBe(400);
+    expect(await invalidQuery.json()).toMatchObject({ error: { fieldErrors: {
+      id: ["invalid_format"],
+      month: ["invalid_format"],
+      service: ["invalid_value"],
+    } } });
+
+    const rejected = await bookAppointment(new Request("http://localhost/api/v1/appointments", {
+      method: "POST",
+      headers: { origin: "https://attacker.invalid", "content-type": "application/json" },
+      body: JSON.stringify({ applicationId: crypto.randomUUID(), slotId: crypto.randomUUID() }),
+    }));
+    expect(rejected.status).toBe(403);
+    expect(await rejected.json()).toMatchObject({ error: { code: "ACCESS_DENIED" } });
   });
 
   it("validates and transports synthetic provider events through the registered contract", async () => {

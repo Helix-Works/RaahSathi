@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { PrismaClient } from "@prisma/client";
 import { applicationListSchema } from "@raahsathi/contracts/applications";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { isDisposableDatabaseApproved } from "@/server/auth/database-test-safety";
 import { getApplication, listApplications } from "@/server/applications/application-service";
+import { createDatabaseTestClient } from "@/server/database/database-test-client";
 
 const testUrl = process.env.TEST_DATABASE_URL;
 const approved = isDisposableDatabaseApproved({
@@ -16,7 +16,7 @@ const approved = isDisposableDatabaseApproved({
 if ((testUrl || process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION) && !approved) {
   throw new Error("Refusing Phase 2 database tests: database identities are not safely distinct.");
 }
-const database = approved ? new PrismaClient({ datasourceUrl: testUrl }) : undefined;
+const database = approved ? createDatabaseTestClient(testUrl) : undefined;
 
 describe.skipIf(!database)("Phase 2 disposable PostgreSQL persistence", () => {
   const applicantA = randomUUID();
@@ -26,9 +26,12 @@ describe.skipIf(!database)("Phase 2 disposable PostgreSQL persistence", () => {
 
   afterAll(async () => {
     if (!database) return;
-    await database.application.deleteMany({ where: { id: applicationId } });
-    await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB] } } });
-    await database.$disconnect();
+    try {
+      await database.application.deleteMany({ where: { id: applicationId } });
+      await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB] } } });
+    } finally {
+      await database.$disconnect();
+    }
   });
 
   it("persists a saved section and immutable history across Prisma clients while owner scoping excludes another applicant", async () => {
@@ -42,7 +45,7 @@ describe.skipIf(!database)("Phase 2 disposable PostgreSQL persistence", () => {
       sections: { create: { sectionKey: "PERSONAL_DETAILS", data: { fullName: "Synthetic A", dateOfBirth: "1995-01-15" } } },
       events: { create: { actorApplicantId: applicantA, eventType: "APPLICATION_CREATED", correlationId: "phase2-db-test" } },
     } });
-    const restarted = new PrismaClient({ datasourceUrl: testUrl });
+    const restarted = createDatabaseTestClient(testUrl);
     try {
       const resumed = await restarted.application.findFirst({ where: { id: applicationId, applicantId: applicantA }, include: { sections: true, events: true } });
       expect(resumed?.sections).toHaveLength(1);
