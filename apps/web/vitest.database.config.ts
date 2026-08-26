@@ -10,6 +10,7 @@ export default defineConfig({
     ...vitestBaseConfig.test,
     environment: "node",
     include: ["src/server/**/*.database.test.ts"],
+    reporters: ["verbose"],
     fileParallelism: false,
     maxWorkers: 1,
     testTimeout: 60_000,
