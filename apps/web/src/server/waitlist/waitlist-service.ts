@@ -9,10 +9,12 @@ import {
   type WaitlistTimeBucket,
 } from "@prisma/client";
 
-import { dependencyAvailabilityStatus } from "@/server/appointments/appointment-service";
+import { dependencyAvailabilityStatus, slotAvailabilityStatus } from "@/server/appointments/appointment-service";
 import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { prisma } from "@/server/database/prisma";
 import { apiErrors } from "@/server/http/api-error";
+
+import { expireOfferInTransaction, expireOffersInTransaction } from "./offer-expiry";
 
 const offerLifetimeMs = 30 * 60 * 1000;
 const mutationLimitPerMinute = 20;
@@ -92,27 +94,12 @@ async function writeEvent(
   } });
 }
 
-async function expireOffersInTransaction(database: Prisma.TransactionClient, now: Date, correlationId: string): Promise<string[]> {
-  const expired = await database.slotOffer.findMany({
-    where: { status: "ACTIVE", expiresAt: { lte: now } }, include: { waitlistEntry: true },
-  });
-  const releasedSlots: string[] = [];
-  for (const offer of expired) {
-    const changed = await database.slotOffer.updateMany({
-      where: { id: offer.id, status: "ACTIVE" }, data: { status: "EXPIRED", expiredAt: now },
-    });
-    if (changed.count !== 1) continue;
-    await database.appointmentSlot.update({ where: { id: offer.slotId }, data: { heldCount: { decrement: 1 } } });
-    await database.waitlistEntry.update({ where: { id: offer.waitlistEntryId }, data: { status: "ACTIVE" } });
-    await database.application.update({ where: { id: offer.waitlistEntry.applicationId }, data: { status: "WAITLISTED" } });
-    await writeEvent(database, {
-      applicationId: offer.waitlistEntry.applicationId, applicantId: offer.waitlistEntry.applicantId,
-      eventType: "SLOT_OFFER_EXPIRED", correlationId, resourceType: "SlotOffer", resourceId: offer.id,
-      metadata: { slotId: offer.slotId },
-    });
-    releasedSlots.push(offer.slotId);
-  }
-  return releasedSlots;
+async function allocateReleasedSlots(
+  slotIds: readonly string[],
+  input: Readonly<{ now: Date; correlationId: string }>,
+  database: PrismaClient,
+): Promise<void> {
+  for (const slotId of new Set(slotIds)) await allocateSlot(slotId, input, database);
 }
 
 export async function allocateSlot(
@@ -124,35 +111,54 @@ export async function allocateSlot(
   try {
     await database.$transaction(async (tx) => {
       await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "AppointmentSlot" WHERE "id" = ${slotId}::uuid FOR UPDATE`);
-      await expireOffersInTransaction(tx, input.now, input.correlationId);
+      await expireOffersInTransaction(tx, {
+        now: input.now, correlationId: input.correlationId, scope: { kind: "slot", slotId },
+      });
       const slot = await tx.appointmentSlot.findUnique({ where: { id: slotId }, include: { rto: true } });
-      if (!slot || dependencyAvailabilityStatus(slot.rto) !== "AVAILABLE" || !slot.releasedAt || slot.releasedAt > input.now) return;
+      if (!slot || slotAvailabilityStatus(slot, slot.rto, input.now) !== "AVAILABLE") return;
       const free = slot.capacity - slot.bookedCount - slot.heldCount;
       if (free <= 0) return;
       const bucket = slotTimeBucket(slot.startTime);
-      for (let index = 0; index < free; index += 1) {
+      let allocated = 0;
+      while (allocated < free) {
         const entry = await tx.waitlistEntry.findFirst({
           where: {
             status: "ACTIVE", rtoId: slot.rtoId, serviceKey: slot.serviceKey, vehicleClass: slot.vehicleClass,
             acceptableDateFrom: { lte: slot.date }, acceptableDateTo: { gte: slot.date }, timeBuckets: { has: bucket },
             offers: { none: { slotId } },
+            application: { status: "WAITLISTED" },
           },
           orderBy: [{ joinedAt: "asc" }, { id: "asc" }],
         });
         if (!entry) break;
         await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "WaitlistEntry" WHERE "id" = ${entry.id}::uuid FOR UPDATE`);
+        const currentEntry = await tx.waitlistEntry.findFirst({ where: {
+          id: entry.id,
+          status: "ACTIVE",
+          rtoId: slot.rtoId,
+          serviceKey: slot.serviceKey,
+          vehicleClass: slot.vehicleClass,
+          acceptableDateFrom: { lte: slot.date },
+          acceptableDateTo: { gte: slot.date },
+          timeBuckets: { has: bucket },
+          offers: { none: { slotId } },
+          application: { status: "WAITLISTED" },
+        } });
+        if (!currentEntry) continue;
         const offeredAt = input.now;
         const offer = await tx.slotOffer.create({ data: {
-          waitlistEntryId: entry.id, slotId, offeredAt, expiresAt: new Date(offeredAt.getTime() + offerLifetimeMs),
+          waitlistEntryId: currentEntry.id, slotId, offeredAt, expiresAt: new Date(offeredAt.getTime() + offerLifetimeMs),
         } });
         await tx.appointmentSlot.update({ where: { id: slotId }, data: { heldCount: { increment: 1 } } });
-        await tx.waitlistEntry.update({ where: { id: entry.id }, data: { status: "OFFERED" } });
-        await tx.application.update({ where: { id: entry.applicationId }, data: { status: "SLOT_OFFERED" } });
+        const entryChanged = await tx.waitlistEntry.updateMany({ where: { id: currentEntry.id, status: "ACTIVE" }, data: { status: "OFFERED" } });
+        const applicationChanged = await tx.application.updateMany({ where: { id: currentEntry.applicationId, status: "WAITLISTED" }, data: { status: "SLOT_OFFERED" } });
+        if (entryChanged.count !== 1 || applicationChanged.count !== 1) throw apiErrors.offerStateConflict();
         await writeEvent(tx, {
-          applicationId: entry.applicationId, applicantId: entry.applicantId, eventType: "SLOT_OFFER_CREATED",
+          applicationId: currentEntry.applicationId, applicantId: currentEntry.applicantId, eventType: "SLOT_OFFER_CREATED",
           correlationId: input.correlationId, resourceType: "SlotOffer", resourceId: offer.id,
-          metadata: { waitlistEntryId: entry.id, slotId },
+          metadata: { waitlistEntryId: currentEntry.id, slotId },
         });
+        allocated += 1;
       }
     }, { isolationLevel: "Serializable" });
   } catch (error) {
@@ -185,6 +191,12 @@ export async function joinWaitlist(
 ): Promise<WaitlistEntry> {
   const now = request.now ?? new Date();
   await enforceRateLimit(context, "JOIN", now, database);
+  const released = await database.$transaction((tx) => expireOffersInTransaction(tx, {
+    now,
+    correlationId: request.correlationId,
+    scope: { kind: "applicant", applicantId: context.applicantId, applicationId: request.applicationId },
+  }));
+  await allocateReleasedSlots(released, { now, correlationId: request.correlationId }, database);
   const existing = await database.waitlistEntry.findFirst({
     where: { applicationId: request.applicationId, applicantId: context.applicantId, status: { in: ["ACTIVE", "OFFERED"] } },
     include: entryInclude,
@@ -219,7 +231,11 @@ export async function listWaitlistEntries(
   database: PrismaClient = prisma,
 ): Promise<readonly WaitlistEntry[]> {
   const now = input.now ?? new Date();
-  await database.$transaction((tx) => expireOffersInTransaction(tx, now, input.correlationId));
+  const released = await database.$transaction((tx) => expireOffersInTransaction(tx, {
+    now, correlationId: input.correlationId,
+    scope: { kind: "applicant", applicantId: context.applicantId, applicationId: input.applicationId },
+  }));
+  await allocateReleasedSlots(released, { now, correlationId: input.correlationId }, database);
   const entries = await database.waitlistEntry.findMany({
     where: { applicantId: context.applicantId, applicationId: input.applicationId }, include: entryInclude,
     orderBy: [{ joinedAt: "desc" }, { id: "desc" }],
@@ -233,7 +249,11 @@ export async function getWaitlistEntry(
   input: Readonly<{ now?: Date; correlationId: string }>,
   database: PrismaClient = prisma,
 ): Promise<WaitlistEntry> {
-  await database.$transaction((tx) => expireOffersInTransaction(tx, input.now ?? new Date(), input.correlationId));
+  const now = input.now ?? new Date();
+  const released = await database.$transaction((tx) => expireOffersInTransaction(tx, {
+    now, correlationId: input.correlationId, scope: { kind: "entry", entryId: id, applicantId: context.applicantId },
+  }));
+  await allocateReleasedSlots(released, { now, correlationId: input.correlationId }, database);
   const entry = await database.waitlistEntry.findFirst({ where: { id, applicantId: context.applicantId }, include: entryInclude });
   if (!entry) throw apiErrors.notFound();
   return entryOutput(entry);
@@ -247,6 +267,10 @@ export async function updateWaitlistEntry(
 ): Promise<WaitlistEntry> {
   const now = request.now ?? new Date();
   await enforceRateLimit(context, "UPDATE", now, database);
+  const released = await database.$transaction((tx) => expireOffersInTransaction(tx, {
+    now, correlationId: request.correlationId, scope: { kind: "entry", entryId: id, applicantId: context.applicantId },
+  }));
+  await allocateReleasedSlots(released, { now, correlationId: request.correlationId }, database);
   const entry = await database.waitlistEntry.findFirst({ where: { id, applicantId: context.applicantId } });
   if (!entry) throw apiErrors.notFound();
   if (entry.status === "OFFERED") throw apiErrors.waitlistOfferActive();
@@ -273,21 +297,26 @@ export async function leaveWaitlist(
   const now = input.now ?? new Date();
   await enforceRateLimit(context, "LEAVE", now, database);
   const released = await database.$transaction(async (tx) => {
+    const expiredSlots = await expireOffersInTransaction(tx, {
+      now, correlationId: input.correlationId, scope: { kind: "entry", entryId: id, applicantId: context.applicantId },
+    });
     const entry = await tx.waitlistEntry.findFirst({ where: { id, applicantId: context.applicantId }, include: { offers: true } });
     if (!entry) throw apiErrors.notFound();
-    if (entry.status === "LEFT" || entry.status === "FULFILLED") return undefined;
+    if (entry.status === "LEFT" || entry.status === "FULFILLED") return expiredSlots;
     const offer = entry.offers.find((candidate) => candidate.status === "ACTIVE");
     if (offer) {
-      await tx.slotOffer.update({ where: { id: offer.id }, data: { status: "DECLINED", declinedAt: now } });
-      await tx.appointmentSlot.update({ where: { id: offer.slotId }, data: { heldCount: { decrement: 1 } } });
+      const changed = await tx.slotOffer.updateMany({ where: { id: offer.id, status: "ACTIVE" }, data: { status: "DECLINED", declinedAt: now } });
+      if (changed.count !== 1) throw apiErrors.offerStateConflict();
+      const hold = await tx.appointmentSlot.updateMany({ where: { id: offer.slotId, heldCount: { gt: 0 } }, data: { heldCount: { decrement: 1 } } });
+      if (hold.count !== 1) throw apiErrors.offerStateConflict();
     }
     await tx.waitlistEntry.update({ where: { id }, data: { status: "LEFT" } });
-    await tx.application.update({ where: { id: entry.applicationId }, data: { status: "READY_FOR_APPOINTMENT" } });
+    await tx.application.updateMany({ where: { id: entry.applicationId, status: { in: ["WAITLISTED", "SLOT_OFFERED"] } }, data: { status: "READY_FOR_APPOINTMENT" } });
     await writeEvent(tx, { applicationId: entry.applicationId, applicantId: context.applicantId, eventType: "WAITLIST_LEFT",
       correlationId: input.correlationId, resourceType: "WaitlistEntry", resourceId: id });
-    return offer?.slotId;
+    return offer ? [...expiredSlots, offer.slotId] : expiredSlots;
   });
-  if (released) await allocateSlot(released, { now, correlationId: input.correlationId }, database);
+  await allocateReleasedSlots(released, { now, correlationId: input.correlationId }, database);
 }
 
 export async function acceptOffer(
@@ -299,24 +328,34 @@ export async function acceptOffer(
   const now = input.now ?? new Date();
   await enforceRateLimit(context, "ACCEPT_OFFER", now, database);
   const { appointmentOutputForWaitlist } = await import("@/server/appointments/appointment-service");
-  const record = await database.$transaction(async (tx) => {
+  const result = await database.$transaction(async (tx) => {
+    const owned = await tx.slotOffer.findFirst({ where: { id, waitlistEntry: { applicantId: context.applicantId } },
+      include: { waitlistEntry: true } });
+    if (!owned) throw apiErrors.notFound();
+    await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Application" WHERE "id" = ${owned.waitlistEntry.applicationId}::uuid FOR UPDATE`);
+    await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "WaitlistEntry" WHERE "id" = ${owned.waitlistEntryId}::uuid FOR UPDATE`);
     await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "SlotOffer" WHERE "id" = ${id}::uuid FOR UPDATE`);
     const offer = await tx.slotOffer.findFirst({ where: { id, waitlistEntry: { applicantId: context.applicantId } },
-      include: { waitlistEntry: { include: { application: { include: { appointment: true } } } }, slot: true } });
+      include: { waitlistEntry: true, slot: true } });
     if (!offer) throw apiErrors.notFound();
     if (offer.status === "ACCEPTED") {
       const appointment = await tx.appointment.findUnique({ where: { applicationId: offer.waitlistEntry.applicationId },
         include: { application: true, slot: { include: { rto: true } } } });
-      if (!appointment) throw apiErrors.offerStateConflict();
-      return appointment;
+      if (!appointment || appointment.slotId !== offer.slotId) throw apiErrors.offerStateConflict();
+      return { kind: "appointment" as const, appointment };
     }
     if (offer.status !== "ACTIVE") throw apiErrors.offerAlreadyConsumed();
-    if (offer.expiresAt <= now) throw apiErrors.offerExpired();
+    if (offer.expiresAt <= now) {
+      const expired = await expireOfferInTransaction(tx, offer, now, input.correlationId);
+      if (!expired) throw apiErrors.offerStateConflict();
+      return { kind: "expired" as const, slotId: offer.slotId };
+    }
+    const existing = await tx.appointment.findUnique({ where: { applicationId: offer.waitlistEntry.applicationId } });
+    if (existing?.status === "CONFIRMED") throw apiErrors.offerStateConflict();
     await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "AppointmentSlot" WHERE "id" = ${offer.slotId}::uuid FOR UPDATE`);
     const slotChanged = await tx.appointmentSlot.updateMany({ where: { id: offer.slotId, heldCount: { gt: 0 } },
       data: { heldCount: { decrement: 1 }, bookedCount: { increment: 1 } } });
     if (slotChanged.count !== 1) throw apiErrors.offerStateConflict();
-    const existing = offer.waitlistEntry.application.appointment;
     const appointment = existing ? await tx.appointment.update({ where: { id: existing.id }, data: {
       slotId: offer.slotId, status: "CONFIRMED", bookedAt: now, cancelledAt: null,
     }, include: { application: true, slot: { include: { rto: true } } } }) : await tx.appointment.create({ data: {
@@ -328,9 +367,13 @@ export async function acceptOffer(
     await writeEvent(tx, { applicationId: offer.waitlistEntry.applicationId, applicantId: context.applicantId,
       eventType: "SLOT_OFFER_ACCEPTED", correlationId: input.correlationId, resourceType: "SlotOffer", resourceId: id,
       metadata: { slotId: offer.slotId } });
-    return appointment;
+    return { kind: "appointment" as const, appointment };
   }, { isolationLevel: "Serializable" });
-  return appointmentOutputForWaitlist(record);
+  if (result.kind === "expired") {
+    await allocateSlot(result.slotId, { now, correlationId: input.correlationId }, database);
+    throw apiErrors.offerExpired();
+  }
+  return appointmentOutputForWaitlist(result.appointment);
 }
 
 export async function declineOffer(
@@ -342,20 +385,31 @@ export async function declineOffer(
   const now = input.now ?? new Date();
   await enforceRateLimit(context, "DECLINE_OFFER", now, database);
   const result = await database.$transaction(async (tx) => {
+    const owned = await tx.slotOffer.findFirst({ where: { id, waitlistEntry: { applicantId: context.applicantId } }, include: { waitlistEntry: true } });
+    if (!owned) throw apiErrors.notFound();
+    await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "Application" WHERE "id" = ${owned.waitlistEntry.applicationId}::uuid FOR UPDATE`);
+    await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "WaitlistEntry" WHERE "id" = ${owned.waitlistEntryId}::uuid FOR UPDATE`);
     await tx.$queryRaw(Prisma.sql`SELECT "id" FROM "SlotOffer" WHERE "id" = ${id}::uuid FOR UPDATE`);
     const offer = await tx.slotOffer.findFirst({ where: { id, waitlistEntry: { applicantId: context.applicantId } }, include: { waitlistEntry: true } });
     if (!offer) throw apiErrors.notFound();
-    if (offer.status === "DECLINED") return { entryId: offer.waitlistEntryId, slotId: offer.slotId };
+    if (offer.status === "DECLINED") return { entryId: offer.waitlistEntryId, releasedSlots: [] as string[] };
     if (offer.status !== "ACTIVE") throw apiErrors.offerStateConflict();
-    await tx.slotOffer.update({ where: { id }, data: { status: "DECLINED", declinedAt: now } });
-    await tx.appointmentSlot.update({ where: { id: offer.slotId }, data: { heldCount: { decrement: 1 } } });
-    await tx.waitlistEntry.update({ where: { id: offer.waitlistEntryId }, data: { status: "ACTIVE" } });
-    await tx.application.update({ where: { id: offer.waitlistEntry.applicationId }, data: { status: "WAITLISTED" } });
+    if (offer.expiresAt <= now) {
+      const expired = await expireOfferInTransaction(tx, offer, now, input.correlationId);
+      if (!expired) throw apiErrors.offerStateConflict();
+      return { entryId: offer.waitlistEntryId, releasedSlots: [offer.slotId] };
+    }
+    const changed = await tx.slotOffer.updateMany({ where: { id, status: "ACTIVE" }, data: { status: "DECLINED", declinedAt: now } });
+    if (changed.count !== 1) throw apiErrors.offerStateConflict();
+    const hold = await tx.appointmentSlot.updateMany({ where: { id: offer.slotId, heldCount: { gt: 0 } }, data: { heldCount: { decrement: 1 } } });
+    if (hold.count !== 1) throw apiErrors.offerStateConflict();
+    await tx.waitlistEntry.updateMany({ where: { id: offer.waitlistEntryId, status: "OFFERED" }, data: { status: "ACTIVE" } });
+    await tx.application.updateMany({ where: { id: offer.waitlistEntry.applicationId, status: "SLOT_OFFERED" }, data: { status: "WAITLISTED" } });
     await writeEvent(tx, { applicationId: offer.waitlistEntry.applicationId, applicantId: context.applicantId,
       eventType: "SLOT_OFFER_DECLINED", correlationId: input.correlationId, resourceType: "SlotOffer", resourceId: id,
       metadata: { slotId: offer.slotId } });
-    return { entryId: offer.waitlistEntryId, slotId: offer.slotId };
+    return { entryId: offer.waitlistEntryId, releasedSlots: [offer.slotId] };
   }, { isolationLevel: "Serializable" });
-  await allocateSlot(result.slotId, { now, correlationId: input.correlationId }, database);
+  await allocateReleasedSlots(result.releasedSlots, { now, correlationId: input.correlationId }, database);
   return getWaitlistEntry(context, result.entryId, { now, correlationId: input.correlationId }, database);
 }

@@ -16,6 +16,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { completeSection, getApplication, saveSection } from "@/features/applications/api";
+import { applicationBlockingReasonMessage } from "@/features/applications/status-presentation";
 import {
   ApplicationSectionForm,
   type SectionSubmitAction,
@@ -74,11 +75,9 @@ function ApplicationStatusCard({
     REVIEW_APPOINTMENT: messages.nextReviewAppointment,
     NONE: messages.nextActionNone,
   };
-  const blocking = application.blockingReasonCode === "IDENTITY_VERIFICATION_REQUIRED"
-    ? messages.blockingIdentity
-    : application.blockingReasonCode === "PAYMENT_REQUIRED"
-      ? messages.blockingPayment
-      : undefined;
+  const blocking = application.blockingReasonCode
+    ? applicationBlockingReasonMessage(application.blockingReasonCode, messages)
+    : undefined;
 
   return (
     <Card>
@@ -313,7 +312,7 @@ export function ApplicationEditor({
         />
       ) : null}
 
-      <AppointmentPanel application={application} locale={locale} onApplicationChanged={refresh} />
+      <AppointmentPanel application={application} locale={locale} messages={messages.appointments} onApplicationChanged={refresh} />
 
       <ApplicationHistoryCard
         application={application}

@@ -25,6 +25,7 @@ import {
 import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { prisma } from "@/server/database/prisma";
 import { apiErrors } from "@/server/http/api-error";
+import { expireOffersInTransaction } from "@/server/waitlist/offer-expiry";
 
 const appointmentMutationLimitPerMinute = 20;
 const delhiUtcOffset = "+05:30";
@@ -69,7 +70,7 @@ export function dependencyAvailabilityStatus(input: Readonly<{
 }
 
 export function slotAvailabilityStatus(
-  slot: Pick<AppointmentSlot, "capacity" | "bookedCount" | "releasedAt" | "date" | "startTime"> & { heldCount?: number },
+  slot: Pick<AppointmentSlot, "capacity" | "bookedCount" | "heldCount" | "releasedAt" | "date" | "startTime">,
   rto: Pick<Rto, "operationalStatus" | "bookingServiceStatus">,
   now: Date,
 ): AvailabilityReasonCode {
@@ -77,7 +78,7 @@ export function slotAvailabilityStatus(
   if (dependencyStatus !== "AVAILABLE") return dependencyStatus;
   if (slotHasElapsed(slot, now)) return "SLOT_ELAPSED";
   if (!slot.releasedAt || slot.releasedAt > now) return "SLOTS_NOT_RELEASED";
-  return slot.bookedCount + (slot.heldCount ?? 0) >= slot.capacity ? "CAPACITY_FULL" : "AVAILABLE";
+  return slot.bookedCount + slot.heldCount >= slot.capacity ? "CAPACITY_FULL" : "AVAILABLE";
 }
 
 function rtoOutput(rto: Rto) {
@@ -133,7 +134,7 @@ function dayStatus(slots: readonly SlotRecord[], rto: Rto, now: Date): Readonly<
   const statuses = slots.map((slot) => slotAvailabilityStatus(slot, rto, now));
   const availableSlots = slots.reduce(
     (total, slot, index) => statuses[index] === "AVAILABLE"
-      ? total + Math.max(0, slot.capacity - slot.bookedCount - (slot.heldCount ?? 0))
+      ? total + Math.max(0, slot.capacity - slot.bookedCount - slot.heldCount)
       : total,
     0,
   );
@@ -191,7 +192,7 @@ export async function getDaySlots(
       startTime: slot.startTime,
       endTime: slot.endTime,
       capacity: slot.capacity,
-      remaining: Math.max(0, slot.capacity - slot.bookedCount - (slot.heldCount ?? 0)),
+      remaining: Math.max(0, slot.capacity - slot.bookedCount - slot.heldCount),
       status: slotAvailabilityStatus(slot, rto, now),
     })),
   });
@@ -247,18 +248,31 @@ export async function bookAppointment(
   const now = input.now ?? new Date();
   if (retryOnSerializationConflict) await enforceMutationRateLimit(context, "BOOK", now, databaseClient);
   try {
-    const record = await databaseClient.$transaction(async (database) => {
+    const result = await databaseClient.$transaction(async (database) => {
       await database.$queryRaw(Prisma.sql`SELECT "id" FROM "Application" WHERE "id" = ${input.applicationId}::uuid AND "applicantId" = ${context.applicantId}::uuid FOR UPDATE`);
+      const releasedSlots = await expireOffersInTransaction(database, {
+        now,
+        correlationId: input.correlationId,
+        scope: { kind: "applicant", applicantId: context.applicantId, applicationId: input.applicationId },
+      });
       const application = await database.application.findFirst({
         where: { id: input.applicationId, applicantId: context.applicantId },
         include: { paymentAttempts: true, appointment: { include: appointmentInclude } },
       });
       if (!application) throw apiErrors.notFound();
+      const activeOffer = await database.slotOffer.findFirst({
+        where: {
+          status: "ACTIVE",
+          waitlistEntry: { applicationId: application.id, applicantId: context.applicantId },
+        },
+        select: { id: true },
+      });
+      if (activeOffer) throw apiErrors.waitlistOfferActive();
       if (!application.paymentAttempts.some((attempt) => attempt.status === "SUCCEEDED")) {
         throw apiErrors.appointmentNotEligible();
       }
       if (application.appointment?.status === "CONFIRMED") {
-        if (application.appointment.slotId === input.slotId) return application.appointment;
+        if (application.appointment.slotId === input.slotId) return { appointment: application.appointment, releasedSlots };
         throw apiErrors.appointmentAlreadyBooked();
       }
       if (application.status !== "READY_FOR_APPOINTMENT" && application.status !== "WAITLISTED") throw apiErrors.appointmentNotEligible();
@@ -301,9 +315,15 @@ export async function bookAppointment(
         context, appointmentId: appointment.id, eventType: "APPOINTMENT_BOOKED",
         correlationId: input.correlationId, applicationId: application.id, slotId: slot.id,
       });
-      return appointment;
+      return { appointment, releasedSlots };
     }, { isolationLevel: "Serializable", maxWait: 30_000, timeout: 30_000 });
-    return appointmentOutputForWaitlist(record);
+    if (result.releasedSlots.length > 0) {
+      const { allocateSlot } = await import("@/server/waitlist/waitlist-service");
+      for (const slotId of new Set(result.releasedSlots)) {
+        await allocateSlot(slotId, { now, correlationId: input.correlationId }, databaseClient);
+      }
+    }
+    return appointmentOutputForWaitlist(result.appointment);
   } catch (error) {
     if (isSerializationConflict(error) && retryOnSerializationConflict) {
       return bookAppointment(context, input, databaseClient, false);

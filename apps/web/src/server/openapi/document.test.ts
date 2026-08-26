@@ -54,6 +54,7 @@ describe("OpenAPI", () => {
           post: { responses: { 201: {}, 409: {}, 429: {} }, security: [{ cookieAuth: [] }] },
         },
         "/api/v1/appointments/{id}/cancel": { post: { responses: { 200: {}, 409: {} } } },
+        "/api/v1/waitlist": { get: { responses: { 200: {}, 400: {}, 401: {}, 500: {} } } },
         "/api/v1/health/ready": {
           get: {
             responses: {

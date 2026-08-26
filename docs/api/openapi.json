@@ -2850,6 +2850,21 @@
               }
             }
           },
+          "400": {
+            "description": "Query validation failed.",
+            "headers": {
+              "x-request-id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiError"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Authentication required.",
             "headers": {

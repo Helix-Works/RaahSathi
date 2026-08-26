@@ -14,6 +14,7 @@ import { POST as startPayment } from "./applications/[id]/payments/route";
 import { createPaymentProviderEventHandler } from "./payment-provider/events/route";
 import { POST as bookAppointment } from "./appointments/route";
 import { GET as getAvailability } from "./rtos/[id]/availability/route";
+import { createListWaitlistHandler } from "./waitlist/route";
 
 describe("Route Handlers", () => {
   it("serves health with a correlation ID and no permissive CORS", async () => {
@@ -104,6 +105,23 @@ describe("Route Handlers", () => {
     }));
     expect(rejected.status).toBe(403);
     expect(await rejected.json()).toMatchObject({ error: { code: "ACCESS_DENIED" } });
+  });
+
+  it("returns canonical field errors for malformed waitlist filters", async () => {
+    const handler = createListWaitlistHandler(
+      async () => [],
+      async () => ({ sessionId: crypto.randomUUID(), applicantId: crypto.randomUUID() }),
+    );
+    const response = await handler(new Request("http://localhost/api/v1/waitlist?applicationId=not-an-id", {
+      headers: { "x-request-id": "waitlist-invalid-filter" },
+    }));
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: {
+      code: "VALIDATION_FAILED",
+      messageKey: "errors.validationFailed",
+      correlationId: "waitlist-invalid-filter",
+      fieldErrors: { applicationId: ["invalid_format"] },
+    } });
   });
 
   it("validates and transports synthetic provider events through the registered contract", async () => {

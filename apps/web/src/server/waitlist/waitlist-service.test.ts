@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { joinWaitlistRequestSchema } from "@raahsathi/contracts/waitlist";
+import { joinWaitlistRequestSchema, updateWaitlistRequestSchema } from "@raahsathi/contracts/waitlist";
 
 import { slotTimeBucket } from "./waitlist-service";
 
@@ -21,6 +21,14 @@ describe("waitlist compatibility primitives", () => {
       applicationId: crypto.randomUUID(), rtoId: crypto.randomUUID(),
       acceptableDateFrom: "2026-09-01", acceptableDateTo: "2026-09-02",
       timeBuckets: ["MORNING"], vehicleClass: "LMV", joinedAt: "tampered",
+    }).success).toBe(false);
+    expect(updateWaitlistRequestSchema.safeParse({
+      rtoId: crypto.randomUUID(), acceptableDateFrom: "2026-09-02", acceptableDateTo: "2026-09-01",
+      timeBuckets: ["AFTERNOON"], vehicleClass: "LMV",
+    }).success).toBe(false);
+    expect(updateWaitlistRequestSchema.safeParse({
+      rtoId: crypto.randomUUID(), acceptableDateFrom: "2026-09-01", acceptableDateTo: "2026-09-02",
+      timeBuckets: [], vehicleClass: "LMV",
     }).success).toBe(false);
   });
 });

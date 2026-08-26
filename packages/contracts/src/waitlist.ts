@@ -8,19 +8,20 @@ export const waitlistStatusSchema = z.enum(["ACTIVE", "OFFERED", "LEFT", "FULFIL
 export const slotOfferStatusSchema = z.enum(["ACTIVE", "ACCEPTED", "DECLINED", "EXPIRED"]);
 export const vehicleClassSchema = z.enum(["LMV"]);
 
-export const waitlistPreferencesSchema = z.object({
+const waitlistPreferenceFields = {
   rtoId: z.uuid(), acceptableDateFrom: appointmentDateSchema, acceptableDateTo: appointmentDateSchema,
   timeBuckets: z.array(waitlistTimeBucketSchema).min(1).max(2), vehicleClass: vehicleClassSchema,
-}).strict().refine((value) => value.acceptableDateFrom <= value.acceptableDateTo, {
+} as const;
+const orderedDateRange = (value: Readonly<{ acceptableDateFrom: string; acceptableDateTo: string }>) =>
+  value.acceptableDateFrom <= value.acceptableDateTo;
+const dateRangeIssue = {
   path: ["acceptableDateTo"], message: "Date range must be ordered.",
-});
+};
+
+export const waitlistPreferencesSchema = z.object(waitlistPreferenceFields).strict().refine(orderedDateRange, dateRangeIssue);
 export const joinWaitlistRequestSchema = z.object({
-  applicationId: z.uuid(), rtoId: z.uuid(), acceptableDateFrom: appointmentDateSchema,
-  acceptableDateTo: appointmentDateSchema, timeBuckets: z.array(waitlistTimeBucketSchema).min(1).max(2),
-  vehicleClass: vehicleClassSchema,
-}).strict().refine((value) => value.acceptableDateFrom <= value.acceptableDateTo, {
-  path: ["acceptableDateTo"], message: "Date range must be ordered.",
-});
+  applicationId: z.uuid(), ...waitlistPreferenceFields,
+}).strict().refine(orderedDateRange, dateRangeIssue);
 export const updateWaitlistRequestSchema = waitlistPreferencesSchema;
 
 export const slotOfferSchema = z.object({

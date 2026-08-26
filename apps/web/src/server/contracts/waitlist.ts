@@ -15,6 +15,8 @@ const mutationErrors = [
 ] as const;
 const readErrors = [{ status: 401, description: "Authentication required." }, { status: 404, description: "Owner-scoped resource not found." },
   { status: 500, description: "Sanitized server error." }] as const;
+const listReadErrors = [{ status: 400, description: "Query validation failed." },
+  ...readErrors.filter((error) => error.status !== 404)] as const;
 
 export const waitlistEndpointContracts: readonly EndpointContract[] = [
   { method: "post", path: "/api/v1/waitlist", operationId: "joinWaitlist", summary: "Join the compatible strict-FIFO waitlist",
@@ -24,7 +26,7 @@ export const waitlistEndpointContracts: readonly EndpointContract[] = [
   { method: "get", path: "/api/v1/waitlist", operationId: "listWaitlist", summary: "List the current applicant's waitlist entries",
     queryParameters: [{ name: "applicationId", description: "Optional application UUID filter.", required: false, schema: z.uuid() }],
     success: { status: 200, description: "Owner-scoped waitlist entries.", schemaName: "WaitlistList", schema: waitlistListSchema, headers },
-    errors: readErrors.filter((error) => error.status !== 404), security: ["cookieAuth"] },
+    errors: listReadErrors, security: ["cookieAuth"] },
   { method: "get", path: "/api/v1/waitlist/{id}", operationId: "getWaitlist", summary: "Get one owner-scoped waitlist entry", pathParameters: [id],
     success: { status: 200, description: "Waitlist entry and latest offer.", schemaName: "WaitlistEntry", schema: waitlistEntrySchema, headers }, errors: readErrors, security: ["cookieAuth"] },
   { method: "patch", path: "/api/v1/waitlist/{id}", operationId: "updateWaitlist", summary: "Update preferences without changing FIFO join time", pathParameters: [id],

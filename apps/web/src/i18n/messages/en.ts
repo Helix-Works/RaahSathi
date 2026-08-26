@@ -198,6 +198,10 @@ export const enMessages = {
     nextActionNone: "No action is required right now",
     blockingIdentity: "Identity verification is required. All completed application sections remain saved.",
     blockingPayment: "Identity is verified. Complete the synthetic fee payment to continue.",
+    blockingNoSuitableSlot:
+      "No suitable direct appointment slot is available. Your saved waitlist preferences remain active.",
+    blockingWaitlistOfferPending:
+      "A temporary appointment offer is waiting for your decision. Review it before the server-provided expiry time.",
     historyTitle: "Application history",
     historyEmpty: "No application history is available yet.",
     historyApplicationCreated: "Application started",
@@ -366,6 +370,17 @@ export const enMessages = {
       SLOT_ELAPSED: "This appointment time has already passed.",
       CENTER_UNAVAILABLE: "This center is currently unavailable.",
       BOOKING_SERVICE_UNAVAILABLE: "Appointment booking is temporarily unavailable.",
+    },
+  },
+  waitlist: {
+    errors: {
+      notEligible: "This application is not eligible to join or change the waitlist.",
+      alreadyActive: "This application already has an active waitlist entry.",
+      offerActive: "Review the active slot offer before changing this waitlist or booking directly.",
+      rateLimited: "Too many waitlist changes were requested. Wait briefly and try again.",
+      offerExpired: "This temporary slot offer has expired. Your waitlist status has been refreshed.",
+      offerConsumed: "This temporary slot offer has already been accepted, declined, or expired.",
+      offerConflict: "This slot offer no longer matches the authoritative appointment state. Refresh and try again.",
     },
   },
   dashboard: {
