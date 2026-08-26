@@ -6,6 +6,8 @@ const copy = {
   defaultDescription: "default",
   readyForAppointmentDescription: "payment complete",
   appointmentBookedDescription: "appointment booked",
+  waitlistedDescription: "waitlisted",
+  slotOfferedDescription: "offered",
   noActionDescription: "nothing to do",
   continueLabel: "Continue",
 } as const;
@@ -19,12 +21,16 @@ describe("dashboard next-action presentation", () => {
     }, copy)).toEqual({ description: "payment complete" });
   });
 
-  it("keeps appointment selection non-actionable until its Phase 5 route exists", () => {
+  it("links appointment selection to the application booking flow", () => {
     expect(resolveNextActionCard({
       id: "application-id",
       statusCode: "READY_FOR_APPOINTMENT",
       nextActionCode: "SELECT_APPOINTMENT",
-    }, copy)).toEqual({ description: "payment complete" });
+    }, copy)).toEqual({
+      description: "payment complete",
+      actionLabel: "Continue",
+      actionHref: "/applications/application-id",
+    });
   });
 
   it("does not reuse payment copy for an already-booked appointment", () => {
@@ -53,5 +59,10 @@ describe("dashboard next-action presentation", () => {
       actionLabel: "Continue",
       actionHref: "/applications/application-id",
     });
+  });
+
+  it("sends waitlist and offer actions to the authoritative application view", () => {
+    expect(resolveNextActionCard({ id: "application-id", statusCode: "WAITLISTED", nextActionCode: "REVIEW_WAITLIST" }, copy)).toEqual({ description: "waitlisted", actionLabel: "Continue", actionHref: "/applications/application-id" });
+    expect(resolveNextActionCard({ id: "application-id", statusCode: "SLOT_OFFERED", nextActionCode: "REVIEW_OFFER" }, copy)).toEqual({ description: "offered", actionLabel: "Continue", actionHref: "/applications/application-id" });
   });
 });

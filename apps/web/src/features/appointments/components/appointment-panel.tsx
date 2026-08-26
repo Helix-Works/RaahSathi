@@ -1,41 +1,178 @@
 "use client";
 
 import type { ApplicationDetail } from "@raahsathi/contracts/applications";
-import type { DaySlots, MonthAvailability, Rto } from "@raahsathi/contracts/appointments";
-import type { WaitlistEntry } from "@raahsathi/contracts/waitlist";
-import { useEffect, useMemo, useState } from "react";
+import type { Appointment, DaySlots, MonthAvailability, Rto } from "@raahsathi/contracts/appointments";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { bookSlot, declineOffer, getAvailability, getRtos, getSlots, joinWaitlist, listWaitlist, acceptOffer } from "@/features/appointments/api";
+import {
+  bookAppointment,
+  getRtoDaySlots,
+  getRtoMonthAvailability,
+  listAppointments,
+  listRtos,
+} from "@/features/appointments/api";
+import {
+  appointmentDayNumber,
+  currentDelhiMonth,
+  formatAppointmentDate,
+  formatAppointmentMonth,
+  shiftMonth,
+} from "@/features/appointments/appointment-date";
+import { beginAppointmentOperation, confirmedAppointmentForApplication } from "@/features/appointments/appointment-flow";
+import { appointmentErrorPresentation } from "@/features/appointments/appointment-errors";
 import { availabilityReasonMessage } from "@/features/appointments/availability-presentation";
 import type { Locale, MessageDictionary } from "@/i18n";
 
-export function AppointmentPanel({ application, locale, messages, onApplicationChanged }: Readonly<{ application: ApplicationDetail; locale: Locale; messages: MessageDictionary["appointments"]; onApplicationChanged: () => Promise<void> }>) {
-  const hi = locale === "hi";
-  const [rtos, setRtos] = useState<readonly Rto[]>([]); const [rtoId, setRtoId] = useState("");
-  const month = new Date().toISOString().slice(0, 7); const [availability, setAvailability] = useState<MonthAvailability>();
-  const [date, setDate] = useState(""); const [slots, setSlots] = useState<DaySlots>(); const [entries, setEntries] = useState<readonly WaitlistEntry[]>([]);
-  const [busy, setBusy] = useState(false); const [error, setError] = useState<string>();
-  const [from, setFrom] = useState(""); const [to, setTo] = useState(""); const buckets = ["MORNING", "AFTERNOON"] as const;
-  const service = application.serviceKey;
-  const activeEntry = entries[0]; const activeOffer = activeEntry?.offer?.status === "ACTIVE" ? activeEntry.offer : undefined;
-  const labels = useMemo(() => hi ? { title: "अपॉइंटमेंट चुनें या वेटलिस्ट में शामिल हों", rto: "आरटीओ", date: "तारीख", load: "उपलब्धता देखें", book: "यह स्लॉट बुक करें", wait: "वेटलिस्ट में शामिल हों", waiting: "वेटलिस्ट में प्रतीक्षा", accept: "ऑफर स्वीकार करें", decline: "ऑफर अस्वीकार करें", unavailable: "यह स्लॉट उपलब्ध नहीं है", error: "कोशिश पूरी नहीं हुई" } : { title: "Choose an appointment or join the waitlist", rto: "RTO", date: "Date", load: "View availability", book: "Book this slot", wait: "Join waitlist", waiting: "Waiting for a suitable slot", accept: "Accept offer", decline: "Decline offer", unavailable: "This slot is unavailable", error: "The request could not be completed" }, [hi]);
-  useEffect(() => { void getRtos().then((value) => { setRtos(value); setRtoId(value[0]?.id ?? ""); }).catch(() => setError(labels.error)); }, [labels.error]);
-  useEffect(() => { if (!rtoId) return; void getAvailability(rtoId, month, service).then(setAvailability).catch(() => setError(labels.error)); void listWaitlist(application.id).then(setEntries).catch(() => undefined); }, [application.id, month, rtoId, service, labels.error]);
-  const loadSlots = async (chosen: string) => { setDate(chosen); try { setSlots(await getSlots(rtoId, chosen, service)); } catch { setError(labels.error); } };
-  const run = async (operation: () => Promise<unknown>) => { setBusy(true); setError(undefined); try { await operation(); await onApplicationChanged(); if (rtoId) setEntries(await listWaitlist(application.id)); } catch { setError(labels.error); } finally { setBusy(false); } };
-  if (!["READY_FOR_APPOINTMENT", "WAITLISTED", "SLOT_OFFERED", "APPOINTMENT_BOOKED"].includes(application.statusCode)) return null;
-  return <Card><CardHeader><CardTitle>{labels.title}</CardTitle></CardHeader><CardContent className="space-y-4">
-    {error ? <Alert variant="error"><AlertTitle>{labels.error}</AlertTitle><AlertDescription>{error}</AlertDescription></Alert> : null}
-    {activeOffer ? <Alert><AlertTitle>{hi ? "अस्थायी स्लॉट ऑफर" : "Temporary slot offer"}</AlertTitle><AlertDescription><div className="space-y-2"><p>{new Date(activeOffer.slot.date).toLocaleDateString(hi ? "hi-IN" : "en-IN")} · {activeOffer.slot.startTime}–{activeOffer.slot.endTime}</p><div className="flex flex-wrap gap-2"><Button disabled={busy} onClick={() => void run(() => acceptOffer(activeOffer.id))}>{labels.accept}</Button><Button variant="outline" disabled={busy} onClick={() => void run(() => declineOffer(activeOffer.id))}>{labels.decline}</Button></div></div></AlertDescription></Alert> : null}
-    {application.statusCode === "APPOINTMENT_BOOKED" ? <p className="font-semibold">{hi ? "आपका अपॉइंटमेंट पुष्ट है।" : "Your appointment is confirmed."}</p> : null}
-    {application.statusCode !== "APPOINTMENT_BOOKED" && !activeOffer ? <>
-      <label className="grid gap-1 text-sm font-semibold">{labels.rto}<select className="rounded-md border bg-background p-2" value={rtoId} onChange={(event) => { setRtoId(event.target.value); setDate(""); setSlots(undefined); }}>{rtos.map((rto) => <option key={rto.id} value={rto.id}>{hi ? rto.nameHi : rto.nameEn}</option>)}</select></label>
-      {availability ? <div className="grid grid-cols-4 gap-2 sm:grid-cols-7">{availability.days.filter((day) => day.date >= new Date().toISOString().slice(0, 10)).slice(0, 14).map((day) => <Button key={day.date} variant={date === day.date ? "default" : "outline"} className="h-auto min-h-16 px-1 text-xs" onClick={() => void loadSlots(day.date)}>{day.date.slice(8)}<span className="block">{day.status === "AVAILABLE" ? day.availableSlots : availabilityReasonMessage(day.status, messages)}</span></Button>)}</div> : null}
-      {slots ? <div className="grid gap-2 sm:grid-cols-2">{slots.slots.map((slot) => <Button key={slot.slotId} variant="outline" disabled={slot.status !== "AVAILABLE" || busy} onClick={() => void run(() => bookSlot(application.id, slot.slotId))}>{slot.startTime}–{slot.endTime} · {slot.status === "AVAILABLE" ? labels.book : labels.unavailable}</Button>)}</div> : null}
-      {application.statusCode !== "WAITLISTED" ? <div className="space-y-2 rounded-md border p-3"><p className="font-semibold">{labels.wait}</p><div className="grid gap-2 sm:grid-cols-2"><input aria-label={hi ? "आरंभ तारीख" : "Start date"} type="date" value={from} onChange={(event) => setFrom(event.target.value)} className="rounded-md border bg-background p-2" /><input aria-label={hi ? "अंतिम तारीख" : "End date"} type="date" value={to} onChange={(event) => setTo(event.target.value)} className="rounded-md border bg-background p-2" /></div><Button disabled={busy || !from || !to} onClick={() => void run(() => joinWaitlist({ applicationId: application.id, rtoId, acceptableDateFrom: from, acceptableDateTo: to, timeBuckets: buckets, vehicleClass: "LMV" }))}>{labels.wait}</Button></div> : null}
-    </> : null}
-    {activeEntry && !activeOffer ? <p className="text-sm font-semibold">{labels.waiting}</p> : null}
+type Labels = ReturnType<typeof appointmentLabels>;
+
+function localizedDistrict(district: string, locale: Locale): string {
+  if (locale !== "hi") return district;
+
+  const hindiDistricts: Readonly<Record<string, string>> = {
+    "Synthetic Delhi": "कृत्रिम दिल्ली",
+    "North Delhi": "उत्तरी दिल्ली",
+    "North West Delhi": "उत्तर-पश्चिम दिल्ली",
+    "South Delhi": "दक्षिण दिल्ली",
+    "North East Delhi": "उत्तर-पूर्वी दिल्ली",
+  };
+
+  return hindiDistricts[district] ?? district;
+}
+
+function appointmentLabels(locale: Locale) {
+  return locale === "hi" ? {
+    title: "अपॉइंटमेंट चुनें", intro: "कृत्रिम दिल्ली आरटीओ, तारीख और उपलब्ध समय चुनें। क्षमता हमेशा सर्वर से आती है।",
+    rto: "आरटीओ चुनें", calendar: "तारीख चुनें", slots: "समय चुनें", previous: "पिछला महीना", next: "अगला महीना",
+    loadingRtos: "आरटीओ लोड हो रहे हैं…", loadingCalendar: "कैलेंडर लोड हो रहा है…", loadingSlots: "स्लॉट लोड हो रहे हैं…",
+    noRtos: "अभी कोई आरटीओ उपलब्ध नहीं है।", noSlots: "इस तारीख के लिए कोई स्लॉट जारी नहीं किया गया है।",
+    remaining: "{count} स्थान शेष", selected: "चुना गया", review: "बुकिंग की पुष्टि करें", service: "सेवा", learner: "लर्नर लाइसेंस", permanent: "स्थायी ड्राइविंग लाइसेंस",
+    date: "तारीख", time: "समय", confirm: "अपॉइंटमेंट पक्का करें", confirming: "पुष्टि हो रही है…", change: "चयन बदलें",
+    confirmed: "अपॉइंटमेंट पक्का है", confirmedBody: "यह विवरण सर्वर से दोबारा बनाया गया है और लॉगआउट या रीफ्रेश के बाद भी सुरक्षित रहता है।",
+    bookedAt: "बुक किया गया", retry: "फिर कोशिश करें", reload: "पेज फिर लोड करें", signIn: "दोबारा साइन इन करें",
+    unavailable: "यह चयन अब उपलब्ध नहीं है। नवीनतम उपलब्धता दिखाई गई है।", rateLimited: "बहुत अधिक प्रयास हुए। थोड़ी देर बाद फिर कोशिश करें।",
+    session: "आपका सत्र समाप्त हो गया है। सुरक्षित रूप से जारी रखने के लिए दोबारा साइन इन करें।", csrf: "सुरक्षा टोकन पुराना हो गया है। पेज फिर लोड करें।",
+    generic: "अपॉइंटमेंट सेवा अभी उत्तर नहीं दे सकी। आपकी आवेदन प्रगति सुरक्षित है।", reconstruct: "पुष्ट अपॉइंटमेंट विवरण लोड नहीं हो सका।",
+  } : {
+    title: "Choose an appointment", intro: "Choose a synthetic Delhi RTO, date, and available time. Capacity always comes from the server.",
+    rto: "Choose an RTO", calendar: "Choose a date", slots: "Choose a time", previous: "Previous month", next: "Next month",
+    loadingRtos: "Loading RTOs…", loadingCalendar: "Loading calendar…", loadingSlots: "Loading slots…",
+    noRtos: "No RTO is available right now.", noSlots: "No slots have been released for this date.",
+    remaining: "{count} places remaining", selected: "Selected", review: "Confirm your booking", service: "Service", learner: "Learner Licence", permanent: "Permanent Driving Licence",
+    date: "Date", time: "Time", confirm: "Confirm appointment", confirming: "Confirming…", change: "Change selection",
+    confirmed: "Appointment confirmed", confirmedBody: "These details were reconstructed from the server and remain safe after refresh or sign-out.",
+    bookedAt: "Booked", retry: "Try again", reload: "Reload page", signIn: "Sign in again",
+    unavailable: "That selection is no longer available. The latest availability is shown.", rateLimited: "Too many attempts were made. Wait briefly and try again.",
+    session: "Your session has expired. Sign in again to continue safely.", csrf: "The security token is stale. Reload the page and try again.",
+    generic: "The appointment service could not respond. Your application progress is safe.", reconstruct: "Confirmed appointment details could not be loaded.",
+  };
+}
+
+function ConfirmedAppointment({ appointment, locale, labels }: Readonly<{ appointment: Appointment; locale: Locale; labels: Labels }>) {
+  const name = locale === "hi" ? appointment.rto.nameHi : appointment.rto.nameEn;
+  return <div className="space-y-4" role="status">
+    <Alert><AlertTitle>{labels.confirmed}</AlertTitle><AlertDescription>{labels.confirmedBody}</AlertDescription></Alert>
+    <dl className="grid gap-4 rounded-xl border p-4 sm:grid-cols-2">
+      <div><dt className="text-sm text-muted-foreground">{labels.rto}</dt><dd className="font-bold">{name}</dd><dd className="text-sm text-muted-foreground">{localizedDistrict(appointment.rto.district, locale)}</dd></div>
+      <div><dt className="text-sm text-muted-foreground">{labels.date}</dt><dd className="font-bold">{formatAppointmentDate(appointment.date, locale)}</dd></div>
+      <div><dt className="text-sm text-muted-foreground">{labels.time}</dt><dd className="font-bold">{appointment.startTime}–{appointment.endTime}</dd></div>
+      <div><dt className="text-sm text-muted-foreground">{labels.bookedAt}</dt><dd className="font-bold">{new Intl.DateTimeFormat(locale === "hi" ? "hi-IN" : "en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(appointment.bookedAt))}</dd></div>
+    </dl>
+  </div>;
+}
+
+export function AppointmentPanel({ application, initialAppointment, locale, messages, onApplicationChanged }: Readonly<{
+  application: ApplicationDetail; initialAppointment?: Appointment; locale: Locale; messages: MessageDictionary["appointments"]; onApplicationChanged: () => Promise<void>;
+}>) {
+  const labels = useMemo(() => appointmentLabels(locale), [locale]);
+  const router = useRouter();
+  const [appointment, setAppointment] = useState(initialAppointment);
+  const [rtos, setRtos] = useState<readonly Rto[]>([]);
+  const [rtoId, setRtoId] = useState("");
+  const [month, setMonth] = useState(() => currentDelhiMonth());
+  const [availability, setAvailability] = useState<MonthAvailability>();
+  const [date, setDate] = useState("");
+  const [slots, setSlots] = useState<DaySlots>();
+  const [slotId, setSlotId] = useState("");
+  const [loading, setLoading] = useState<"rtos" | "calendar" | "slots" | "reconstruct">();
+  const [confirming, setConfirming] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [error, setError] = useState<ReturnType<typeof appointmentErrorPresentation>>();
+  const operationLock = useRef(false);
+  const slotRequest = useRef<AbortController | undefined>(undefined);
+  const errorRef = useRef<HTMLDivElement>(null);
+  const relevant = ["READY_FOR_APPOINTMENT", "APPOINTMENT_BOOKED"].includes(application.statusCode);
+
+  useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
+  useEffect(() => {
+    if (!relevant || appointment || application.statusCode !== "APPOINTMENT_BOOKED") return;
+    const controller = new AbortController();
+    void Promise.resolve().then(() => { setLoading("reconstruct"); return listAppointments(controller.signal); }).then((items) => {
+      setAppointment(confirmedAppointmentForApplication(items, application.id));
+      if (!confirmedAppointmentForApplication(items, application.id)) setError({ message: labels.reconstruct, action: "retry" });
+    }).catch((reason: unknown) => { if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(appointmentErrorPresentation(reason, locale)); }).finally(() => setLoading(undefined));
+    return () => controller.abort();
+  }, [application.id, application.statusCode, appointment, labels, locale, relevant]);
+  useEffect(() => {
+    if (!relevant || application.statusCode !== "READY_FOR_APPOINTMENT") return;
+    const controller = new AbortController();
+    void Promise.resolve().then(() => { setLoading("rtos"); setError(undefined); return listRtos(controller.signal); }).then((items) => { setRtos(items); setRtoId((current) => current || items.find((rto) => rto.status === "AVAILABLE")?.id || ""); }).catch((reason: unknown) => { if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(appointmentErrorPresentation(reason, locale)); }).finally(() => setLoading(undefined));
+    return () => controller.abort();
+  }, [application.statusCode, locale, relevant, reloadKey]);
+  useEffect(() => {
+    if (!rtoId || application.statusCode !== "READY_FOR_APPOINTMENT") return;
+    const controller = new AbortController();
+    void Promise.resolve().then(() => { setLoading("calendar"); setAvailability(undefined); setDate(""); setSlots(undefined); setSlotId(""); setError(undefined); return getRtoMonthAvailability(rtoId, month, application.serviceKey, controller.signal); }).then(setAvailability).catch((reason: unknown) => { if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(appointmentErrorPresentation(reason, locale)); }).finally(() => setLoading(undefined));
+    return () => controller.abort();
+  }, [application.serviceKey, application.statusCode, locale, month, reloadKey, rtoId]);
+
+  useEffect(() => () => slotRequest.current?.abort(), []);
+
+  if (!relevant) return null;
+  const selectedRto = rtos.find((rto) => rto.id === rtoId);
+  const selectedSlot = slots?.slots.find((slot) => slot.slotId === slotId);
+  const loadSlots = (chosenDate: string) => {
+    slotRequest.current?.abort();
+    const controller = new AbortController(); slotRequest.current = controller; setDate(chosenDate); setSlotId(""); setSlots(undefined); setLoading("slots"); setError(undefined);
+    void getRtoDaySlots(rtoId, chosenDate, application.serviceKey, controller.signal)
+      .then(setSlots)
+      .catch((reason: unknown) => { if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(appointmentErrorPresentation(reason, locale)); })
+      .finally(() => { if (slotRequest.current === controller) setLoading(undefined); });
+  };
+  const reconstruct = async () => {
+    setLoading("reconstruct"); setError(undefined);
+    try { setAppointment(confirmedAppointmentForApplication(await listAppointments(), application.id)); await onApplicationChanged(); }
+    catch (reason: unknown) { setError(appointmentErrorPresentation(reason, locale)); }
+    finally { setLoading(undefined); }
+  };
+  const confirm = async () => {
+    if (!selectedSlot || !beginAppointmentOperation(operationLock)) return;
+    setConfirming(true); setError(undefined);
+    try { const created = await bookAppointment(application.id, selectedSlot.slotId); setAppointment(created); await onApplicationChanged(); }
+    catch (reason: unknown) {
+      const nextError = appointmentErrorPresentation(reason, locale); setError(nextError);
+      if (nextError.action === "reconstruct") await reconstruct();
+      else if (nextError.action === "refresh-calendar") { setDate(""); setSlots(undefined); setSlotId(""); setReloadKey((value) => value + 1); }
+      else { setSlotId(""); if (date) loadSlots(date); }
+    } finally { operationLock.current = false; setConfirming(false); }
+  };
+  const retry = () => { if (error?.action === "signin") router.push(`/login?returnTo=/applications/${application.id}`); else if (error?.action === "reload") window.location.reload(); else if (error?.action === "reconstruct" || application.statusCode === "APPOINTMENT_BOOKED") void reconstruct(); else if (error?.action === "refresh-slots" && date) loadSlots(date); else { setDate(""); setSlots(undefined); setSlotId(""); setReloadKey((value) => value + 1); } };
+
+  return <Card><CardHeader><CardTitle>{labels.title}</CardTitle><p className="text-sm text-muted-foreground">{labels.intro}</p></CardHeader><CardContent className="space-y-6">
+    {error ? <Alert ref={errorRef} tabIndex={-1} variant="error"><AlertTitle>{labels.generic}</AlertTitle><AlertDescription className="space-y-3"><p>{error.message}</p><Button variant="outline" onClick={retry}>{error.action === "signin" ? labels.signIn : error.action === "reload" ? labels.reload : labels.retry}</Button></AlertDescription></Alert> : null}
+    {appointment ? <ConfirmedAppointment appointment={appointment} locale={locale} labels={labels} /> : application.statusCode === "APPOINTMENT_BOOKED" || loading === "reconstruct" ? <p role="status">{labels.loadingSlots}</p> : <>
+      <section className="space-y-3" aria-labelledby="appointment-rto-heading"><h3 id="appointment-rto-heading" className="font-bold">1. {labels.rto}</h3>
+        {loading === "rtos" ? <p role="status">{labels.loadingRtos}</p> : rtos.length === 0 ? <p>{labels.noRtos}</p> : <div className="grid gap-2 sm:grid-cols-2">{rtos.map((rto) => <button key={rto.id} type="button" disabled={rto.status !== "AVAILABLE"} aria-pressed={rtoId === rto.id} onClick={() => setRtoId(rto.id)} className="rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-60 data-[selected=true]:border-primary data-[selected=true]:bg-accent" data-selected={rtoId === rto.id}><span className="block font-bold">{locale === "hi" ? rto.nameHi : rto.nameEn}</span><span className="block text-sm text-muted-foreground">{localizedDistrict(rto.district, locale)}</span>{rto.status !== "AVAILABLE" ? <span className="mt-1 block text-xs">{availabilityReasonMessage(rto.status, messages)}</span> : null}</button>)}</div>}
+      </section>
+      {rtoId ? <section className="space-y-3" aria-labelledby="appointment-calendar-heading"><div className="flex items-center justify-between gap-2"><h3 id="appointment-calendar-heading" className="font-bold">2. {labels.calendar}</h3><div className="flex items-center gap-1"><Button variant="outline" size="icon" aria-label={labels.previous} disabled={month <= currentDelhiMonth()} onClick={() => setMonth((value) => shiftMonth(value, -1))}><ChevronLeft aria-hidden="true" /></Button><span className="min-w-32 text-center font-bold">{formatAppointmentMonth(month, locale)}</span><Button variant="outline" size="icon" aria-label={labels.next} onClick={() => setMonth((value) => shiftMonth(value, 1))}><ChevronRight aria-hidden="true" /></Button></div></div>
+        {loading === "calendar" ? <p role="status">{labels.loadingCalendar}</p> : availability ? <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">{availability.days.map((day) => <button key={day.date} type="button" disabled={day.status !== "AVAILABLE"} aria-pressed={date === day.date} onClick={() => loadSlots(day.date)} className="min-h-24 rounded-lg border p-2 text-left disabled:cursor-not-allowed disabled:opacity-60 data-[selected=true]:border-primary data-[selected=true]:bg-accent" data-selected={date === day.date}><span className="block text-lg font-black">{appointmentDayNumber(day.date, locale)}</span><span className="block text-xs">{day.status === "AVAILABLE" ? labels.remaining.replace("{count}", new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(day.availableSlots)) : availabilityReasonMessage(day.status, messages)}</span></button>)}</div> : null}
+      </section> : null}
+      {date ? <section className="space-y-3" aria-labelledby="appointment-slots-heading"><h3 id="appointment-slots-heading" className="font-bold">3. {labels.slots} · {formatAppointmentDate(date, locale)}</h3>{loading === "slots" ? <p role="status">{labels.loadingSlots}</p> : slots?.slots.length ? <div className="grid gap-2 sm:grid-cols-2">{slots.slots.map((slot) => <button key={slot.slotId} type="button" disabled={slot.status !== "AVAILABLE" || confirming} aria-pressed={slotId === slot.slotId} onClick={() => setSlotId(slot.slotId)} className="rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-60 data-[selected=true]:border-primary data-[selected=true]:bg-accent" data-selected={slotId === slot.slotId}><span className="font-bold">{slot.startTime}–{slot.endTime}</span><span className="block text-sm text-muted-foreground">{slot.status === "AVAILABLE" ? labels.remaining.replace("{count}", new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(slot.remaining)) : availabilityReasonMessage(slot.status, messages)}</span></button>)}</div> : <p>{labels.noSlots}</p>}</section> : null}
+      {selectedRto && selectedSlot && date ? <section className="space-y-4 rounded-xl border-2 border-primary p-4" aria-labelledby="appointment-review-heading"><h3 id="appointment-review-heading" className="text-lg font-black">4. {labels.review}</h3><dl className="grid gap-3 sm:grid-cols-2"><div><dt className="text-sm text-muted-foreground">{labels.rto}</dt><dd className="font-bold">{locale === "hi" ? selectedRto.nameHi : selectedRto.nameEn}</dd><dd className="text-sm text-muted-foreground">{localizedDistrict(selectedRto.district, locale)}</dd></div><div><dt className="text-sm text-muted-foreground">{labels.service}</dt><dd className="font-bold">{application.serviceKey === "LEARNER_LICENCE" ? labels.learner : labels.permanent}</dd></div><div><dt className="text-sm text-muted-foreground">{labels.date}</dt><dd className="font-bold">{formatAppointmentDate(date, locale)}</dd></div><div><dt className="text-sm text-muted-foreground">{labels.time}</dt><dd className="font-bold">{selectedSlot.startTime}–{selectedSlot.endTime}</dd></div></dl><div className="flex flex-wrap gap-2"><Button disabled={confirming} aria-busy={confirming} onClick={() => void confirm()}>{confirming ? labels.confirming : labels.confirm}</Button><Button variant="outline" disabled={confirming} onClick={() => setSlotId("")}>{labels.change}</Button></div></section> : null}
+    </>}
   </CardContent></Card>;
 }

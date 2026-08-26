@@ -1,37 +1,70 @@
-import { appointmentSchema, daySlotsSchema, monthAvailabilitySchema, rtoListSchema } from "@raahsathi/contracts/appointments";
-import { joinWaitlistRequestSchema, waitlistEntrySchema, waitlistListSchema } from "@raahsathi/contracts/waitlist";
+import type { ServiceKey } from "@raahsathi/contracts/applications";
+import {
+  appointmentListSchema,
+  appointmentSchema,
+  createAppointmentRequestSchema,
+  daySlotsSchema,
+  monthAvailabilitySchema,
+  rtoListSchema,
+} from "@raahsathi/contracts/appointments";
+
 import { apiRequest, createInvalidResponseError } from "@/lib/api";
 
-export async function getRtos() {
-  const parsed = rtoListSchema.safeParse(await apiRequest("/rtos", { cache: "no-store" }));
-  if (!parsed.success) throw createInvalidResponseError(200); return parsed.data.rtos;
+export async function listRtos(signal?: AbortSignal) {
+  const parsed = rtoListSchema.safeParse(
+    await apiRequest("/rtos", { cache: "no-store", signal }),
+  );
+  if (!parsed.success) throw createInvalidResponseError(200);
+  return parsed.data.rtos;
 }
-export async function getAvailability(rtoId: string, month: string, service: string) {
-  const parsed = monthAvailabilitySchema.safeParse(await apiRequest(`/rtos/${rtoId}/availability?month=${month}&service=${service}`, { cache: "no-store" }));
-  if (!parsed.success) throw createInvalidResponseError(200); return parsed.data;
+
+export async function getRtoMonthAvailability(
+  rtoId: string,
+  month: string,
+  service: ServiceKey,
+  signal?: AbortSignal,
+) {
+  const query = new URLSearchParams({ month, service });
+  const parsed = monthAvailabilitySchema.safeParse(
+    await apiRequest(`/rtos/${rtoId}/availability?${query}`, {
+      cache: "no-store",
+      signal,
+    }),
+  );
+  if (!parsed.success) throw createInvalidResponseError(200);
+  return parsed.data;
 }
-export async function getSlots(rtoId: string, date: string, service: string) {
-  const parsed = daySlotsSchema.safeParse(await apiRequest(`/rtos/${rtoId}/slots?date=${date}&service=${service}`, { cache: "no-store" }));
-  if (!parsed.success) throw createInvalidResponseError(200); return parsed.data;
+
+export async function getRtoDaySlots(
+  rtoId: string,
+  date: string,
+  service: ServiceKey,
+  signal?: AbortSignal,
+) {
+  const query = new URLSearchParams({ date, service });
+  const parsed = daySlotsSchema.safeParse(
+    await apiRequest(`/rtos/${rtoId}/slots?${query}`, {
+      cache: "no-store",
+      signal,
+    }),
+  );
+  if (!parsed.success) throw createInvalidResponseError(200);
+  return parsed.data;
 }
-export async function bookSlot(applicationId: string, slotId: string) {
-  const parsed = appointmentSchema.safeParse(await apiRequest("/appointments", { method: "POST", json: { applicationId, slotId } }));
-  if (!parsed.success) throw createInvalidResponseError(201); return parsed.data;
+
+export async function bookAppointment(applicationId: string, slotId: string) {
+  const request = createAppointmentRequestSchema.parse({ applicationId, slotId });
+  const parsed = appointmentSchema.safeParse(
+    await apiRequest("/appointments", { method: "POST", json: request }),
+  );
+  if (!parsed.success) throw createInvalidResponseError(201);
+  return parsed.data;
 }
-export async function joinWaitlist(input: unknown) {
-  const request = joinWaitlistRequestSchema.parse(input);
-  const parsed = waitlistEntrySchema.safeParse(await apiRequest("/waitlist", { method: "POST", json: request }));
-  if (!parsed.success) throw createInvalidResponseError(201); return parsed.data;
-}
-export async function listWaitlist(applicationId: string) {
-  const parsed = waitlistListSchema.safeParse(await apiRequest(`/waitlist?applicationId=${applicationId}`, { cache: "no-store" }));
-  if (!parsed.success) throw createInvalidResponseError(200); return parsed.data.entries;
-}
-export async function acceptOffer(id: string) {
-  const parsed = appointmentSchema.safeParse(await apiRequest(`/offers/${id}/accept`, { method: "POST" }));
-  if (!parsed.success) throw createInvalidResponseError(200); return parsed.data;
-}
-export async function declineOffer(id: string) {
-  const parsed = waitlistEntrySchema.safeParse(await apiRequest(`/offers/${id}/decline`, { method: "POST" }));
-  if (!parsed.success) throw createInvalidResponseError(200); return parsed.data;
+
+export async function listAppointments(signal?: AbortSignal) {
+  const parsed = appointmentListSchema.safeParse(
+    await apiRequest("/appointments", { cache: "no-store", signal }),
+  );
+  if (!parsed.success) throw createInvalidResponseError(200);
+  return parsed.data.appointments;
 }

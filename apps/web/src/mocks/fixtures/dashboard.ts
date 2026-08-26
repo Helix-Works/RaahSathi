@@ -18,7 +18,7 @@ export const activeDashboardFixture = {
   },
   offer: {
     id: "offer_synthetic_rohini",
-    rtoCode: "SYNTHETIC_ROHINI",
+    rto: { nameEn: "Synthetic Rohini RTO", nameHi: "कृत्रिम रोहिणी आरटीओ" },
     expiresAt: relativeIsoDate(2),
   },
   licence: {
@@ -40,8 +40,10 @@ export const appointmentDashboardFixture = {
   },
   appointment: {
     id: "appointment_synthetic_rohini",
-    rtoCode: "SYNTHETIC_ROHINI",
-    startsAt: relativeIsoDate(48),
+    rto: { nameEn: "Synthetic Rohini RTO", nameHi: "कृत्रिम रोहिणी आरटीओ" },
+    date: "2026-08-28",
+    startTime: "10:00",
+    endTime: "10:30",
   },
   licence: {
     labelCode: "SYNTHETIC_LEARNER_CONTEXT",

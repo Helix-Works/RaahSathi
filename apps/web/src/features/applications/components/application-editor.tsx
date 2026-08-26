@@ -8,6 +8,7 @@ import {
 } from "@raahsathi/contracts/applications";
 import type { IdentityContext } from "@raahsathi/contracts/identity";
 import type { PaymentContext } from "@raahsathi/contracts/payments";
+import type { Appointment } from "@raahsathi/contracts/appointments";
 import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 
@@ -23,6 +24,7 @@ import {
 } from "@/features/applications/components/application-section-form";
 import { IdentityRecoveryPanel } from "@/features/identity/components/identity-recovery-panel";
 import { AppointmentPanel } from "@/features/appointments/components/appointment-panel";
+import { WaitlistPanel } from "@/features/waitlist/components/waitlist-panel";
 import { PaymentPanel } from "@/features/payments/components/payment-panel";
 import { isPaymentRelevantApplicationStatus } from "@/features/payments/payment-flow";
 import type { Locale, MessageDictionary } from "@/i18n";
@@ -216,12 +218,14 @@ export function ApplicationEditor({
   initialApplication,
   initialIdentity,
   initialPayment,
+  initialAppointment,
   locale,
   messages,
 }: Readonly<{
   initialApplication: ApplicationDetail;
   initialIdentity: IdentityContext;
   initialPayment: PaymentContext;
+  initialAppointment?: Appointment;
   locale: Locale;
   messages: MessageDictionary;
 }>) {
@@ -287,12 +291,12 @@ export function ApplicationEditor({
             />
           </CardContent>
         </Card>
-      ) : (
+      ) : application.statusCode === "READY_FOR_IDENTITY" ? (
         <Alert>
           <CheckCircle2 className="size-5" aria-hidden="true" />
           <AlertDescription>{applicationMessages.allSectionsComplete}</AlertDescription>
         </Alert>
-      )}
+      ) : null}
 
       {application.progressPercent === 100 ? (
         <IdentityRecoveryPanel
@@ -312,7 +316,9 @@ export function ApplicationEditor({
         />
       ) : null}
 
-      <AppointmentPanel application={application} locale={locale} messages={messages.appointments} onApplicationChanged={refresh} />
+      <AppointmentPanel application={application} initialAppointment={initialAppointment} locale={locale} messages={messages.appointments} onApplicationChanged={refresh} />
+
+      <WaitlistPanel application={application} locale={locale} messages={messages} onApplicationChanged={refresh} />
 
       <ApplicationHistoryCard
         application={application}

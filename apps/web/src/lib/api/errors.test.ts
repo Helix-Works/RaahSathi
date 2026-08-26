@@ -24,4 +24,13 @@ describe("API error normalization", () => {
       retryable: true,
     });
   });
+
+  it("normalizes a numeric Retry-After header without trusting the response body", () => {
+    const response = new Response(null, {
+      status: 429,
+      headers: { "retry-after": "60" },
+    });
+
+    expect(normalizeApiError(response, {}).retryAfterSeconds).toBe(60);
+  });
 });

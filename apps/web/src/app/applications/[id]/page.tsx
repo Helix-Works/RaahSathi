@@ -13,6 +13,7 @@ import { ApiError } from "@/server/http/api-error";
 import { getIdentityContext } from "@/server/identity/identity-service";
 import { listLicences } from "@/server/licences/licence-service";
 import { getPaymentContextForApplication } from "@/server/payments/payment-service";
+import { listAppointments } from "@/server/appointments/appointment-service";
 
 export default async function ApplicationPage({
   params,
@@ -48,11 +49,15 @@ export default async function ApplicationPage({
   const locale = await getRequestLocale();
   const messages = getDictionary(locale);
 
-  const [identity, licences, payment] = await Promise.all([
+  const [identity, licences, payment, appointments] = await Promise.all([
     getIdentityContext(session.context, id),
     listLicences(session.context),
     getPaymentContextForApplication(session.context, id),
+    listAppointments(session.context),
   ]);
+  const appointment = appointments.find(
+    (item) => item.applicationId === id && item.status === "CONFIRMED",
+  );
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
@@ -60,6 +65,7 @@ export default async function ApplicationPage({
         initialApplication={application}
         initialIdentity={identity}
         initialPayment={payment}
+        initialAppointment={appointment}
         locale={locale}
         messages={messages}
       />

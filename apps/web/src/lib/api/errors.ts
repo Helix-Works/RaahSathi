@@ -9,6 +9,7 @@ export type ApiError = Readonly<{
   messageKey: string;
   fieldErrors?: ApiFieldErrors;
   correlationId?: string;
+  retryAfterSeconds?: number;
   retryable: boolean;
 }>;
 
@@ -48,6 +49,7 @@ export class ApiClientError extends Error implements ApiError {
   readonly messageKey: string;
   readonly fieldErrors?: ApiFieldErrors;
   readonly correlationId?: string;
+  readonly retryAfterSeconds?: number;
   readonly retryable: boolean;
 
   constructor(error: ApiError) {
@@ -58,6 +60,7 @@ export class ApiClientError extends Error implements ApiError {
     this.messageKey = error.messageKey;
     this.fieldErrors = error.fieldErrors;
     this.correlationId = error.correlationId;
+    this.retryAfterSeconds = error.retryAfterSeconds;
     this.retryable = error.retryable;
   }
 }
@@ -82,6 +85,11 @@ export function normalizeApiError(
     typeof error.retryable === "boolean"
       ? error.retryable
       : response.status === 429 || response.status >= 500;
+  const retryAfterHeader = response.headers.get("retry-after");
+  const retryAfterValue = retryAfterHeader ? Number.parseInt(retryAfterHeader, 10) : Number.NaN;
+  const retryAfterSeconds = Number.isInteger(retryAfterValue) && retryAfterValue >= 0
+    ? retryAfterValue
+    : undefined;
 
   return new ApiClientError({
     status: response.status,
@@ -89,6 +97,7 @@ export function normalizeApiError(
     messageKey,
     fieldErrors: readFieldErrors(error.fieldErrors),
     correlationId,
+    retryAfterSeconds,
     retryable,
   });
 }
