@@ -1,7 +1,8 @@
 import { randomUUID } from "node:crypto";
 
-import { PrismaClient } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
+
+import { createDatabaseTestClient } from "@/server/database/database-test-client";
 
 import { acquireAuthTransactionLock } from "./auth-service";
 import { isDisposableDatabaseApproved } from "./database-test-safety";
@@ -15,7 +16,7 @@ const safeTestUrl = isDisposableDatabaseApproved({
 if (testUrl && process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION && !safeTestUrl) {
   throw new Error("Refusing database tests: disposable database identity is invalid or matches DATABASE_URL.");
 }
-const database = safeTestUrl ? new PrismaClient({ datasourceUrl: testUrl }) : undefined;
+const database = safeTestUrl ? createDatabaseTestClient(testUrl) : undefined;
 
 describe.skipIf(!database)("Phase 1 disposable PostgreSQL persistence", () => {
   const applicantId = randomUUID();
@@ -56,7 +57,7 @@ describe.skipIf(!database)("Phase 1 disposable PostgreSQL persistence", () => {
         absoluteExpiresAt: new Date(Date.now() + 120_000),
       },
     });
-    const secondClient = new PrismaClient({ datasourceUrl: testUrl });
+    const secondClient = createDatabaseTestClient(testUrl);
     try {
       await secondClient.session.update({ where: { id: sessionId }, data: { revokedAt: new Date() } });
     } finally {

@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 
-import { PrismaClient } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { listApplications } from "@/server/applications/application-service";
 import { isDisposableDatabaseApproved } from "@/server/auth/database-test-safety";
+import { createDatabaseTestClient } from "@/server/database/database-test-client";
 
 import {
   getPayment,
@@ -23,7 +23,7 @@ const approved = isDisposableDatabaseApproved({
 if ((testUrl || process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION) && !approved) {
   throw new Error("Refusing Phase 4 database tests: database identities are not safely distinct.");
 }
-const database = approved ? new PrismaClient({ datasourceUrl: testUrl }) : undefined;
+const database = approved ? createDatabaseTestClient(testUrl) : undefined;
 
 describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", () => {
   const applicantA = randomUUID();

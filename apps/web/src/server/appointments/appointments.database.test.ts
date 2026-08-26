@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 
-import { PrismaClient } from "@prisma/client";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { isDisposableDatabaseApproved } from "@/server/auth/database-test-safety";
+import { createDatabaseTestClient } from "@/server/database/database-test-client";
 
 import { seedSyntheticAppointments } from "../../../prisma/seed-appointments";
 import { bookAppointment, cancelAppointment, getDaySlots, listAppointments } from "./appointment-service";
@@ -17,7 +17,7 @@ const approved = isDisposableDatabaseApproved({
 if ((testUrl || process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION) && !approved) {
   throw new Error("Refusing Phase 5 database tests: database identities are not safely distinct.");
 }
-const database = approved ? new PrismaClient({ datasourceUrl: testUrl }) : undefined;
+const database = approved ? createDatabaseTestClient(testUrl) : undefined;
 
 describe.skipIf(!database)("Phase 5 disposable PostgreSQL appointment capacity", () => {
   const applicantA = randomUUID();

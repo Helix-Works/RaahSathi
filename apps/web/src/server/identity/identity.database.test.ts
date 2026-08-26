@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
 
-import { PrismaClient } from "@prisma/client";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { seedSyntheticApplication } from "../../../prisma/seed-application";
 
 import { isDisposableDatabaseApproved } from "@/server/auth/database-test-safety";
+import { createDatabaseTestClient } from "@/server/database/database-test-client";
 import { getIdentityContext, retryIdentityAttempt, startIdentityAttempt } from "@/server/identity/identity-service";
 import { getLicence } from "@/server/licences/licence-service";
 
@@ -18,7 +18,7 @@ const approved = isDisposableDatabaseApproved({
 if ((testUrl || process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION) && !approved) {
   throw new Error("Refusing Phase 3 database tests: database identities are not safely distinct.");
 }
-const database = approved ? new PrismaClient({ datasourceUrl: testUrl }) : undefined;
+const database = approved ? createDatabaseTestClient(testUrl) : undefined;
 
 describe.skipIf(!database)("Phase 3 disposable PostgreSQL identity recovery", () => {
   const applicantA = randomUUID();
