@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  assertDisposableDatabaseApproved,
   databaseIdentity,
   disposableDatabaseConfirmation,
   isDisposableDatabaseApproved,
 } from "./database-test-safety";
+
+const disposableConfiguration = {
+  testDatabaseUrl: "postgresql://test:secret@db.example/app_test?sslmode=require",
+  primaryDatabaseUrl: "postgresql://prod:other@db.example/app?sslmode=require",
+  confirmation: disposableDatabaseConfirmation,
+} as const;
 
 describe("database test safety", () => {
   it("normalizes a PostgreSQL database identity without credentials or query parameters", () => {
@@ -19,13 +26,36 @@ describe("database test safety", () => {
     expect(databaseIdentity("postgresql://db.example")).toBeUndefined();
   });
 
-  it("requires the exact confirmation and a database distinct from DATABASE_URL", () => {
-    const testDatabaseUrl = "postgresql://test:secret@db.example/app_test?sslmode=require";
-    const primaryDatabaseUrl = "postgresql://prod:other@DB.EXAMPLE/app_test?sslmode=disable";
-    expect(isDisposableDatabaseApproved({ testDatabaseUrl, primaryDatabaseUrl, confirmation: disposableDatabaseConfirmation })).toBe(false);
-    expect(isDisposableDatabaseApproved({ testDatabaseUrl, primaryDatabaseUrl: undefined, confirmation: disposableDatabaseConfirmation })).toBe(false);
-    expect(isDisposableDatabaseApproved({ testDatabaseUrl, primaryDatabaseUrl: "not-a-url", confirmation: disposableDatabaseConfirmation })).toBe(false);
-    expect(isDisposableDatabaseApproved({ testDatabaseUrl, primaryDatabaseUrl: "postgresql://prod@db.example/app", confirmation: "yes" })).toBe(false);
-    expect(isDisposableDatabaseApproved({ testDatabaseUrl, primaryDatabaseUrl: "postgresql://prod@db.example/app", confirmation: disposableDatabaseConfirmation })).toBe(true);
+  it("rejects missing test and primary database URLs", () => {
+    expect(isDisposableDatabaseApproved({ ...disposableConfiguration, testDatabaseUrl: undefined })).toBe(false);
+    expect(isDisposableDatabaseApproved({ ...disposableConfiguration, primaryDatabaseUrl: undefined })).toBe(false);
+  });
+
+  it("rejects malformed test and primary database URLs", () => {
+    expect(isDisposableDatabaseApproved({ ...disposableConfiguration, testDatabaseUrl: "not-a-url" })).toBe(false);
+    expect(isDisposableDatabaseApproved({ ...disposableConfiguration, primaryDatabaseUrl: "not-a-url" })).toBe(false);
+  });
+
+  it("rejects identical normalized database identities", () => {
+    expect(isDisposableDatabaseApproved({
+      ...disposableConfiguration,
+      primaryDatabaseUrl: "postgresql://prod:other@DB.EXAMPLE/app_test?sslmode=disable",
+    })).toBe(false);
+  });
+
+  it("requires the exact disposable-database confirmation", () => {
+    expect(isDisposableDatabaseApproved({ ...disposableConfiguration, confirmation: "yes" })).toBe(false);
+  });
+
+  it("approves only a confirmed database distinct from DATABASE_URL", () => {
+    expect(isDisposableDatabaseApproved(disposableConfiguration)).toBe(true);
+    expect(() => assertDisposableDatabaseApproved(disposableConfiguration)).not.toThrow();
+  });
+
+  it("fails closed without exposing either database URL", () => {
+    expect(() => assertDisposableDatabaseApproved({
+      ...disposableConfiguration,
+      confirmation: undefined,
+    })).toThrow("Refusing database tests: configure a confirmed disposable TEST_DATABASE_URL distinct from DATABASE_URL.");
   });
 });

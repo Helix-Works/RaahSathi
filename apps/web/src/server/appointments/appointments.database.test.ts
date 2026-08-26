@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { PrismaClient } from "@prisma/client";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
 import { isDisposableDatabaseApproved } from "@/server/auth/database-test-safety";
 
@@ -28,33 +28,47 @@ describe.skipIf(!database)("Phase 5 disposable PostgreSQL appointment capacity",
   const seededApplication = randomUUID();
   const rtoId = randomUUID();
   const slotId = randomUUID();
-  const seededRtoIds = [
-    "50000000-0000-4000-8000-000000000001",
-    "50000000-0000-4000-8000-000000000002",
-    "50000000-0000-4000-8000-000000000003",
-  ];
-  const seededSlotIds = [
-    "51000000-0000-4000-8000-000000000001",
-    "51000000-0000-4000-8000-000000000002",
-    "51000000-0000-4000-8000-000000000003",
-  ];
+  const seededSlotId = "51000000-0000-4000-8000-000000000001";
   const contextA = { sessionId: randomUUID(), applicantId: applicantA };
   const contextB = { sessionId: randomUUID(), applicantId: applicantB };
   const now = new Date("2026-08-25T12:00:00.000Z");
 
+  beforeAll(async () => {
+    if (!database) return;
+    const staleApplicants = await database.applicant.findMany({
+      where: { mobileLookupHash: { startsWith: "phase5-seed-" } },
+      select: { id: true },
+    });
+    const staleApplicantIds = staleApplicants.map(({ id }) => id);
+    if (staleApplicantIds.length === 0) return;
+    const staleApplications = await database.application.findMany({
+      where: { applicantId: { in: staleApplicantIds } },
+      select: { id: true },
+    });
+    const staleApplicationIds = staleApplications.map(({ id }) => id);
+    await database.appointment.deleteMany({ where: { applicationId: { in: staleApplicationIds } } });
+    await database.paymentAttempt.deleteMany({ where: { applicationId: { in: staleApplicationIds } } });
+    await database.feeSnapshot.deleteMany({ where: { applicationId: { in: staleApplicationIds } } });
+    await database.application.deleteMany({ where: { id: { in: staleApplicationIds } } });
+    await database.applicant.deleteMany({ where: { id: { in: staleApplicantIds } } });
+  });
+
   afterAll(async () => {
     if (!database) return;
-    await database.auditEvent.deleteMany({ where: { resourceType: "Appointment", actorApplicantId: { in: [applicantA, applicantB] } } });
-    await database.appointmentRateLimitBucket.deleteMany({ where: { applicantId: { in: [applicantA, applicantB] } } });
-    const applicationIds = [applicationA, applicationB, seededApplication];
-    await database.appointment.deleteMany({ where: { applicationId: { in: applicationIds } } });
-    await database.paymentAttempt.deleteMany({ where: { applicationId: { in: applicationIds } } });
-    await database.feeSnapshot.deleteMany({ where: { applicationId: { in: applicationIds } } });
-    await database.application.deleteMany({ where: { id: { in: applicationIds } } });
-    await database.appointmentSlot.deleteMany({ where: { id: { in: [slotId, ...seededSlotIds] } } });
-    await database.rto.deleteMany({ where: { id: { in: [rtoId, ...seededRtoIds] } } });
-    await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, seededApplicant] } } });
-    await database.$disconnect();
+    try {
+      await database.auditEvent.deleteMany({ where: { resourceType: "Appointment", actorApplicantId: { in: [applicantA, applicantB] } } });
+      await database.appointmentRateLimitBucket.deleteMany({ where: { applicantId: { in: [applicantA, applicantB] } } });
+      const applicationIds = [applicationA, applicationB, seededApplication];
+      await database.appointment.deleteMany({ where: { applicationId: { in: applicationIds } } });
+      await database.paymentAttempt.deleteMany({ where: { applicationId: { in: applicationIds } } });
+      await database.feeSnapshot.deleteMany({ where: { applicationId: { in: applicationIds } } });
+      await database.application.deleteMany({ where: { id: { in: applicationIds } } });
+      await database.appointmentSlot.deleteMany({ where: { id: slotId } });
+      await database.rto.deleteMany({ where: { id: rtoId } });
+      await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, seededApplicant] } } });
+    } finally {
+      await database.$disconnect();
+    }
   });
 
   it("allows exactly one concurrent winner for the final slot, owner-scopes it, and releases capacity on cancellation", async () => {
@@ -184,8 +198,6 @@ describe.skipIf(!database)("Phase 5 disposable PostgreSQL appointment capacity",
 
   it("preserves a referenced seeded schedule and reconciles capacity from confirmed appointments", async () => {
     if (!database) return;
-    const seededSlotId = seededSlotIds[0];
-    if (!seededSlotId) throw new Error("The appointment seed must define a primary slot.");
 
     await seedSyntheticAppointments(database, { seedDate: "2026-08-25" });
     await database.applicant.create({ data: {

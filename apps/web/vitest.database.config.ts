@@ -1,13 +1,13 @@
-import { fileURLToPath } from "node:url";
-
 import { defineConfig } from "vitest/config";
 
+import { createVitestBaseConfig } from "./vitest.config.js";
+
+const vitestBaseConfig = createVitestBaseConfig();
+
 export default defineConfig({
-  resolve: {
-    alias: { "server-only": fileURLToPath(new URL("./test/server-only.ts", import.meta.url)) },
-    tsconfigPaths: true,
-  },
+  ...vitestBaseConfig,
   test: {
+    ...vitestBaseConfig.test,
     environment: "node",
     include: ["src/server/**/*.database.test.ts"],
     fileParallelism: false,

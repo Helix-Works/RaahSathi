@@ -23,11 +23,14 @@ describe.skipIf(!database)("Phase 1 disposable PostgreSQL persistence", () => {
 
   afterAll(async () => {
     if (!database) return;
-    await database.session.deleteMany({ where: { applicantId } });
-    await database.auditEvent.deleteMany({ where: { actorApplicantId: applicantId } });
-    await database.authAttempt.deleteMany({ where: { applicantId } });
-    await database.applicant.deleteMany({ where: { id: applicantId } });
-    await database.$disconnect();
+    try {
+      await database.session.deleteMany({ where: { applicantId } });
+      await database.auditEvent.deleteMany({ where: { actorApplicantId: applicantId } });
+      await database.authAttempt.deleteMany({ where: { applicantId } });
+      await database.applicant.deleteMany({ where: { id: applicantId } });
+    } finally {
+      await database.$disconnect();
+    }
   });
 
   it("acquires the transaction-scoped auth advisory lock through a deserializable result", async () => {

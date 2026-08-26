@@ -1,5 +1,11 @@
 export const disposableDatabaseConfirmation = "I_UNDERSTAND_THIS_DATABASE_WILL_BE_MUTATED";
 
+export type DisposableDatabaseConfiguration = Readonly<{
+  testDatabaseUrl: string | undefined;
+  primaryDatabaseUrl: string | undefined;
+  confirmation: string | undefined;
+}>;
+
 export function databaseIdentity(value: string | undefined): string | undefined {
   if (!value) return undefined;
   try {
@@ -12,15 +18,19 @@ export function databaseIdentity(value: string | undefined): string | undefined 
   }
 }
 
-export function isDisposableDatabaseApproved(input: Readonly<{
-  testDatabaseUrl: string | undefined;
-  primaryDatabaseUrl: string | undefined;
-  confirmation: string | undefined;
-}>): boolean {
+export function isDisposableDatabaseApproved(input: DisposableDatabaseConfiguration): boolean {
   const testIdentity = databaseIdentity(input.testDatabaseUrl);
   const primaryIdentity = databaseIdentity(input.primaryDatabaseUrl);
   return input.confirmation === disposableDatabaseConfirmation
     && testIdentity !== undefined
     && primaryIdentity !== undefined
     && testIdentity !== primaryIdentity;
+}
+
+export function assertDisposableDatabaseApproved(input: DisposableDatabaseConfiguration): void {
+  if (!isDisposableDatabaseApproved(input)) {
+    throw new Error(
+      "Refusing database tests: configure a confirmed disposable TEST_DATABASE_URL distinct from DATABASE_URL.",
+    );
+  }
 }

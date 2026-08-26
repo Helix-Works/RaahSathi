@@ -30,10 +30,13 @@ describe.skipIf(!database)("Phase 3 disposable PostgreSQL identity recovery", ()
 
   afterAll(async () => {
     if (!database) return;
-    await database.application.deleteMany({ where: { id: applicationId } });
-    await database.licenceRecord.deleteMany({ where: { id: licenceId } });
-    await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB] } } });
-    await database.$disconnect();
+    try {
+      await database.application.deleteMany({ where: { id: applicationId } });
+      await database.licenceRecord.deleteMany({ where: { id: licenceId } });
+      await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB] } } });
+    } finally {
+      await database.$disconnect();
+    }
   });
 
   it("preserves completed progress through provider failure and advances exactly once after safe retry", async () => {

@@ -26,9 +26,12 @@ describe.skipIf(!database)("Phase 2 disposable PostgreSQL persistence", () => {
 
   afterAll(async () => {
     if (!database) return;
-    await database.application.deleteMany({ where: { id: applicationId } });
-    await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB] } } });
-    await database.$disconnect();
+    try {
+      await database.application.deleteMany({ where: { id: applicationId } });
+      await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB] } } });
+    } finally {
+      await database.$disconnect();
+    }
   });
 
   it("persists a saved section and immutable history across Prisma clients while owner scoping excludes another applicant", async () => {

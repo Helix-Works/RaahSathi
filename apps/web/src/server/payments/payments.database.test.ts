@@ -40,9 +40,12 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
 
   afterAll(async () => {
     if (!database) return;
-    await database.application.deleteMany({ where: { id: { in: [applicationId, secondApplicationId, projectionApplicationId] } } });
-    await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, projectionApplicantId] } } });
-    await database.$disconnect();
+    try {
+      await database.application.deleteMany({ where: { id: { in: [applicationId, secondApplicationId, projectionApplicationId] } } });
+      await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, projectionApplicantId] } } });
+    } finally {
+      await database.$disconnect();
+    }
   });
 
   it("converges delayed and duplicate success once without a browser while enforcing amount and ownership", async () => {
