@@ -24,6 +24,7 @@ import {
 
 import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { prisma } from "@/server/database/prisma";
+import { isRetryableTransactionConflict } from "@/server/database/prisma-errors";
 import { apiErrors } from "@/server/http/api-error";
 import { expireOffersInTransaction } from "@/server/waitlist/offer-expiry";
 
@@ -35,12 +36,6 @@ export type AppointmentRecord = Prisma.AppointmentGetPayload<{
 }>;
 
 type SlotRecord = AppointmentSlot & { rto: Rto };
-
-function isSerializationConflict(error: unknown): boolean {
-  if (!(error instanceof Prisma.PrismaClientKnownRequestError)) return false;
-  if (error.code === "P2034") return true;
-  return error.code === "P2010" && error.meta?.code === "40001";
-}
 
 function dateKey(value: Date): string {
   return value.toISOString().slice(0, 10);
@@ -325,7 +320,7 @@ export async function bookAppointment(
     }
     return appointmentOutputForWaitlist(result.appointment);
   } catch (error) {
-    if (isSerializationConflict(error) && retryOnSerializationConflict) {
+    if (isRetryableTransactionConflict(error) && retryOnSerializationConflict) {
       return bookAppointment(context, input, databaseClient, false);
     }
     throw error;
@@ -389,7 +384,7 @@ export async function cancelAppointment(
     }, { isolationLevel: "Serializable", maxWait: 30_000, timeout: 30_000 });
     return appointmentOutputForWaitlist(record);
   } catch (error) {
-    if (isSerializationConflict(error) && retryOnSerializationConflict) {
+    if (isRetryableTransactionConflict(error) && retryOnSerializationConflict) {
       return cancelAppointment(context, input, databaseClient, false);
     }
     throw error;

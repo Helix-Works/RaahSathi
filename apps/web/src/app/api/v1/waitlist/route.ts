@@ -24,7 +24,7 @@ export function createListWaitlistHandler(
       const raw = new URL(request.url).searchParams.get("applicationId");
       const parsed = raw === null ? undefined : z.uuid().safeParse(raw);
       if (parsed && !parsed.success) throw apiErrors.validation({ applicationId: ["invalid_format"] });
-      const response = Response.json(waitlistListSchema.parse({ entries: await listEntries(context, { applicationId: parsed?.data, correlationId }) }));
+      const response = Response.json(waitlistListSchema.parse({ entries: await listEntries(context, { applicationId: parsed?.data }) }));
       response.headers.set("cache-control", "no-store");
       return response;
     });

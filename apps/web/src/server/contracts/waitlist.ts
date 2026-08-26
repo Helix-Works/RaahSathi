@@ -1,5 +1,11 @@
 import { appointmentSchema } from "@raahsathi/contracts/appointments";
-import { joinWaitlistRequestSchema, updateWaitlistRequestSchema, waitlistEntrySchema, waitlistListSchema } from "@raahsathi/contracts/waitlist";
+import {
+  joinWaitlistRequestSchema,
+  processWaitlistRequestSchema,
+  updateWaitlistRequestSchema,
+  waitlistEntrySchema,
+  waitlistListSchema,
+} from "@raahsathi/contracts/waitlist";
 import { z } from "zod";
 
 import type { EndpointContract } from "./endpoint";
@@ -22,6 +28,10 @@ export const waitlistEndpointContracts: readonly EndpointContract[] = [
   { method: "post", path: "/api/v1/waitlist", operationId: "joinWaitlist", summary: "Join the compatible strict-FIFO waitlist",
     request: { schemaName: "JoinWaitlistRequest", schema: joinWaitlistRequestSchema },
     success: { status: 201, description: "Persisted waitlist entry.", schemaName: "WaitlistEntry", schema: waitlistEntrySchema, headers },
+    errors: mutationErrors, security: ["cookieAuth"] },
+  { method: "post", path: "/api/v1/waitlist/process", operationId: "processWaitlistState", summary: "Expire and allocate waitlist state for one owned application",
+    request: { schemaName: "ProcessWaitlistRequest", schema: processWaitlistRequestSchema },
+    success: { status: 204, description: "Waitlist state processed.", headers },
     errors: mutationErrors, security: ["cookieAuth"] },
   { method: "get", path: "/api/v1/waitlist", operationId: "listWaitlist", summary: "List the current applicant's waitlist entries",
     queryParameters: [{ name: "applicationId", description: "Optional application UUID filter.", required: false, schema: z.uuid() }],

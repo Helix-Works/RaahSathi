@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { GET as getUnknown } from "./[...path]/route";
 import { GET as getHealth } from "./health/route";
@@ -15,6 +15,8 @@ import { createPaymentProviderEventHandler } from "./payment-provider/events/rou
 import { POST as bookAppointment } from "./appointments/route";
 import { GET as getAvailability } from "./rtos/[id]/availability/route";
 import { createListWaitlistHandler } from "./waitlist/route";
+import { createProcessWaitlistHandler } from "./waitlist/process/route";
+import { apiErrors } from "@/server/http/api-error";
 
 describe("Route Handlers", () => {
   it("serves health with a correlation ID and no permissive CORS", async () => {
@@ -122,6 +124,52 @@ describe("Route Handlers", () => {
       correlationId: "waitlist-invalid-filter",
       fieldErrors: { applicationId: ["invalid_format"] },
     } });
+  });
+
+  it("protects explicit waitlist processing with authentication, origin, and CSRF", async () => {
+    const applicationId = crypto.randomUUID();
+    const applicantId = crypto.randomUUID();
+    const processState = vi.fn(async () => undefined);
+    const authenticated = async () => ({
+      kind: "authenticated" as const,
+      context: { sessionId: crypto.randomUUID(), applicantId },
+      user: { id: applicantId, displayName: "Synthetic Citizen", preferredLocale: "en" as const },
+      csrfSecretHash: "synthetic-hash",
+    });
+    const accepted = createProcessWaitlistHandler(processState, authenticated);
+    const acceptedResponse = await accepted(new Request("http://localhost/api/v1/waitlist/process", {
+      method: "POST",
+      headers: { origin: "http://localhost", "content-type": "application/json" },
+      body: JSON.stringify({ applicationId }),
+    }));
+    expect(acceptedResponse.status).toBe(204);
+    expect(processState).toHaveBeenCalledWith(
+      expect.objectContaining({ applicantId }),
+      expect.objectContaining({ applicationId }),
+    );
+
+    const csrfRejected = createProcessWaitlistHandler(processState, async () => { throw apiErrors.csrfInvalid(); });
+    const csrfResponse = await csrfRejected(new Request("http://localhost/api/v1/waitlist/process", {
+      method: "POST",
+      headers: { origin: "http://localhost", "content-type": "application/json" },
+      body: JSON.stringify({ applicationId }),
+    }));
+    expect(csrfResponse.status).toBe(403);
+    expect(await csrfResponse.json()).toMatchObject({ error: { code: "CSRF_INVALID" } });
+
+    const realHandler = createProcessWaitlistHandler();
+    const crossOrigin = await realHandler(new Request("http://localhost/api/v1/waitlist/process", {
+      method: "POST",
+      headers: { origin: "https://attacker.invalid", "content-type": "application/json" },
+      body: JSON.stringify({ applicationId }),
+    }));
+    expect(crossOrigin.status).toBe(403);
+    const unauthenticated = await realHandler(new Request("http://localhost/api/v1/waitlist/process", {
+      method: "POST",
+      headers: { origin: "http://localhost", "content-type": "application/json" },
+      body: JSON.stringify({ applicationId }),
+    }));
+    expect(unauthenticated.status).toBe(401);
   });
 
   it("validates and transports synthetic provider events through the registered contract", async () => {
