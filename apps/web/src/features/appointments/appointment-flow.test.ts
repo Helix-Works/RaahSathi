@@ -1,7 +1,7 @@
 import type { Appointment } from "@raahsathi/contracts/appointments";
 import { describe, expect, it } from "vitest";
 
-import { beginAppointmentOperation, confirmedAppointmentForApplication, selectDate, selectMonth, selectRto, selectSlot } from "./appointment-flow";
+import { beginAppointmentOperation, confirmedAppointmentForApplication, isActiveAppointmentRequest, isBookedReconstructionLoading, selectDate, selectMonth, selectRto, selectSlot } from "./appointment-flow";
 
 describe("appointment selection and reconstruction", () => {
   it("clears stale downstream choices when the RTO, month, or date changes", () => {
@@ -16,6 +16,21 @@ describe("appointment selection and reconstruction", () => {
     const lock = { current: false };
     expect(beginAppointmentOperation(lock)).toBe(true);
     expect(beginAppointmentOperation(lock)).toBe(false);
+  });
+
+  it("rejects stale or aborted appointment requests before they update UI state", () => {
+    const first = new AbortController();
+    const second = new AbortController();
+    expect(isActiveAppointmentRequest(first, first)).toBe(true);
+    first.abort();
+    expect(isActiveAppointmentRequest(first, first)).toBe(false);
+    expect(isActiveAppointmentRequest(second, first)).toBe(false);
+  });
+
+  it("shows the booked reconstruction spinner only while reconstruction is active", () => {
+    expect(isBookedReconstructionLoading("APPOINTMENT_BOOKED", "reconstruct")).toBe(true);
+    expect(isBookedReconstructionLoading("APPOINTMENT_BOOKED", undefined)).toBe(false);
+    expect(isBookedReconstructionLoading("READY_FOR_APPOINTMENT", "reconstruct")).toBe(false);
   });
 
   it("selects only a confirmed appointment owned by the application", () => {

@@ -23,7 +23,7 @@ import {
   formatAppointmentMonth,
   shiftMonth,
 } from "@/features/appointments/appointment-date";
-import { beginAppointmentOperation, confirmedAppointmentForApplication } from "@/features/appointments/appointment-flow";
+import { beginAppointmentOperation, confirmedAppointmentForApplication, isActiveAppointmentRequest, isBookedReconstructionLoading } from "@/features/appointments/appointment-flow";
 import { appointmentErrorPresentation } from "@/features/appointments/appointment-errors";
 import { availabilityReasonMessage } from "@/features/appointments/availability-presentation";
 import type { Locale, MessageDictionary } from "@/i18n";
@@ -103,6 +103,8 @@ export function AppointmentPanel({ application, initialAppointment, locale, mess
   const [reloadKey, setReloadKey] = useState(0);
   const [error, setError] = useState<ReturnType<typeof appointmentErrorPresentation>>();
   const operationLock = useRef(false);
+  const rtoRequest = useRef<AbortController | undefined>(undefined);
+  const calendarRequest = useRef<AbortController | undefined>(undefined);
   const slotRequest = useRef<AbortController | undefined>(undefined);
   const errorRef = useRef<HTMLDivElement>(null);
   const relevant = ["READY_FOR_APPOINTMENT", "APPOINTMENT_BOOKED"].includes(application.statusCode);
@@ -119,18 +121,33 @@ export function AppointmentPanel({ application, initialAppointment, locale, mess
   }, [application.id, application.statusCode, appointment, labels, locale, relevant]);
   useEffect(() => {
     if (!relevant || application.statusCode !== "READY_FOR_APPOINTMENT") return;
+    rtoRequest.current?.abort();
     const controller = new AbortController();
-    void Promise.resolve().then(() => { setLoading("rtos"); setError(undefined); return listRtos(controller.signal); }).then((items) => { setRtos(items); setRtoId((current) => current || items.find((rto) => rto.status === "AVAILABLE")?.id || ""); }).catch((reason: unknown) => { if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(appointmentErrorPresentation(reason, locale)); }).finally(() => setLoading(undefined));
-    return () => controller.abort();
+    rtoRequest.current = controller;
+    void Promise.resolve().then(() => { setLoading("rtos"); setError(undefined); return listRtos(controller.signal); }).then((items) => {
+      if (!isActiveAppointmentRequest(rtoRequest.current, controller)) return;
+      setRtos(items); setRtoId((current) => current || items.find((rto) => rto.status === "AVAILABLE")?.id || "");
+    }).catch((reason: unknown) => {
+      if (!isActiveAppointmentRequest(rtoRequest.current, controller)) return;
+      if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(appointmentErrorPresentation(reason, locale));
+    }).finally(() => { if (isActiveAppointmentRequest(rtoRequest.current, controller)) setLoading(undefined); });
+    return () => { controller.abort(); if (rtoRequest.current === controller) rtoRequest.current = undefined; };
   }, [application.statusCode, locale, relevant, reloadKey]);
   useEffect(() => {
     if (!rtoId || application.statusCode !== "READY_FOR_APPOINTMENT") return;
+    calendarRequest.current?.abort();
     const controller = new AbortController();
-    void Promise.resolve().then(() => { setLoading("calendar"); setAvailability(undefined); setDate(""); setSlots(undefined); setSlotId(""); setError(undefined); return getRtoMonthAvailability(rtoId, month, application.serviceKey, controller.signal); }).then(setAvailability).catch((reason: unknown) => { if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(appointmentErrorPresentation(reason, locale)); }).finally(() => setLoading(undefined));
-    return () => controller.abort();
+    calendarRequest.current = controller;
+    void Promise.resolve().then(() => { setLoading("calendar"); setAvailability(undefined); setDate(""); setSlots(undefined); setSlotId(""); setError(undefined); return getRtoMonthAvailability(rtoId, month, application.serviceKey, controller.signal); }).then((result) => {
+      if (isActiveAppointmentRequest(calendarRequest.current, controller)) setAvailability(result);
+    }).catch((reason: unknown) => {
+      if (!isActiveAppointmentRequest(calendarRequest.current, controller)) return;
+      if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(appointmentErrorPresentation(reason, locale));
+    }).finally(() => { if (isActiveAppointmentRequest(calendarRequest.current, controller)) setLoading(undefined); });
+    return () => { controller.abort(); if (calendarRequest.current === controller) calendarRequest.current = undefined; };
   }, [application.serviceKey, application.statusCode, locale, month, reloadKey, rtoId]);
 
-  useEffect(() => () => slotRequest.current?.abort(), []);
+  useEffect(() => () => { slotRequest.current?.abort(); slotRequest.current = undefined; }, []);
 
   if (!relevant) return null;
   const selectedRto = rtos.find((rto) => rto.id === rtoId);
@@ -139,9 +156,12 @@ export function AppointmentPanel({ application, initialAppointment, locale, mess
     slotRequest.current?.abort();
     const controller = new AbortController(); slotRequest.current = controller; setDate(chosenDate); setSlotId(""); setSlots(undefined); setLoading("slots"); setError(undefined);
     void getRtoDaySlots(rtoId, chosenDate, application.serviceKey, controller.signal)
-      .then(setSlots)
-      .catch((reason: unknown) => { if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(appointmentErrorPresentation(reason, locale)); })
-      .finally(() => { if (slotRequest.current === controller) setLoading(undefined); });
+      .then((result) => { if (isActiveAppointmentRequest(slotRequest.current, controller)) setSlots(result); })
+      .catch((reason: unknown) => {
+        if (!isActiveAppointmentRequest(slotRequest.current, controller)) return;
+        if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(appointmentErrorPresentation(reason, locale));
+      })
+      .finally(() => { if (isActiveAppointmentRequest(slotRequest.current, controller)) setLoading(undefined); });
   };
   const reconstruct = async () => {
     setLoading("reconstruct"); setError(undefined);
@@ -168,7 +188,7 @@ export function AppointmentPanel({ application, initialAppointment, locale, mess
 
   return <Card><CardHeader><CardTitle>{labels.title}</CardTitle><p className="text-sm text-muted-foreground">{labels.intro}</p></CardHeader><CardContent className="space-y-6">
     {error ? <Alert ref={errorRef} tabIndex={-1} variant="error"><AlertTitle>{labels.generic}</AlertTitle><AlertDescription className="space-y-3"><p>{error.message}</p><Button variant="outline" onClick={retry}>{error.action === "signin" ? labels.signIn : error.action === "reload" ? labels.reload : labels.retry}</Button></AlertDescription></Alert> : null}
-    {appointment ? <ConfirmedAppointment appointment={appointment} locale={locale} labels={labels} /> : application.statusCode === "APPOINTMENT_BOOKED" || loading === "reconstruct" ? <p role="status">{labels.loadingSlots}</p> : <>
+    {appointment ? <ConfirmedAppointment appointment={appointment} locale={locale} labels={labels} /> : application.statusCode === "APPOINTMENT_BOOKED" ? isBookedReconstructionLoading(application.statusCode, loading) ? <p role="status">{labels.loadingSlots}</p> : null : <>
       <section className="space-y-3" aria-labelledby="appointment-rto-heading"><h3 id="appointment-rto-heading" className="font-bold">1. {labels.rto}</h3>
         {loading === "rtos" ? <p role="status">{labels.loadingRtos}</p> : rtos.length === 0 ? <p>{labels.noRtos}</p> : <div className="grid gap-2 sm:grid-cols-2">{rtos.map((rto) => <button key={rto.id} type="button" disabled={rto.status !== "AVAILABLE"} aria-pressed={rtoId === rto.id} onClick={() => setRtoId(rto.id)} className="rounded-xl border p-4 text-left disabled:cursor-not-allowed disabled:opacity-60 data-[selected=true]:border-primary data-[selected=true]:bg-accent" data-selected={rtoId === rto.id}><span className="block font-bold">{locale === "hi" ? rto.nameHi : rto.nameEn}</span><span className="block text-sm text-muted-foreground">{localizedDistrict(rto.district, locale)}</span>{rto.status !== "AVAILABLE" ? <span className="mt-1 block text-xs">{availabilityReasonMessage(rto.status, messages)}</span> : null}</button>)}</div>}
       </section>

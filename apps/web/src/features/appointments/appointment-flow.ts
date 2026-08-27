@@ -37,3 +37,17 @@ export function beginAppointmentOperation(lock: { current: boolean }): boolean {
   lock.current = true;
   return true;
 }
+
+export function isActiveAppointmentRequest(
+  current: AbortController | undefined,
+  request: AbortController,
+): boolean {
+  return current === request && !request.signal.aborted;
+}
+
+export function isBookedReconstructionLoading(
+  statusCode: string,
+  loading: string | undefined,
+): boolean {
+  return statusCode === "APPOINTMENT_BOOKED" && loading === "reconstruct";
+}
