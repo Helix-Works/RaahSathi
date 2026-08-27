@@ -352,7 +352,8 @@ async function assertResettablePhase7Fixture(
       && slotIds.includes(offer.slotId), "a slot offer touching the fixture is not deterministic");
   }
   for (const attempt of authAttempts) {
-    assertFixture(applicantIds.includes(attempt.applicantId ?? "") || mobileLookupHashes.includes(attempt.mobileLookupHash),
+    assertFixture((attempt.applicantId === null || applicantIds.includes(attempt.applicantId))
+      && mobileLookupHashes.includes(attempt.mobileLookupHash),
     "an authentication attempt touching the fixture is not deterministic");
   }
   for (const audit of releaseAudits) {
