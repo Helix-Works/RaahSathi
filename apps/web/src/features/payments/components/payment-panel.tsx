@@ -1,14 +1,14 @@
 "use client";
 
 import type { PaymentContext, PaymentStatus } from "@raahsathi/contracts/payments";
-import { CreditCard, LoaderCircle, RefreshCw } from "lucide-react";
+import { CreditCard, Landmark, LoaderCircle, RefreshCw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { StatusBadge } from "@/components/shared/state-presentations";
+import { JourneyStageHeader, StageActionPanel } from "@/components/shared/journey-stage";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { refreshPayment, startPayment } from "@/features/payments/api";
 import {
   getPaymentErrorPresentation,
@@ -21,6 +21,7 @@ import {
   synchronizePaymentResponse,
   type PaymentInitiation,
 } from "@/features/payments/payment-flow";
+import { FeeSummary, PaymentAttemptMetadata, PaymentStatusView } from "@/features/payments/components/payment-stage-views";
 import type { Locale, MessageDictionary } from "@/i18n";
 
 function statusTone(status: PaymentStatus): "error" | "success" | "warning" {
@@ -101,39 +102,21 @@ export function PaymentPanel({
           : messages.pay;
 
   return <Card>
-    <CardHeader className="space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-2xl font-black">{messages.title}</h2>
-        {status ? <StatusBadge tone={statusTone(status)}>{messages.statuses[status]}</StatusBadge> : null}
-      </div>
-      <p className="leading-7 text-muted-foreground">{messages.description}</p>
-    </CardHeader>
-    <CardContent className="space-y-5">
-      <dl className="grid gap-3 rounded-xl border p-4 sm:grid-cols-3">
-        <div><dt className="text-sm text-muted-foreground">{messages.baseFee}</dt><dd className="font-black">{money.format(context.fee.baseFeeMinor / 100)}</dd></div>
-        <div><dt className="text-sm text-muted-foreground">{messages.serviceCharge}</dt><dd className="font-black">{money.format(context.fee.serviceChargeMinor / 100)}</dd></div>
-        <div><dt className="text-sm text-muted-foreground">{messages.total}</dt><dd className="font-black">{money.format(context.fee.totalAmountMinor / 100)}</dd></div>
-      </dl>
-      {status ? (
-        <Alert variant={status === "SUCCEEDED" ? "success" : status === "FAILED" ? "error" : "warning"} role="status" aria-live="polite">
-          <AlertTitle>{messages.statuses[status]}</AlertTitle>
-          <AlertDescription>{messages.explanations[status]}</AlertDescription>
-        </Alert>
-      ) : (
-        <p className="rounded-xl border bg-muted/40 p-4 font-semibold">{messages.notStarted}</p>
-      )}
-      {context.attempt ? (
-        <dl className="grid gap-3 rounded-xl border p-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-sm text-muted-foreground">{messages.reference}</dt>
-            <dd className="break-all font-mono text-sm font-semibold">{context.attempt.providerReference}</dd>
-          </div>
-          <div>
-            <dt className="text-sm text-muted-foreground">{messages.attempt}</dt>
-            <dd className="font-semibold">{new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(context.attempt.attemptNumber)}</dd>
-          </div>
-        </dl>
-      ) : null}
+    <JourneyStageHeader
+      title={messages.title}
+      description={messages.description}
+      icon={Landmark}
+      status={status ? { label: messages.statuses[status], tone: statusTone(status) } : undefined}
+    />
+    <CardContent className="space-y-5 pt-5 sm:pt-6">
+      <FeeSummary context={context} money={money} messages={messages} />
+      <PaymentStatusView status={status} messages={messages} />
+      <PaymentAttemptMetadata
+        context={context}
+        referenceLabel={messages.reference}
+        attemptLabel={messages.attempt}
+        formattedAttempt={context.attempt ? new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(context.attempt.attemptNumber) : ""}
+      />
       {error ? (
         <div ref={errorRef} tabIndex={-1}>
           <Alert variant="error" role="alert">
@@ -164,9 +147,9 @@ export function PaymentPanel({
         </div>
       ) : null}
       {status === "SUCCEEDED" ? (
-        <p className="font-semibold">{messages.readyForAppointment}</p>
+        <Alert variant="success" role="status"><AlertDescription>{messages.readyForAppointment}</AlertDescription></Alert>
       ) : paymentActionBlocked ? null : (
-        <Button
+        <StageActionPanel><Button
           type="button"
           disabled={Boolean(pendingAction)}
           aria-busy={Boolean(pendingAction)}
@@ -174,7 +157,7 @@ export function PaymentPanel({
         >
           {pendingAction ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : status === "PENDING" ? <RefreshCw className="size-4" aria-hidden="true" /> : <CreditCard className="size-4" aria-hidden="true" />}
           {actionLabel}
-        </Button>
+        </Button></StageActionPanel>
       )}
     </CardContent>
   </Card>;

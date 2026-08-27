@@ -98,6 +98,24 @@ export const enMessages = {
     nextTitle: "Start with the service that fits your journey",
     nextDescription:
       "Review the two core licence journeys prepared for this prototype before application flows are connected.",
+    servicesTitle: "Start with a service that matches your journey",
+    servicesDescription:
+      "Choose from the services that are actually available in this prototype. Each journey keeps its saved progress and returns you to the next approved step.",
+    allServicesAction: "View all services",
+    servicesUnavailable:
+      "The service catalogue is temporarily unavailable. You can try the full services list again shortly.",
+    accountTitle: "Your progress has a safe place to return to",
+    accountDescription:
+      "Sign in with a synthetic account to save your journey, recover after interruptions, and see the status and next action reconstructed from the service.",
+    accountAction: "Sign in to continue",
+    howItWorksEyebrow: "How it works",
+    howItWorksTitle: "A clearer path, one practical step at a time",
+    howItWorksDescription:
+      "RaahSathi keeps the journey grounded in the information the service can actually confirm.",
+    stepChoose: "Choose an available driving-licence service.",
+    stepSave: "Save each section as you go, so you can return safely.",
+    stepFollow: "See the current status, the next action, and any blocking reason.",
+    stepBook: "Choose an appointment only when a suitable slot is available.",
   },
   services: {
     eyebrow: "Driving-licence services",
@@ -117,6 +135,7 @@ export const enMessages = {
     loading: "Loading driving-licence services",
     availableStatus: "Available in this prototype",
     startFailed: "Unable to start safely. Please try again.",
+    backToHome: "Back to home",
   },
   applications: {
     eyebrow: "Saved citizen journey",
@@ -257,6 +276,13 @@ export const enMessages = {
     reloadLatest: "Reload latest state",
     signInAgain: "Sign in again",
     referenceLabel: "Reference ID",
+    licenceContext: {
+      title: "Synthetic licence context",
+      description: "Reference data used only for this prototype.",
+      learner: "Learner licence",
+      vehicle: "Vehicle class",
+      validUntil: "Valid until",
+    },
   },
   account: {
     label: "Synthetic citizen account",
@@ -304,6 +330,10 @@ export const enMessages = {
     sessionExpiredDescription:
       "Sign in again to see private dashboard information. No consequential action was replayed.",
     reauthenticate: "Sign in again",
+    benefitsLabel: "What a RaahSathi account helps you do",
+    benefitRecovery: "Return to saved progress after an interruption.",
+    benefitStatus: "See the service-provided status and next action.",
+    benefitLanguage: "Use the journey in English or Hindi.",
   },
   payments: {
     title: "Synthetic fee payment",
@@ -359,7 +389,37 @@ export const enMessages = {
   },
   appointments: {
     chooseRto: "Choose an RTO",
+    title: "Choose an appointment",
+    intro: "Choose a synthetic Delhi RTO, date, and available time. Capacity always comes from the server.",
+    rto: "Choose an RTO",
+    calendar: "Choose a date",
+    slots: "Choose a time",
+    availabilityLegend: "Availability reasons",
+    previous: "Previous month",
+    next: "Next month",
+    loadingRtos: "Loading RTOs…",
+    loadingCalendar: "Loading calendar…",
+    loadingSlots: "Loading slots…",
+    noRtos: "No RTO is available right now.",
+    noSlots: "No slots have been released for this date.",
+    remaining: "{count} places remaining",
+    review: "Confirm your booking",
+    service: "Service",
+    learner: "Learner Licence",
+    permanent: "Permanent Driving Licence",
+    date: "Date",
     time: "Time",
+    confirm: "Confirm appointment",
+    confirming: "Confirming…",
+    change: "Change selection",
+    confirmed: "Appointment confirmed",
+    confirmedBody: "These details were reconstructed from the server and remain safe after refresh or sign-out.",
+    bookedAt: "Booked",
+    retry: "Try again",
+    reload: "Reload page",
+    signIn: "Sign in again",
+    generic: "The appointment service could not respond. Your application progress is safe.",
+    reconstruct: "Confirmed appointment details could not be loaded.",
     errors: {
       notEligible: "This application is not ready for appointment booking.",
       alreadyBooked: "This application already has a confirmed appointment.",
@@ -379,12 +439,12 @@ export const enMessages = {
     description: "Direct booking remains available whenever a suitable slot is released. Join only if the available dates or times do not work for you.",
     join: "Join waitlist", joining: "Joining waitlist…", waiting: "Waiting for a suitable appointment slot",
     fifo: "When a compatible slot is released, offers are made in first-joined order.",
-    rto: "Preferred RTO", chooseRto: "Choose an RTO", dateFrom: "Earliest acceptable date", dateTo: "Latest acceptable date",
+    rto: "Preferred RTO", chooseRto: "Choose an RTO", dateFrom: "Earliest acceptable date", dateTo: "Latest acceptable date", time: "Time",
     buckets: "Acceptable time of day", morning: "Morning", afternoon: "Afternoon", vehicleClass: "Vehicle class",
     update: "Update preferences", updating: "Updating preferences…", leave: "Leave waitlist", leaving: "Leaving waitlist…",
     joined: "Joined", refresh: "Refresh waitlist status", processing: "Checking authoritative waitlist status…",
     offerTitle: "Temporary appointment offer", offerDescription: "This slot is held temporarily by the service. Accept before it expires.",
-    expires: "Offer expires", time: "Time", remaining: "Time remaining", accept: "Accept offer", accepting: "Accepting offer…",
+    expires: "Offer expires", remaining: "Time remaining", accept: "Accept offer", accepting: "Accepting offer…",
     decline: "Decline offer", declining: "Declining offer…", offerExpired: "The offer time has passed. Checking the latest server state…",
     leaveTitle: "Leave this waitlist?", leaveDescription: "You will stop being considered for matching slots. Your application will return to the appointment step if the service permits it.",
     declineTitle: "Decline this offer?", declineDescription: "The held slot will be released. You may remain on the waitlist if the service allows it.",
@@ -406,6 +466,9 @@ export const enMessages = {
     syntheticCitizen: "Synthetic citizen",
     description:
       "See your current work, explicit status, and the next action supplied by the service.",
+    applicationsAction: "Your applications",
+    nextActionLabel: "Your highest-priority next action",
+    contextEyebrow: "Current context",
     activeApplicationTitle: "Active application",
     currentWorkDescription:
       "This status is reconstructed from your saved PostgreSQL application sections.",
@@ -476,6 +539,7 @@ export const enMessages = {
       "Try again later. Private information is not kept on screen when the dashboard service cannot return a safe response.",
   },
   footer: {
+    navigationLabel: "Footer navigation",
     tagline: "Clear status. Safe progress. Honest next steps.",
   },
 } as const;

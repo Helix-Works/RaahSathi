@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 
 import { ErrorState } from "@/components/shared/state-presentations";
+import { PageContainer } from "@/components/shared/page-container";
 import { SessionExpiredState } from "@/features/auth/components/session-expired-state";
 import { getShellSession } from "@/features/auth/session";
 import { getDashboardSummary } from "@/features/dashboard/api";
@@ -40,7 +41,7 @@ export default async function DashboardPage() {
 
   if (!summary) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
+      <PageContainer className="max-w-4xl py-10 sm:py-12 lg:py-14">
         <ErrorState
           title={messages.dashboard.dataUnavailableTitle}
           description={messages.dashboard.dataUnavailableDescription}
@@ -50,7 +51,7 @@ export default async function DashboardPage() {
           correlationLabel={messages.errors.correlationLabel}
           headingLevel={1}
         />
-      </div>
+      </PageContainer>
     );
   }
 

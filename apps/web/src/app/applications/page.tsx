@@ -3,19 +3,18 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/state-presentations";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ApplicationListItem } from "@/features/applications/components/application-list-item";
 import { getDictionary, type MessageDictionary } from "@/i18n";
 import { getRequestLocale } from "@/i18n/locale";
 import { listApplications } from "@/server/applications/application-service";
 import { resolveSessionFromCookie } from "@/server/auth/session-service";
 
 function serviceName(serviceKey: ServiceKey, messages: MessageDictionary): string {
-  return serviceKey === "LEARNER_LICENCE"
-    ? messages.services.learnerName
-    : messages.services.permanentName;
+  return serviceKey === "LEARNER_LICENCE" ? messages.services.learnerName : messages.services.permanentName;
 }
 
 export default async function ApplicationsPage() {
@@ -23,12 +22,9 @@ export default async function ApplicationsPage() {
   const messages = getDictionary(locale);
   const session = await resolveSessionFromCookie((await cookies()).toString());
 
-  if (session.kind !== "authenticated") {
-    redirect("/login?returnTo=/applications");
-  }
+  if (session.kind !== "authenticated") redirect("/login?returnTo=/applications");
 
   const applications = await listApplications(session.context);
-  const hindi = locale === "hi";
   const statusLabels = {
     DRAFT: messages.applications.statusDraft,
     IN_PROGRESS: messages.applications.statusInProgress,
@@ -54,64 +50,36 @@ export default async function ApplicationsPage() {
   };
 
   return (
-    <div className="mx-auto max-w-[80rem] space-y-8 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
-      <div className="border-b border-border-strong pb-8">
+    <PageContainer className="space-y-8 py-10 sm:py-12 lg:space-y-10 lg:py-16">
+      <div className="flex flex-col gap-5 border-b border-border pb-8 sm:flex-row sm:items-end sm:justify-between">
         <PageHeader
-          eyebrow={hindi ? "नागरिक यात्रा" : "Citizen journey"}
-          title={hindi ? "आपके आवेदन" : "Your applications"}
-          description={
-            hindi
-              ? "सहेजे गए आवेदन पर लौटें और वहीं से आगे बढ़ें जहाँ आपने छोड़ा था।"
-              : "Return to a saved application and continue from where you left off."
-          }
+          eyebrow={messages.applications.eyebrow}
+          title={messages.applications.listTitle}
+          description={messages.applications.listDescription}
         />
+        <Link className={buttonVariants({ variant: "outline" })} href="/services">{messages.common.exploreServices}</Link>
       </div>
-
       {applications.length === 0 ? (
-        <EmptyState
-          title={hindi ? "अभी कोई आवेदन नहीं है" : "No applications yet"}
-          description={
-            hindi
-              ? "उपलब्ध सेवाओं में से कृत्रिम आवेदन शुरू करें।"
-              : "Start a synthetic application from the available services."
-          }
-        />
+        <EmptyState title={messages.applications.emptyTitle} description={messages.applications.emptyDescription} />
       ) : (
-        <div className="grid border-t border-border-strong">
+        <div className="space-y-4">
           {applications.map((application) => (
-            <Card
+            <ApplicationListItem
               key={application.id}
-              className="grid gap-4 rounded-none border-x-0 border-t-0 p-5 sm:grid-cols-[1fr_auto] sm:items-center sm:p-6"
-            >
-              <CardHeader className="space-y-2 p-0">
-                <CardTitle>{serviceName(application.serviceKey, messages)}</CardTitle>
-                <p className="text-sm font-bold">{statusLabels[application.statusCode]}</p>
-                <p className="text-sm text-muted-foreground">{actionLabels[application.nextActionCode]}</p>
-                <p className="text-xs text-muted-foreground">
-                  {messages.applications.updatedLabel}: {new Date(application.updatedAt).toLocaleString(
-                    hindi ? "hi-IN" : "en-IN",
-                    { timeZone: "Asia/Kolkata" },
-                  )}
-                </p>
-              </CardHeader>
-              <CardContent className="flex flex-wrap items-center gap-4 p-0 sm:justify-end">
-                <span className="text-sm font-black">
-                  {new Intl.NumberFormat(hindi ? "hi-IN" : "en-IN").format(
-                    application.progressPercent,
-                  )}
-                  %
-                </span>
-                <Link
-                  className={buttonVariants({ variant: "outline" })}
-                  href={`/applications/${application.id}`}
-                >
-                  {hindi ? "जारी रखें" : "Resume"}
-                </Link>
-              </CardContent>
-            </Card>
+              serviceName={serviceName(application.serviceKey, messages)}
+              status={statusLabels[application.statusCode]}
+              nextAction={actionLabels[application.nextActionCode]}
+              updatedLabel={messages.applications.updatedLabel}
+              updatedValue={new Intl.DateTimeFormat(locale === "hi" ? "hi-IN" : "en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(application.updatedAt))}
+              progressLabel={messages.applications.progressLabel}
+              progress={application.progressPercent}
+              progressText={`${new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(application.progressPercent)}%`}
+              resumeLabel={messages.applications.resume}
+              href={`/applications/${application.id}`}
+            />
           ))}
         </div>
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -17,14 +17,14 @@ export function LanguageSwitcher({
 }: LanguageSwitcherProps) {
   return (
     <div
-      className="language-toggle relative grid min-h-11 w-[6.8rem] shrink-0 grid-cols-2 items-stretch rounded-full border border-primary-foreground/20 bg-primary-foreground/8 p-1 shadow-inner sm:w-[10.25rem]"
+      className="language-toggle relative grid min-h-11 w-[6.5rem] shrink-0 grid-cols-2 items-stretch rounded-control border border-border bg-secondary sm:w-[10.25rem]"
       role="group"
       aria-label={label}
       data-locale={locale}
     >
       <span
         className={cn(
-          "language-toggle-indicator pointer-events-none absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-brand-accent shadow-[0_0_18px_var(--brand-glow)]",
+          "language-toggle-indicator pointer-events-none absolute inset-y-[3px] left-[3px] w-[calc(50%-3px)] rounded-[0.375rem] bg-primary shadow-subtle",
           locale === "hi" && "translate-x-full",
         )}
         aria-hidden="true"
@@ -38,10 +38,10 @@ export function LanguageSwitcher({
           <input type="hidden" name="locale" value={value} />
           <button
             className={cn(
-              "min-h-9 min-w-0 rounded-full px-2 text-xs font-black transition-colors duration-200 focus-visible:outline-brand-accent sm:px-3",
+              "min-h-11 min-w-0 rounded-control px-2 text-xs font-semibold transition-colors duration-200 focus-visible:outline-focus sm:px-3",
               locale === value
-                ? "text-brand-accent-foreground"
-                : "text-primary-foreground/65 hover:text-primary-foreground",
+                ? "text-primary-foreground"
+                : "text-muted-foreground hover:text-foreground",
             )}
             type="submit"
             aria-pressed={locale === value}

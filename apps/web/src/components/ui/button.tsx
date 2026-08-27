@@ -4,21 +4,23 @@ import type { ComponentProps } from "react";
 import { cn } from "@/lib/utils";
 
 export const buttonVariants = cva(
-  "inline-flex h-auto min-h-11 items-center justify-center gap-2 whitespace-normal rounded-md border border-transparent px-4 py-2 text-center text-sm font-bold leading-5 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current disabled:pointer-events-none disabled:opacity-55 aria-disabled:pointer-events-none aria-disabled:opacity-60",
+  "inline-flex h-auto min-h-11 items-center justify-center gap-2 whitespace-normal rounded-control border border-transparent px-4 py-2 text-center text-sm font-semibold leading-5 shadow-none transition-[background-color,border-color,color,box-shadow] focus-visible:outline-focus disabled:pointer-events-none disabled:opacity-55 aria-disabled:pointer-events-none aria-disabled:opacity-60",
   {
     variants: {
       variant: {
         default:
-          "bg-primary text-primary-foreground! hover:bg-foreground/85",
+          "bg-primary text-primary-foreground! shadow-subtle hover:bg-primary-hover",
         secondary:
-          "border-border bg-secondary text-secondary-foreground! hover:border-border-strong hover:bg-muted",
+          "border-border bg-secondary text-secondary-foreground! hover:border-border-strong hover:bg-accent",
         outline:
-          "border-border-strong bg-card text-card-foreground! hover:border-foreground hover:bg-muted",
-        ghost: "text-foreground hover:bg-muted",
+          "border-input bg-card text-card-foreground! hover:border-primary/55 hover:bg-secondary",
+        ghost: "text-foreground hover:bg-secondary",
+        destructive:
+          "bg-destructive text-primary-foreground! shadow-subtle hover:bg-destructive/90",
       },
       size: {
         default: "min-h-11 px-4",
-        sm: "min-h-10 px-3 py-1.5 text-xs",
+        sm: "min-h-11 px-3 py-1.5 text-xs",
         lg: "min-h-11 px-4 py-2.5 text-sm",
         icon: "size-11 p-0",
       },

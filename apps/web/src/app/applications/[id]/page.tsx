@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { ApplicationDetail } from "@raahsathi/contracts/applications";
 
 import { ApplicationEditor } from "@/features/applications/components/application-editor";
+import { PageContainer } from "@/components/shared/page-container";
 import { LicenceContextCard } from "@/features/identity/components/licence-context-card";
 import { getDictionary } from "@/i18n";
 import { getRequestLocale } from "@/i18n/locale";
@@ -60,12 +61,12 @@ export default async function ApplicationPage({
   );
 
   return (
-    <div className="mx-auto max-w-4xl space-y-6 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
+    <PageContainer className="max-w-5xl space-y-6 py-10 sm:py-12 lg:py-16">
       <LicenceContextCard
         licences={licences}
         locale={locale}
+        messages={messages.identity.licenceContext}
       />
-
       <ApplicationEditor
         initialApplication={application}
         initialIdentity={identity}
@@ -74,6 +75,6 @@ export default async function ApplicationPage({
         locale={locale}
         messages={messages}
       />
-    </div>
+    </PageContainer>
   );
 }

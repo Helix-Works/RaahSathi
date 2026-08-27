@@ -13,6 +13,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { IconTile } from "@/components/shared/icon-tile";
 
 export function LoadingState({ message }: Readonly<{ message: string }>) {
   return (
@@ -41,10 +42,10 @@ export function EmptyState({
   return (
     <Card>
       <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-        <span className="grid size-12 place-items-center rounded-md border border-border bg-muted text-foreground">
+        <IconTile size="lg" tone="neutral">
           <Inbox className="size-6" aria-hidden="true" />
-        </span>
-        <h2 className="text-xl font-extrabold">{title}</h2>
+        </IconTile>
+        <h2 className="text-xl font-bold">{title}</h2>
         <p className="max-w-lg leading-6 text-muted-foreground">{description}</p>
       </CardContent>
     </Card>
@@ -71,17 +72,17 @@ export function ErrorState({
   const Heading = headingLevel === 1 ? "h1" : "h2";
 
   return (
-    <Card className="border-foreground" role="alert">
+    <Card className="border-destructive/30" role="alert">
       <CardContent className="flex flex-col items-start gap-4 py-8">
-        <span className="grid size-11 place-items-center rounded-md bg-primary text-primary-foreground">
+        <IconTile tone="destructive">
           <CircleAlert className="size-6" aria-hidden="true" />
-        </span>
+        </IconTile>
         <div className="space-y-2">
-          <Heading className="text-xl font-extrabold">{title}</Heading>
+          <Heading className="text-xl font-bold">{title}</Heading>
           <p className="max-w-xl leading-6 text-muted-foreground">{description}</p>
         </div>
         {correlationId && correlationLabel ? (
-          <p className="rounded-sm border border-border bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
+          <p className="rounded-control border border-border bg-muted px-3 py-2 font-mono text-xs text-muted-foreground">
             {correlationLabel}: {correlationId}
           </p>
         ) : null}
@@ -97,9 +98,9 @@ export function ErrorState({
 
 const badgeTones = {
   neutral: "default",
-  success: "outline",
+  success: "success",
   warning: "warning",
-  error: "inverse",
+  error: "error",
 } as const;
 
 const badgeIcons = {
@@ -127,11 +128,15 @@ export function StatusBadge({
 }
 
 export function NextActionCard({
+  eyebrow,
+  headingId,
   title,
   description,
   actionLabel,
   actionHref,
 }: Readonly<{
+  eyebrow?: string;
+  headingId?: string;
   title: string;
   description: string;
   actionLabel?: string;
@@ -141,7 +146,10 @@ export function NextActionCard({
     <Card className="overflow-hidden border-primary bg-primary text-primary-foreground">
       <CardContent className="grid gap-5 py-5 sm:grid-cols-[1fr_auto] sm:items-center sm:py-6">
         <div className="space-y-2">
-          <h2 className="text-xl font-black leading-snug tracking-tight">{title}</h2>
+          {eyebrow ? (
+            <p className="text-sm font-semibold text-primary-foreground/75">{eyebrow}</p>
+          ) : null}
+          <h2 id={headingId} className="text-xl font-bold leading-snug tracking-tight">{title}</h2>
           <p className="max-w-2xl text-sm leading-6 text-primary-foreground/80 sm:text-base">
             {description}
           </p>
