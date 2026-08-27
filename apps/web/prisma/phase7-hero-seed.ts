@@ -233,6 +233,136 @@ async function createCompletedApplication(
   });
 }
 
+function assertFixture(condition: unknown, message: string): asserts condition {
+  if (!condition) throw new Error(`Phase 7 hero fixture conflict: ${message}`);
+}
+
+/**
+ * Reset is the only destructive Phase 7 command. Before removing records, prove
+ * every connected record belongs to the two deterministic synthetic accounts,
+ * applications, slots, and RTO. Any unexpected relationship leaves the whole
+ * transaction untouched instead of broadening fixture cleanup.
+ */
+async function assertResettablePhase7Fixture(
+  transaction: Prisma.TransactionClient,
+  mobileLookupHashes: readonly string[],
+): Promise<void> {
+  const applicantIds: string[] = Object.values(phase7HeroApplicants).map(({ id }) => id);
+  const applicationIds: string[] = Object.values(phase7HeroApplications).map(({ id }) => id);
+  const slotIds: string[] = Object.values(phase7HeroSlots).map(({ id }) => id);
+  const expectedApplications = new Map<string, (typeof phase7HeroApplications)[keyof typeof phase7HeroApplications]>(
+    Object.values(phase7HeroApplications).map((application) => [application.id, application]),
+  );
+  const expectedApplicants = new Map<string, (typeof phase7HeroApplicants)[keyof typeof phase7HeroApplicants]>(
+    Object.values(phase7HeroApplicants).map((applicant) => [applicant.id, applicant]),
+  );
+
+  const [applicants, applications, licences, rtos, slots, appointments, waitlistEntries, slotOffers, authAttempts, releaseAudits] = await Promise.all([
+    transaction.applicant.findMany({
+      where: { OR: [{ id: { in: applicantIds } }, { mobileLookupHash: { in: [...mobileLookupHashes] } }] },
+      select: { id: true, mobileLookupHash: true, mobileLast4: true, displayName: true, authScenario: true },
+    }),
+    transaction.application.findMany({
+      where: { applicantId: { in: applicantIds } },
+      select: { id: true, applicantId: true, serviceKey: true },
+    }),
+    transaction.licenceRecord.findMany({
+      where: { applicantId: { in: applicantIds } },
+      select: { id: true, applicantId: true, kind: true, vehicleClass: true, syntheticReference: true },
+    }),
+    transaction.rto.findMany({
+      where: { OR: [{ id: phase7HeroRto.id }, { code: phase7HeroRto.code }] },
+      select: {
+        id: true,
+        code: true,
+        slots: { select: { id: true } },
+        waitlistEntries: { select: { applicationId: true, applicantId: true } },
+      },
+    }),
+    transaction.appointmentSlot.findMany({
+      where: { id: { in: slotIds } },
+      select: { id: true, rtoId: true, serviceKey: true, startTime: true, endTime: true, vehicleClass: true },
+    }),
+    transaction.appointment.findMany({
+      where: { OR: [{ applicationId: { in: applicationIds } }, { applicantId: { in: applicantIds } }, { slotId: { in: slotIds } }] },
+      select: { applicationId: true, applicantId: true, slotId: true },
+    }),
+    transaction.waitlistEntry.findMany({
+      where: { OR: [{ applicationId: { in: applicationIds } }, { applicantId: { in: applicantIds } }, { rtoId: phase7HeroRto.id }] },
+      select: { id: true, applicationId: true, applicantId: true, rtoId: true, serviceKey: true, vehicleClass: true },
+    }),
+    transaction.slotOffer.findMany({
+      where: { OR: [{ slotId: { in: slotIds } }, { waitlistEntry: { applicationId: { in: applicationIds } } }] },
+      select: { waitlistEntryId: true, slotId: true, waitlistEntry: { select: { applicationId: true, applicantId: true, rtoId: true } } },
+    }),
+    transaction.authAttempt.findMany({
+      where: { OR: [{ applicantId: { in: applicantIds } }, { mobileLookupHash: { in: [...mobileLookupHashes] } }] },
+      select: { applicantId: true, mobileLookupHash: true },
+    }),
+    transaction.auditEvent.findMany({
+      where: { id: phase7HeroFixtureId("44000000", 71) },
+      select: { actorApplicantId: true, eventType: true, resourceType: true, resourceId: true, correlationId: true },
+    }),
+  ]);
+
+  for (const applicant of applicants) {
+    const expected = expectedApplicants.get(applicant.id);
+    assertFixture(expected !== undefined && applicant.mobileLast4 === expected.mobile.slice(-4) && applicant.displayName === expected.name
+      && applicant.authScenario === "STANDARD", "an applicant identity is not the expected synthetic account");
+  }
+  for (const application of applications) {
+    const expected = expectedApplications.get(application.id);
+    assertFixture(expected !== undefined && expected.applicantId === application.applicantId
+      && expected.serviceKey === application.serviceKey, "an application linked to a fixture applicant is not deterministic");
+  }
+  for (const licence of licences) {
+    assertFixture(licence.id === phase7HeroLicence.id && licence.applicantId === phase7HeroApplicants.hero.id
+      && licence.kind === "LEARNER" && licence.vehicleClass === "LMV"
+      && licence.syntheticReference === phase7HeroLicence.syntheticReference,
+    "a licence linked to a fixture applicant is not deterministic");
+  }
+  assertFixture(rtos.length <= 1, "the fixture RTO id and code resolve to different records");
+  for (const rto of rtos) {
+    assertFixture(rto.id === phase7HeroRto.id && rto.code === phase7HeroRto.code, "the fixture RTO identity is not deterministic");
+    assertFixture(rto.slots.every((slot) => slotIds.includes(slot.id)), "the fixture RTO has a non-fixture slot");
+    assertFixture(rto.waitlistEntries.every((entry) => applicationIds.includes(entry.applicationId)
+      && applicantIds.includes(entry.applicantId)), "the fixture RTO has a non-fixture waitlist entry");
+  }
+  for (const slot of slots) {
+    const expected = slot.id === phase7HeroSlots.learner.id
+      ? { serviceKey: "LEARNER_LICENCE", startTime: phase7HeroSlots.learner.startTime, endTime: phase7HeroSlots.learner.endTime }
+      : { serviceKey: "PERMANENT_DRIVING_LICENCE", startTime: phase7HeroSlots.full.startTime, endTime: phase7HeroSlots.full.endTime };
+    assertFixture(slot.rtoId === phase7HeroRto.id && slot.serviceKey === expected.serviceKey
+      && slot.startTime === expected.startTime && slot.endTime === expected.endTime && slot.vehicleClass === "LMV",
+    "a fixture slot has unexpected ownership or shape");
+  }
+  for (const appointment of appointments) {
+    assertFixture(applicationIds.includes(appointment.applicationId) && applicantIds.includes(appointment.applicantId)
+      && slotIds.includes(appointment.slotId), "an appointment touching the fixture is not deterministic");
+  }
+  for (const entry of waitlistEntries) {
+    const application = expectedApplications.get(entry.applicationId);
+    assertFixture(application !== undefined && application.applicantId === entry.applicantId && entry.rtoId === phase7HeroRto.id
+      && application.serviceKey === entry.serviceKey && entry.vehicleClass === "LMV",
+    "a waitlist entry touching the fixture is not deterministic");
+  }
+  for (const offer of slotOffers) {
+    assertFixture(applicationIds.includes(offer.waitlistEntry.applicationId)
+      && applicantIds.includes(offer.waitlistEntry.applicantId) && offer.waitlistEntry.rtoId === phase7HeroRto.id
+      && slotIds.includes(offer.slotId), "a slot offer touching the fixture is not deterministic");
+  }
+  for (const attempt of authAttempts) {
+    assertFixture((attempt.applicantId === null || applicantIds.includes(attempt.applicantId))
+      && mobileLookupHashes.includes(attempt.mobileLookupHash),
+    "an authentication attempt touching the fixture is not deterministic");
+  }
+  for (const audit of releaseAudits) {
+    assertFixture(audit.actorApplicantId === phase7HeroApplicants.holder.id && audit.eventType === "APPOINTMENT_CANCELLED"
+      && audit.resourceType === "Appointment" && audit.resourceId === phase7HeroAppointments.holder
+      && audit.correlationId === "synthetic-phase7-release", "the deterministic release audit is incompatible");
+  }
+}
+
 async function removePhase7Records(
   transaction: Prisma.TransactionClient,
   mobileLookupHashes: readonly string[],
@@ -242,14 +372,7 @@ async function removePhase7Records(
   const slotIds = Object.values(phase7HeroSlots).map(({ id }) => id);
   const appointmentIds = Object.values(phase7HeroAppointments);
 
-  await transaction.auditEvent.deleteMany({
-    where: {
-      OR: [
-        { actorApplicantId: { in: applicantIds } },
-        { resourceId: { in: [...applicationIds, ...slotIds, ...appointmentIds, phase7HeroWaitlistId, phase7HeroOfferId] } },
-      ],
-    },
-  });
+  await transaction.auditEvent.deleteMany({ where: { id: phase7HeroFixtureId("44000000", 71) } });
   await transaction.authAttempt.deleteMany({
     where: { OR: [{ applicantId: { in: applicantIds } }, { mobileLookupHash: { in: [...mobileLookupHashes] } }] },
   });
@@ -302,6 +425,7 @@ export async function resetPhase7Hero(
       throw new Error("Phase 7 hero identifiers conflict with records outside the enumerated synthetic fixture.");
     }
 
+    await assertResettablePhase7Fixture(transaction, applicants.map(({ mobileLookupHash }) => mobileLookupHash));
     await removePhase7Records(transaction, applicants.map(({ mobileLookupHash }) => mobileLookupHash));
 
     const existingRto = await transaction.rto.findFirst({

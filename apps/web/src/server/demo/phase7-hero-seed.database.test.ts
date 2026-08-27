@@ -27,7 +27,7 @@ if ((testUrl || process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION) && !approved)
   throw new Error("Refusing Phase 7 hero tests: database identities are not safely distinct.");
 }
 const database = approved ? createDatabaseTestClient(testUrl) : undefined;
-const pepper = "phase-7-hero-test-mobile-pepper-at-least-32-characters";
+const pepper = process.env.AUTH_MOBILE_LOOKUP_PEPPER ?? "phase-7-hero-test-mobile-pepper-at-least-32-characters";
 const fixtureNow = new Date("2026-08-27T10:00:00.000Z");
 const heroContext = { sessionId: randomUUID(), applicantId: phase7HeroApplicants.hero.id };
 
@@ -119,5 +119,49 @@ describe.skipIf(!database)("Phase 7 deterministic hero fixture", () => {
     const audits = await database.auditEvent.findMany({ where: { resourceId: phase7HeroAppointments.holder } });
     expect(audits).toHaveLength(1);
     expect(JSON.stringify(audits[0]?.metadata)).not.toMatch(/token|otp|secret/i);
+  });
+
+  it("fails closed before deleting a fixture account with an incompatible identity", async () => {
+    if (!database) return;
+    await database.applicant.update({
+      where: { id: phase7HeroApplicants.hero.id },
+      data: { displayName: "Unexpected account" },
+    });
+    try {
+      await expect(resetPhase7Hero(database, pepper, phase7HeroConfirmation, fixtureNow))
+        .rejects.toThrow(/fixture conflict/i);
+      expect(await database.application.findUnique({ where: { id: phase7HeroApplications.learner.id } }))
+        .not.toBeNull();
+    } finally {
+      await database.applicant.update({
+        where: { id: phase7HeroApplicants.hero.id },
+        data: { displayName: phase7HeroApplicants.hero.name },
+      });
+    }
+  });
+
+  it("fails closed for an authentication attempt with a foreign lookup hash", async () => {
+    if (!database) return;
+    const attemptId = randomUUID();
+    const attemptNow = new Date();
+    await database.authAttempt.create({
+      data: {
+        id: attemptId,
+        applicantId: phase7HeroApplicants.hero.id,
+        mobileLookupHash: "foreign-phase7-authentication-attempt-hash",
+        otpHash: "synthetic-test-otp-hash",
+        otpSalt: "synthetic-test-otp-salt",
+        attemptsRemaining: 3,
+        expiresAt: new Date(attemptNow.getTime() + 10 * 60 * 1000),
+        resendAvailableAt: new Date(attemptNow.getTime() + 2 * 60 * 1000),
+      },
+    });
+    try {
+      await expect(resetPhase7Hero(database, pepper, phase7HeroConfirmation, fixtureNow))
+        .rejects.toThrow(/fixture conflict/i);
+      expect(await database.authAttempt.findUnique({ where: { id: attemptId } })).not.toBeNull();
+    } finally {
+      await database.authAttempt.delete({ where: { id: attemptId } });
+    }
   });
 });

@@ -75,7 +75,9 @@ function runDemoCommand(
 ): void {
   const pnpmCli = process.env.npm_execpath;
   if (!pnpmCli) throw new Error("npm_execpath is required to run the approved Phase 7 demo commands.");
-  const result = spawnSync(pnpmCli, ["--filter", "@raahsathi/web", command], {
+  // npm_execpath is a JavaScript CLI entrypoint. Launch it through Node so the
+  // deterministic fixture commands run consistently on Windows and Unix hosts.
+  const result = spawnSync(process.execPath, [pnpmCli, "--filter", "@raahsathi/web", command], {
     cwd: repositoryRoot,
     env: {
       ...process.env,

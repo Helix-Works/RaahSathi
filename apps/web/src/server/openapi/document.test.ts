@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { readinessEndpointContract } from "../contracts/health";
-import { createOpenApiDocument, serializeOpenApiDocument } from "./document";
+import { createOpenApiDocument, normalizeOpenApiLineEndings, serializeOpenApiDocument } from "./document";
 
 describe("OpenAPI", () => {
   it("documents health, readiness, authentication, and shared errors", () => {
@@ -87,6 +87,10 @@ describe("OpenAPI", () => {
 
   it("matches the committed generated artifact", async () => {
     const committed = await readFile(resolve(process.cwd(), "../../docs/api/openapi.json"), "utf8");
-    expect(committed).toBe(serializeOpenApiDocument());
+    expect(normalizeOpenApiLineEndings(committed)).toBe(serializeOpenApiDocument());
+  });
+
+  it("compares generated artifacts independently of Git working-tree line endings", () => {
+    expect(normalizeOpenApiLineEndings("one\r\ntwo\r\n")).toBe("one\ntwo\n");
   });
 });

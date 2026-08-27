@@ -1,10 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 
+import { assertPhase7HeroCommandEnvironment } from "./phase7-hero-command-safety";
 import { phase7HeroSeedNow, resetPhase7Hero } from "./phase7-hero-seed";
 
 const database = new PrismaClient();
 
 async function main(): Promise<void> {
+  assertPhase7HeroCommandEnvironment();
   const pepper = process.env.AUTH_MOBILE_LOOKUP_PEPPER;
   if (!pepper) throw new Error("AUTH_MOBILE_LOOKUP_PEPPER must contain at least 32 characters.");
   await resetPhase7Hero(
