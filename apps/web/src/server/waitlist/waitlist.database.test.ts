@@ -224,27 +224,35 @@ describe.skipIf(!database)("Phase 6 disposable PostgreSQL waitlist invariants", 
       (await database.appointmentSlot.findUniqueOrThrow({ where: { id: firstSlot.id } })).heldCount).toBeLessThanOrEqual(1);
   });
 
-  it("decline and leave release holds once without regressing booked applications", async () => {
+  it("declining an offer releases its hold once without regressing a booked application", async () => {
     if (!database) return;
     const now = new Date("2026-08-26T12:00:00.000Z");
     const rto = await createRto();
     const declining = await createApplication("APPOINTMENT_BOOKED");
-    const leaving = await createApplication("APPOINTMENT_BOOKED");
     const declineSlot = await createSlot(rto.id, { heldCount: 1 });
-    const leaveSlot = await createSlot(rto.id, { heldCount: 1, startTime: "14:00" });
     const declineEntry = await createEntry(declining, rto.id, { status: "OFFERED" });
-    const leaveEntry = await createEntry(leaving, rto.id, { status: "OFFERED", timeBuckets: ["AFTERNOON"] });
     const declinedOffer = await createActiveOffer(declineEntry.id, declineSlot.id, now);
-    await createActiveOffer(leaveEntry.id, leaveSlot.id, now);
 
     await declineOffer(declining.context, declinedOffer.id, { now, correlationId: "phase6-decline" }, database);
     await declineOffer(declining.context, declinedOffer.id, { now, correlationId: "phase6-decline-repeat" }, database);
+
+    expect((await database.appointmentSlot.findUniqueOrThrow({ where: { id: declineSlot.id } })).heldCount).toBe(0);
+    expect((await database.application.findUniqueOrThrow({ where: { id: declining.applicationId } })).status).toBe("APPOINTMENT_BOOKED");
+  });
+
+  it("leaving with an active offer releases its hold once without regressing a booked application", async () => {
+    if (!database) return;
+    const now = new Date("2026-08-26T12:00:00.000Z");
+    const rto = await createRto();
+    const leaving = await createApplication("APPOINTMENT_BOOKED");
+    const leaveSlot = await createSlot(rto.id, { heldCount: 1, startTime: "14:00" });
+    const leaveEntry = await createEntry(leaving, rto.id, { status: "OFFERED", timeBuckets: ["AFTERNOON"] });
+    await createActiveOffer(leaveEntry.id, leaveSlot.id, now);
+
     await leaveWaitlist(leaving.context, leaveEntry.id, { now, correlationId: "phase6-leave" }, database);
     await leaveWaitlist(leaving.context, leaveEntry.id, { now, correlationId: "phase6-leave-repeat" }, database);
 
-    expect((await database.appointmentSlot.findUniqueOrThrow({ where: { id: declineSlot.id } })).heldCount).toBe(0);
     expect((await database.appointmentSlot.findUniqueOrThrow({ where: { id: leaveSlot.id } })).heldCount).toBe(0);
-    expect((await database.application.findUniqueOrThrow({ where: { id: declining.applicationId } })).status).toBe("APPOINTMENT_BOOKED");
     expect((await database.application.findUniqueOrThrow({ where: { id: leaving.applicationId } })).status).toBe("APPOINTMENT_BOOKED");
   });
 
