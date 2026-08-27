@@ -1,6 +1,7 @@
 import { defineConfig, devices } from "@playwright/test";
 
-const disposableConfirmation = "I_UNDERSTAND_THIS_DATABASE_WILL_BE_MUTATED";
+import { isDisposableDatabaseApproved } from "../apps/web/src/server/auth/database-test-safety";
+
 const heroConfirmation = "RESET_PHASE7_HERO_SYNTHETIC_RECORDS";
 
 function required(name: string): string {
@@ -11,14 +12,14 @@ function required(name: string): string {
 
 const testDatabaseUrl = required("TEST_DATABASE_URL");
 const primaryDatabaseUrl = required("DATABASE_URL");
-if (process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION !== disposableConfirmation) {
-  throw new Error("TEST_DATABASE_DISPOSABLE_CONFIRMATION does not approve the disposable hero database.");
-}
+const disposableApproved = isDisposableDatabaseApproved({
+  testDatabaseUrl,
+  primaryDatabaseUrl,
+  confirmation: process.env.TEST_DATABASE_DISPOSABLE_CONFIRMATION,
+});
+if (!disposableApproved) throw new Error("The hero E2E database identity is not an approved disposable database.");
 if (process.env.RAAHSATHI_DEMO_RESET_CONFIRMATION !== heroConfirmation) {
   throw new Error("RAAHSATHI_DEMO_RESET_CONFIRMATION does not approve the enumerated hero reset.");
-}
-if (testDatabaseUrl === primaryDatabaseUrl) {
-  throw new Error("The hero E2E database must be distinct from DATABASE_URL.");
 }
 
 const port = process.env.E2E_HERO_PORT ?? "3207";

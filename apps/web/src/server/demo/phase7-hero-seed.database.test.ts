@@ -78,6 +78,16 @@ describe.skipIf(!database)("Phase 7 deterministic hero fixture", () => {
       nextActionCode: "SELECT_APPOINTMENT",
       progressPercent: 100,
     });
+    const permanentFixture = await database.application.findUniqueOrThrow({
+      where: { id: phase7HeroApplications.permanent.id },
+      include: { sections: true, events: true, identityAttempts: true, feeSnapshot: true, paymentAttempts: true },
+    });
+    expect(permanentFixture.createdAt).toEqual(fixtureNow);
+    expect(permanentFixture.sections.every(({ createdAt }) => createdAt.getTime() === fixtureNow.getTime())).toBe(true);
+    expect(permanentFixture.events.every(({ createdAt }) => createdAt.getTime() === fixtureNow.getTime())).toBe(true);
+    expect(permanentFixture.identityAttempts.every(({ createdAt }) => createdAt.getTime() === fixtureNow.getTime())).toBe(true);
+    expect(permanentFixture.feeSnapshot?.createdAt).toEqual(fixtureNow);
+    expect(permanentFixture.paymentAttempts.map(({ createdAt }) => createdAt)).toEqual([fixtureNow]);
     expect(await database.licenceRecord.findUnique({ where: { id: phase7HeroLicence.id } })).toMatchObject({
       applicantId: phase7HeroApplicants.hero.id,
       kind: "LEARNER",

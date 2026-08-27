@@ -160,19 +160,21 @@ async function createCompletedApplication(
       status: input.status,
       identityScenario: "SUCCESS",
       paymentScenario: "SUCCESS",
+      createdAt: input.now,
       sections: {
         create: completedSections(input.applicantName, input.learnerReference).map((section, index) => ({
           id: phase7HeroFixtureId("31000000", input.ordinalBase + index),
           ...section,
           completedAt: input.now,
+          createdAt: input.now,
         })),
       },
       events: {
         create: [
-          { id: phase7HeroFixtureId("32000000", input.ordinalBase), actorApplicantId: input.application.applicantId, eventType: "APPLICATION_CREATED", correlationId },
-          { id: phase7HeroFixtureId("32000000", input.ordinalBase + 1), actorApplicantId: input.application.applicantId, eventType: "WORKFLOW_ADVANCED", correlationId },
-          { id: phase7HeroFixtureId("32000000", input.ordinalBase + 2), actorApplicantId: input.application.applicantId, eventType: "IDENTITY_VERIFIED", correlationId },
-          { id: phase7HeroFixtureId("32000000", input.ordinalBase + 3), actorApplicantId: input.application.applicantId, eventType: "PAYMENT_SUCCEEDED", correlationId },
+          { id: phase7HeroFixtureId("32000000", input.ordinalBase), actorApplicantId: input.application.applicantId, eventType: "APPLICATION_CREATED", correlationId, createdAt: input.now },
+          { id: phase7HeroFixtureId("32000000", input.ordinalBase + 1), actorApplicantId: input.application.applicantId, eventType: "WORKFLOW_ADVANCED", correlationId, createdAt: input.now },
+          { id: phase7HeroFixtureId("32000000", input.ordinalBase + 2), actorApplicantId: input.application.applicantId, eventType: "IDENTITY_VERIFIED", correlationId, createdAt: input.now },
+          { id: phase7HeroFixtureId("32000000", input.ordinalBase + 3), actorApplicantId: input.application.applicantId, eventType: "PAYMENT_SUCCEEDED", correlationId, createdAt: input.now },
         ],
       },
       identityAttempts: {
@@ -181,6 +183,7 @@ async function createCompletedApplication(
           outcome: "VERIFIED",
           attemptNumber: 1,
           correlationId,
+          createdAt: input.now,
         },
       },
     },
@@ -193,6 +196,7 @@ async function createCompletedApplication(
       serviceChargeMinor: 5_000,
       totalAmountMinor: 55_000,
       currency: "INR",
+      createdAt: input.now,
     },
   });
   await transaction.paymentAttempt.create({
@@ -206,6 +210,7 @@ async function createCompletedApplication(
       status: "SUCCEEDED",
       amountMinor: 55_000,
       succeededAt: input.now,
+      createdAt: input.now,
     },
   });
 }

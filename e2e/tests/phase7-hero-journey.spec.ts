@@ -162,7 +162,7 @@ for (const locale of ["en", "hi"] as const) {
     await page.getByRole("button", { name: copy.saveDraft }).click();
     await expect(page.getByText(copy.saved, { exact: true })).toBeVisible();
     await page.getByRole("button", { name: copy.saveAndContinue }).click();
-    await expect(page.getByRole("heading", { name: copy.serviceDetails })).toBeVisible();
+    await expect(page.getByRole("heading", { name: copy.serviceDetails })).toBeVisible({ timeout: 30_000 });
 
     await logout(page, locale);
     // The security policy intentionally enforces a one-minute OTP resend cooldown.

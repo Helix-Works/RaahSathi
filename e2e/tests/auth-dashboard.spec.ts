@@ -75,7 +75,7 @@ test("request rate-limit and provider-unavailable states are distinct", async ({
   await expect(page.getByText(/simulated OTP provider is temporarily unavailable/)).toBeVisible();
 });
 
-test("successful mock login shows active work, blocking reason, and next action", async ({
+test("successful mock login prioritizes an active offer and its next action", async ({
   page,
 }) => {
   await completeMockLogin(page, "123456");
@@ -86,7 +86,7 @@ test("successful mock login shows active work, blocking reason, and next action"
   ).toBeVisible();
   await expect(page.getByRole("heading", { name: "Permanent Driving Licence" })).toBeVisible();
   await expect(page.getByText("Temporary slot offer available", { exact: true })).toBeVisible();
-  await expect(page.getByText("Why you cannot continue yet", { exact: true })).toBeVisible();
+  await expect(page.getByText("Why you cannot continue yet", { exact: true })).not.toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Review temporary slot offer" }),
   ).toBeVisible();

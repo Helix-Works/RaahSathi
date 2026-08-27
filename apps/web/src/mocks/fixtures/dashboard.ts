@@ -13,7 +13,6 @@ export const activeDashboardFixture = {
     statusCode: "SLOT_OFFERED",
     progressPercent: 100,
     nextActionCode: "REVIEW_OFFER",
-    blockingReasonCode: "NO_SUITABLE_SLOT",
     updatedAt: relativeIsoDate(-1),
   },
   offer: {
