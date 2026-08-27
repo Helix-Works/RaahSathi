@@ -1,0 +1,41 @@
+import { paymentAttemptSchema } from "@raahsathi/contracts/payments";
+import { describe, expect, it } from "vitest";
+
+import {
+  assertPhase7HeroConfirmation,
+  phase7HeroApplications,
+  phase7HeroConfirmation,
+  phase7HeroPayments,
+  phase7HeroSchedule,
+} from "./phase7-hero-seed";
+
+describe("Phase 7 hero fixture definitions", () => {
+  it("uses stable application ownership and contract-valid payment references", () => {
+    expect(phase7HeroApplications.learner.applicantId).toBe(phase7HeroApplications.permanent.applicantId);
+    expect(phase7HeroApplications.holder.applicantId).not.toBe(phase7HeroApplications.learner.applicantId);
+
+    for (const payment of Object.values(phase7HeroPayments)) {
+      expect(() => paymentAttemptSchema.parse({
+        id: payment.paymentAttemptId,
+        status: "SUCCEEDED",
+        attemptNumber: 1,
+        providerReference: payment.providerReference,
+        createdAt: "2026-08-27T10:00:00.000Z",
+        updatedAt: "2026-08-27T10:00:00.000Z",
+        succeededAt: "2026-08-27T10:00:00.000Z",
+      })).not.toThrow();
+    }
+  });
+
+  it("derives the full and unreleased dates deterministically", () => {
+    const schedule = phase7HeroSchedule(new Date("2026-08-27T20:00:00.000Z"));
+    expect(schedule.fullDate.toISOString()).toBe("2026-08-28T00:00:00.000Z");
+    expect(schedule.unreleasedDate.toISOString()).toBe("2026-08-29T00:00:00.000Z");
+  });
+
+  it("fails closed without the explicit reset confirmation", () => {
+    expect(() => assertPhase7HeroConfirmation(undefined)).toThrow(/RAAHSATHI_DEMO_RESET_CONFIRMATION/);
+    expect(() => assertPhase7HeroConfirmation("wrong")).toThrow(/RAAHSATHI_DEMO_RESET_CONFIRMATION/);
+    expect(() => assertPhase7HeroConfirmation(phase7HeroConfirmation)).not.toThrow();
+  });
+});

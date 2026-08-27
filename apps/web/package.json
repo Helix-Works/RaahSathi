@@ -18,6 +18,9 @@
     "prisma:seed:fresh-journey": "node --env-file=.env --import tsx prisma/seed-fresh-journey.ts",
     "prisma:seed:phase6-demo": "node --env-file=.env --import tsx prisma/seed-phase6-demo.ts",
     "prisma:seed:phase6-release": "node --env-file=.env --import tsx prisma/release-phase6-demo-slot.ts",
+    "demo:reset": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx prisma/reset-phase7-hero.ts",
+    "demo:stage:permanent": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx prisma/advance-phase7-hero.ts",
+    "demo:release-slot": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx prisma/release-phase7-hero-slot.ts",
     "openapi:generate": "tsx src/server/openapi/write-openapi.ts",
     "openapi:check": "tsx src/server/openapi/check-openapi.ts"
   },
