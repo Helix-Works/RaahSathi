@@ -10,8 +10,8 @@ export const activeDashboardFixture = {
   application: {
     id: "app_synthetic_permanent_dl",
     serviceKey: "PERMANENT_DRIVING_LICENCE",
-    statusCode: "APPOINTMENT_REQUIRED",
-    progressPercent: 68,
+    statusCode: "SLOT_OFFERED",
+    progressPercent: 100,
     nextActionCode: "REVIEW_OFFER",
     blockingReasonCode: "NO_SUITABLE_SLOT",
     updatedAt: relativeIsoDate(-1),
@@ -22,8 +22,8 @@ export const activeDashboardFixture = {
     expiresAt: relativeIsoDate(2),
   },
   licence: {
-    labelCode: "SYNTHETIC_LEARNER_CONTEXT",
-    vehicleClassCode: "LMV",
+    kind: "LEARNER",
+    vehicleClass: "LMV",
   },
 } as const satisfies DashboardSummary;
 
@@ -34,8 +34,8 @@ export const appointmentDashboardFixture = {
     id: "app_synthetic_permanent_dl",
     serviceKey: "PERMANENT_DRIVING_LICENCE",
     statusCode: "APPOINTMENT_BOOKED",
-    progressPercent: 76,
-    nextActionCode: "NONE",
+    progressPercent: 100,
+    nextActionCode: "REVIEW_APPOINTMENT",
     updatedAt: relativeIsoDate(-1),
   },
   appointment: {
@@ -46,7 +46,7 @@ export const appointmentDashboardFixture = {
     endTime: "10:30",
   },
   licence: {
-    labelCode: "SYNTHETIC_LEARNER_CONTEXT",
-    vehicleClassCode: "LMV",
+    kind: "LEARNER",
+    vehicleClass: "LMV",
   },
 } as const satisfies DashboardSummary;

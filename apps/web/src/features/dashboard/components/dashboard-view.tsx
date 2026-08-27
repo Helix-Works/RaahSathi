@@ -1,4 +1,9 @@
-import type { ServiceKey } from "@raahsathi/contracts";
+import type {
+  ApplicationBlockingReasonCode,
+  ApplicationNextActionCode,
+  ApplicationStatusCode,
+  ServiceKey,
+} from "@raahsathi/contracts/applications";
 import { CalendarClock, Clock3, IdCard, TicketCheck } from "lucide-react";
 
 import { BlockingReasonAlert } from "@/components/shared/blocking-reason-alert";
@@ -37,13 +42,9 @@ function serviceName(
 }
 
 function statusPresentation(
-  code: string,
+  code: ApplicationStatusCode | "",
   messages: MessageDictionary["dashboard"],
 ): Readonly<{ label: string; tone: "neutral" | "success" | "warning" }> {
-  if (code === "APPOINTMENT_REQUIRED") {
-    return { label: messages.statusAppointmentRequired, tone: "warning" };
-  }
-
   if (code === "APPOINTMENT_BOOKED") {
     return { label: messages.statusAppointmentBooked, tone: "success" };
   }
@@ -60,7 +61,7 @@ function statusPresentation(
 }
 
 function nextActionPresentation(
-  code: string,
+  code: ApplicationNextActionCode,
   messages: MessageDictionary["dashboard"],
 ): string {
   if (code === "REVIEW_OFFER") {
@@ -82,7 +83,7 @@ function nextActionPresentation(
 }
 
 function blockingReasonPresentation(
-  code: string,
+  code: ApplicationBlockingReasonCode,
   messages: MessageDictionary["dashboard"],
 ): string {
   if (code === "NO_SUITABLE_SLOT") return messages.blockingNoSuitableSlot;
@@ -311,7 +312,7 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                         "{vehicleClass}",
                         localizedCodeLabel(
                           dashboard.vehicleClassNames,
-                          summary.licence.vehicleClassCode,
+                          summary.licence.vehicleClass,
                           messages.status.unavailable,
                         ),
                       )}

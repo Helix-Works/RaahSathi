@@ -1,15 +1,7 @@
-import type { ServiceKey } from "@raahsathi/contracts";
+import type { ApplicationSummary } from "@raahsathi/contracts/applications";
+import type { LicenceRecordSummary } from "@raahsathi/contracts/identity";
 
-/** Provisional dashboard view data; backend status codes remain authoritative. */
-export type DashboardApplicationSummary = Readonly<{
-  id: string;
-  serviceKey: ServiceKey;
-  statusCode: string;
-  progressPercent: number;
-  nextActionCode: string;
-  blockingReasonCode?: string;
-  updatedAt: string;
-}>;
+export type DashboardApplicationSummary = ApplicationSummary;
 
 export type DashboardAppointmentSummary = Readonly<{
   id: string;
@@ -32,8 +24,8 @@ export type DashboardWaitlistSummary = Readonly<{
 }>;
 
 export type DashboardLicenceSummary = Readonly<{
-  labelCode: string;
-  vehicleClassCode: string;
+  kind: LicenceRecordSummary["kind"];
+  vehicleClass: LicenceRecordSummary["vehicleClass"];
 }>;
 
 export type DashboardSummary = Readonly<{

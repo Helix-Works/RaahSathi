@@ -61,6 +61,11 @@ export default async function ApplicationPage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6 px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
+      <LicenceContextCard
+        licences={licences}
+        locale={locale}
+      />
+
       <ApplicationEditor
         initialApplication={application}
         initialIdentity={identity}
@@ -68,11 +73,6 @@ export default async function ApplicationPage({
         initialAppointment={appointment}
         locale={locale}
         messages={messages}
-      />
-
-      <LicenceContextCard
-        licences={licences}
-        locale={locale}
       />
     </div>
   );

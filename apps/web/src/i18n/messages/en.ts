@@ -358,6 +358,8 @@ export const enMessages = {
     },
   },
   appointments: {
+    chooseRto: "Choose an RTO",
+    time: "Time",
     errors: {
       notEligible: "This application is not ready for appointment booking.",
       alreadyBooked: "This application already has a confirmed appointment.",
@@ -377,12 +379,12 @@ export const enMessages = {
     description: "Direct booking remains available whenever a suitable slot is released. Join only if the available dates or times do not work for you.",
     join: "Join waitlist", joining: "Joining waitlist…", waiting: "Waiting for a suitable appointment slot",
     fifo: "When a compatible slot is released, offers are made in first-joined order.",
-    rto: "Preferred RTO", dateFrom: "Earliest acceptable date", dateTo: "Latest acceptable date",
+    rto: "Preferred RTO", chooseRto: "Choose an RTO", dateFrom: "Earliest acceptable date", dateTo: "Latest acceptable date",
     buckets: "Acceptable time of day", morning: "Morning", afternoon: "Afternoon", vehicleClass: "Vehicle class",
     update: "Update preferences", updating: "Updating preferences…", leave: "Leave waitlist", leaving: "Leaving waitlist…",
     joined: "Joined", refresh: "Refresh waitlist status", processing: "Checking authoritative waitlist status…",
     offerTitle: "Temporary appointment offer", offerDescription: "This slot is held temporarily by the service. Accept before it expires.",
-    expires: "Offer expires", remaining: "Time remaining", accept: "Accept offer", accepting: "Accepting offer…",
+    expires: "Offer expires", time: "Time", remaining: "Time remaining", accept: "Accept offer", accepting: "Accepting offer…",
     decline: "Decline offer", declining: "Declining offer…", offerExpired: "The offer time has passed. Checking the latest server state…",
     leaveTitle: "Leave this waitlist?", leaveDescription: "You will stop being considered for matching slots. Your application will return to the appointment step if the service permits it.",
     declineTitle: "Decline this offer?", declineDescription: "The held slot will be released. You may remain on the waitlist if the service allows it.",

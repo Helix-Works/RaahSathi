@@ -28,7 +28,7 @@ import { appointmentErrorPresentation } from "@/features/appointments/appointmen
 import { availabilityReasonMessage } from "@/features/appointments/availability-presentation";
 import type { Locale, MessageDictionary } from "@/i18n";
 
-type Labels = ReturnType<typeof appointmentLabels>;
+type Labels = ReturnType<typeof appointmentLabels> & Readonly<{ rto: string; time: string }>;
 
 function localizedDistrict(district: string, locale: Locale): string {
   if (locale !== "hi") return district;
@@ -47,11 +47,11 @@ function localizedDistrict(district: string, locale: Locale): string {
 function appointmentLabels(locale: Locale) {
   return locale === "hi" ? {
     title: "अपॉइंटमेंट चुनें", intro: "कृत्रिम दिल्ली आरटीओ, तारीख और उपलब्ध समय चुनें। क्षमता हमेशा सर्वर से आती है।",
-    rto: "आरटीओ चुनें", calendar: "तारीख चुनें", slots: "समय चुनें", previous: "पिछला महीना", next: "अगला महीना",
+    calendar: "तारीख चुनें", slots: "समय चुनें", previous: "पिछला महीना", next: "अगला महीना",
     loadingRtos: "आरटीओ लोड हो रहे हैं…", loadingCalendar: "कैलेंडर लोड हो रहा है…", loadingSlots: "स्लॉट लोड हो रहे हैं…",
     noRtos: "अभी कोई आरटीओ उपलब्ध नहीं है।", noSlots: "इस तारीख के लिए कोई स्लॉट जारी नहीं किया गया है।",
     remaining: "{count} स्थान शेष", selected: "चुना गया", review: "बुकिंग की पुष्टि करें", service: "सेवा", learner: "लर्नर लाइसेंस", permanent: "स्थायी ड्राइविंग लाइसेंस",
-    date: "तारीख", time: "समय", confirm: "अपॉइंटमेंट पक्का करें", confirming: "पुष्टि हो रही है…", change: "चयन बदलें",
+    date: "तारीख", confirm: "अपॉइंटमेंट पक्का करें", confirming: "पुष्टि हो रही है…", change: "चयन बदलें",
     confirmed: "अपॉइंटमेंट पक्का है", confirmedBody: "यह विवरण सर्वर से दोबारा बनाया गया है और लॉगआउट या रीफ्रेश के बाद भी सुरक्षित रहता है।",
     bookedAt: "बुक किया गया", retry: "फिर कोशिश करें", reload: "पेज फिर लोड करें", signIn: "दोबारा साइन इन करें",
     unavailable: "यह चयन अब उपलब्ध नहीं है। नवीनतम उपलब्धता दिखाई गई है।", rateLimited: "बहुत अधिक प्रयास हुए। थोड़ी देर बाद फिर कोशिश करें।",
@@ -59,11 +59,11 @@ function appointmentLabels(locale: Locale) {
     generic: "अपॉइंटमेंट सेवा अभी उत्तर नहीं दे सकी। आपकी आवेदन प्रगति सुरक्षित है।", reconstruct: "पुष्ट अपॉइंटमेंट विवरण लोड नहीं हो सका।",
   } : {
     title: "Choose an appointment", intro: "Choose a synthetic Delhi RTO, date, and available time. Capacity always comes from the server.",
-    rto: "Choose an RTO", calendar: "Choose a date", slots: "Choose a time", previous: "Previous month", next: "Next month",
+    calendar: "Choose a date", slots: "Choose a time", previous: "Previous month", next: "Next month",
     loadingRtos: "Loading RTOs…", loadingCalendar: "Loading calendar…", loadingSlots: "Loading slots…",
     noRtos: "No RTO is available right now.", noSlots: "No slots have been released for this date.",
     remaining: "{count} places remaining", selected: "Selected", review: "Confirm your booking", service: "Service", learner: "Learner Licence", permanent: "Permanent Driving Licence",
-    date: "Date", time: "Time", confirm: "Confirm appointment", confirming: "Confirming…", change: "Change selection",
+    date: "Date", confirm: "Confirm appointment", confirming: "Confirming…", change: "Change selection",
     confirmed: "Appointment confirmed", confirmedBody: "These details were reconstructed from the server and remain safe after refresh or sign-out.",
     bookedAt: "Booked", retry: "Try again", reload: "Reload page", signIn: "Sign in again",
     unavailable: "That selection is no longer available. The latest availability is shown.", rateLimited: "Too many attempts were made. Wait briefly and try again.",
@@ -88,7 +88,11 @@ function ConfirmedAppointment({ appointment, locale, labels }: Readonly<{ appoin
 export function AppointmentPanel({ application, initialAppointment, locale, messages, onApplicationChanged }: Readonly<{
   application: ApplicationDetail; initialAppointment?: Appointment; locale: Locale; messages: MessageDictionary["appointments"]; onApplicationChanged: () => Promise<void>;
 }>) {
-  const labels = useMemo(() => appointmentLabels(locale), [locale]);
+  const labels = useMemo(() => ({
+    ...appointmentLabels(locale),
+    rto: messages.chooseRto,
+    time: messages.time,
+  }), [locale, messages]);
   const router = useRouter();
   const [appointment, setAppointment] = useState(initialAppointment);
   const [rtos, setRtos] = useState<readonly Rto[]>([]);

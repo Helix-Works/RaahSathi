@@ -45,4 +45,13 @@ describe("Phase 6 bilingual presentation mappings", () => {
       expect(hiMessages.waitlist.errors[key]).toBeTruthy();
     }
   });
+
+  it("keeps residual waitlist labels in both typed dictionaries", () => {
+    expect(enMessages.waitlist.chooseRto).toBe("Choose an RTO");
+    expect(enMessages.waitlist.time).toBe("Time");
+    expect(hiMessages.waitlist.chooseRto).not.toBe(enMessages.waitlist.chooseRto);
+    expect(hiMessages.waitlist.time).not.toBe(enMessages.waitlist.time);
+    expect(hiMessages.appointments.chooseRto).not.toBe(enMessages.appointments.chooseRto);
+    expect(hiMessages.appointments.time).not.toBe(enMessages.appointments.time);
+  });
 });
