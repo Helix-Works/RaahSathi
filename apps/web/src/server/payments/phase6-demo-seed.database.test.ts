@@ -52,7 +52,8 @@ describe.skipIf(!database)("Phase 6 deterministic payment seed", () => {
 
   it("creates reconstructable contexts and narrowly reconciles only the legacy seed references", async () => {
     if (!database) return;
-    expect(await seedPhase6Demo(database, pepper, new Date("2026-08-26T10:00:00.000Z"))).toBe("created");
+    const fixtureNow = new Date("2026-08-26T10:00:00.000Z");
+    expect(await seedPhase6Demo(database, pepper, fixtureNow)).toBe("created");
 
     for (const index of [0, 1] as const) {
       const fixture = phase6DemoPaymentFixture(index);
@@ -74,8 +75,12 @@ describe.skipIf(!database)("Phase 6 deterministic payment seed", () => {
         data: { providerReference: fixture.legacyProviderReference },
       });
     }
-    expect(await seedPhase6Demo(database, pepper, new Date("2026-08-27T10:00:00.000Z"))).toBe("reconciled");
-    expect(await seedPhase6Demo(database, pepper, new Date("2026-08-27T10:00:00.000Z"))).toBe("unchanged");
+    expect(await seedPhase6Demo(database, pepper, fixtureNow)).toBe("reconciled");
+    expect(await seedPhase6Demo(database, pepper, fixtureNow)).toBe("unchanged");
+    expect(await seedPhase6Demo(database, pepper, new Date("2026-08-27T10:00:00.000Z"))).toBe("requires-fresh-fixtures");
+    expect((await database.appointmentSlot.findUniqueOrThrow({
+      where: { id: phase6DemoFullSlot.id },
+    })).date.toISOString().slice(0, 10)).toBe("2026-08-27");
 
     const direct = phase6DemoPaymentFixture(1);
     const directContext = await getPaymentContextForApplication({

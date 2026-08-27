@@ -12,6 +12,8 @@ async function main(): Promise<void> {
     ? "Seeded Phase 6 synthetic waitlist/direct-booking fixtures."
     : result === "reconciled"
       ? "Reconciled the validated Phase 6 demo payment references; durable journey progress was preserved."
+      : result === "requires-fresh-fixtures"
+        ? "Phase 6 fixture slots use an older date. Seed a fresh disposable database rather than rewriting durable demo progress."
       : "Phase 6 synthetic fixtures already exist; left durable journey state unchanged.");
   console.info("Synthetic mobiles: waitlist 9000000004, direct booking 9000000005.");
 }

@@ -145,7 +145,11 @@ export function AppointmentPanel({ application, initialAppointment, locale, mess
   };
   const reconstruct = async () => {
     setLoading("reconstruct"); setError(undefined);
-    try { setAppointment(confirmedAppointmentForApplication(await listAppointments(), application.id)); await onApplicationChanged(); }
+    try {
+      const reconstructed = confirmedAppointmentForApplication(await listAppointments(), application.id);
+      if (!reconstructed) { setError({ message: labels.reconstruct, action: "retry" }); return; }
+      setAppointment(reconstructed); await onApplicationChanged();
+    }
     catch (reason: unknown) { setError(appointmentErrorPresentation(reason, locale)); }
     finally { setLoading(undefined); }
   };

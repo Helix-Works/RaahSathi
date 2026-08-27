@@ -33,4 +33,9 @@ describe("API error normalization", () => {
 
     expect(normalizeApiError(response, {}).retryAfterSeconds).toBe(60);
   });
+
+  it.each(["60.5", "60abc", "1e2", "-1", "9007199254740992"])("rejects malformed Retry-After seconds: %s", (retryAfter) => {
+    const response = new Response(null, { status: 429, headers: { "retry-after": retryAfter } });
+    expect(normalizeApiError(response, {}).retryAfterSeconds).toBeUndefined();
+  });
 });

@@ -126,7 +126,7 @@ async function createReadyApplication(
   } });
 }
 
-export type Phase6DemoSeedResult = "created" | "reconciled" | "unchanged";
+export type Phase6DemoSeedResult = "created" | "reconciled" | "unchanged" | "requires-fresh-fixtures";
 
 export async function seedPhase6Demo(
   database: PrismaClient,
@@ -206,6 +206,11 @@ export async function seedPhase6Demo(
         && found.startTime === expected.startTime && found.endTime === expected.endTime));
       if (!applicantsMatch || !applicationsMatch || !rtoMatches || !slotsMatch) {
         throw new Error("Phase 6 demo identifiers conflict with incompatible synthetic records.");
+      }
+      if (foundSlots.some((slot) => slot.date.toISOString().slice(0, 10) !== seedDate)) {
+        // A booked fixture may already refer to this slot. Do not rewrite durable demo progress;
+        // callers can seed a fresh disposable database for a new appointment date instead.
+        return "requires-fresh-fixtures";
       }
 
       let repaired = 0;

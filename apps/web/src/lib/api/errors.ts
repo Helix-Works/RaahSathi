@@ -86,8 +86,8 @@ export function normalizeApiError(
       ? error.retryable
       : response.status === 429 || response.status >= 500;
   const retryAfterHeader = response.headers.get("retry-after");
-  const retryAfterValue = retryAfterHeader ? Number.parseInt(retryAfterHeader, 10) : Number.NaN;
-  const retryAfterSeconds = Number.isInteger(retryAfterValue) && retryAfterValue >= 0
+  const retryAfterValue = retryAfterHeader && /^\d+$/.test(retryAfterHeader) ? Number(retryAfterHeader) : Number.NaN;
+  const retryAfterSeconds = Number.isSafeInteger(retryAfterValue) && retryAfterValue >= 0
     ? retryAfterValue
     : undefined;
 

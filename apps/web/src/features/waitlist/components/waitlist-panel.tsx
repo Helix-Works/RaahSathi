@@ -55,6 +55,7 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   const [entry, setEntry] = useState<WaitlistEntry>();
   const [rtos, setRtos] = useState<readonly Rto[]>([]);
   const [preferences, setPreferences] = useState<WaitlistPreferences>(() => ({ rtoId: "", acceptableDateFrom: delhiToday(), acceptableDateTo: delhiToday(), timeBuckets: ["MORNING"], vehicleClass: "LMV" }));
+  const [rtoReloadKey, setRtoReloadKey] = useState(0);
   const [operation, setOperation] = useState<Operation>();
   const [confirmation, setConfirmation] = useState<Confirmation>();
   const [error, setError] = useState<WaitlistErrorPresentation>();
@@ -104,7 +105,7 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
       if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(waitlistErrorPresentation(reason, locale, copy));
     });
     return () => controller.abort();
-  }, [copy, locale, relevant, rtos.length]);
+  }, [copy, locale, relevant, rtoReloadKey, rtos.length]);
 
   useEffect(() => {
     if (!offer) return;
@@ -146,8 +147,8 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
     await synchronize(true); await onApplicationChanged();
   }, true);
   const submitUpdate = () => { if (!activeEntry) return; void run("update", async () => { await updateWaitlist(activeEntry.id, preferences); await synchronize(true); await onApplicationChanged(); }, true); };
-  const refresh = () => void run("process", async () => { await synchronize(true); await onApplicationChanged(); });
-  const accept = () => { if (!offer || offerTiming(offer.expiresAt, now).acceptanceDisabled) return; void run("accept", async () => { await acceptOffer(offer.id); await onApplicationChanged(); await loadEntry(); }, true); };
+  const refresh = () => void run("process", async () => { if (!rtos.length) setRtoReloadKey((value) => value + 1); await synchronize(true); await onApplicationChanged(); });
+  const accept = () => { if (!offer || offerTiming(offer.expiresAt, Date.now()).acceptanceDisabled) return; void run("accept", async () => { await acceptOffer(offer.id); await onApplicationChanged(); await loadEntry(); }, true); };
   const completeConfirmation = () => {
     if (!activeEntry || !confirmation) return;
     const type = confirmation; setConfirmation(undefined);

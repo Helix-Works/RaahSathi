@@ -25,5 +25,6 @@ describe("appointment selection and reconstruction", () => {
       { applicationId: "application-a", status: "CONFIRMED", id: "winner" },
     ] as unknown as readonly Appointment[];
     expect(confirmedAppointmentForApplication(records, "application-a")?.id).toBe("winner");
+    expect(confirmedAppointmentForApplication(records, "application-c")).toBeUndefined();
   });
 });
