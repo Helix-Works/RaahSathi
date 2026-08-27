@@ -25,6 +25,7 @@ describe("appointment selection and reconstruction", () => {
     first.abort();
     expect(isActiveAppointmentRequest(first, first)).toBe(false);
     expect(isActiveAppointmentRequest(second, first)).toBe(false);
+    expect(isActiveAppointmentRequest(undefined, second)).toBe(false);
   });
 
   it("shows the booked reconstruction spinner only while reconstruction is active", () => {
