@@ -94,6 +94,14 @@ describe.skipIf(!database)("Phase 7 deterministic hero fixture", () => {
     expect(permanentFixture.identityAttempts.every(({ createdAt }) => createdAt.getTime() === fixtureNow.getTime())).toBe(true);
     expect(permanentFixture.feeSnapshot?.createdAt).toEqual(fixtureNow);
     expect(permanentFixture.paymentAttempts.map(({ createdAt }) => createdAt)).toEqual([fixtureNow]);
+    const advancedLearnerSections = await database.applicationSection.findMany({
+      where: {
+        applicationId: phase7HeroApplications.learner.id,
+        sectionKey: { in: ["SERVICE_DETAILS", "DECLARATION"] },
+      },
+    });
+    expect(advancedLearnerSections).toHaveLength(2);
+    expect(advancedLearnerSections.every(({ createdAt }) => createdAt.getTime() === fixtureNow.getTime())).toBe(true);
     expect(await database.licenceRecord.findUnique({ where: { id: phase7HeroLicence.id } })).toMatchObject({
       applicantId: phase7HeroApplicants.hero.id,
       kind: "LEARNER",

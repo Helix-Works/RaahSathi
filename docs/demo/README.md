@@ -94,7 +94,7 @@ It builds and starts Next.js in production mode, uses the real data source, runs
 - **No Permanent DL card:** run `pnpm demo:stage:permanent`, refresh the dashboard, and verify the app and command use the same `DATABASE_URL` and authentication peppers.
 - **No offer after release:** first confirm the hero joined tomorrow's morning waitlist, then run `pnpm demo:release-slot` and use **Refresh waitlist status** while authenticated.
 - **Dates differ:** set the same `RAAHSATHI_DEMO_SEED_DATE` (`YYYY-MM-DD`) for reset, milestone, and slot-release commands. The hero E2E does this automatically so a midnight boundary cannot change its slot date.
-- **Hero E2E refuses to start:** supply both database confirmations and ensure `TEST_DATABASE_URL` is not byte-for-byte equal to `DATABASE_URL`.
+- **Hero E2E refuses to start:** supply both database confirmations and ensure `TEST_DATABASE_URL` resolves to a different PostgreSQL host, port, and database identity than `DATABASE_URL`. Different credentials or query parameters do not make the database distinct.
 
 ## Real versus simulated
 

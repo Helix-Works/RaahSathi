@@ -197,6 +197,7 @@ for (const locale of ["en", "hi"] as const) {
     await page.getByRole("button", { name: locale === "en" ? "Join waitlist" : "वेटलिस्ट में शामिल हों" }).click();
     await expect(page.getByText(copy.waiting, { exact: true })).toBeVisible({ timeout: 30_000 });
     const joinedValue = page.locator("dt", { hasText: copy.joined }).locator("..").locator("dd");
+    await expect(joinedValue).toHaveText(/\S+/);
     const immutableJoinTime = await joinedValue.textContent();
     await page.getByLabel(copy.afternoon).check();
     await page.getByRole("button", { name: copy.update }).click();

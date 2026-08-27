@@ -28,7 +28,7 @@ docs/                     Architecture, API, decision, and demo notes
 
 ## Prerequisites
 
-- Node.js 22 or newer
+- Node.js 22.12.0 or newer
 - pnpm 11 (use `corepack pnpm` if the pnpm shim is not installed)
 - PostgreSQL when exercising readiness or database-backed features
 

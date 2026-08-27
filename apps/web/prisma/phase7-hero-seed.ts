@@ -455,8 +455,8 @@ export async function advancePhase7Hero(
     });
     await transaction.applicationSection.createMany({
       data: [
-        { id: phase7HeroFixtureId("31000000", 63), applicationId: learner.id, sectionKey: "SERVICE_DETAILS", data: { vehicleClass: "LMV" }, completedAt: now },
-        { id: phase7HeroFixtureId("31000000", 64), applicationId: learner.id, sectionKey: "DECLARATION", data: { accepted: true }, completedAt: now },
+        { id: phase7HeroFixtureId("31000000", 63), applicationId: learner.id, sectionKey: "SERVICE_DETAILS", data: { vehicleClass: "LMV" }, completedAt: now, createdAt: now },
+        { id: phase7HeroFixtureId("31000000", 64), applicationId: learner.id, sectionKey: "DECLARATION", data: { accepted: true }, completedAt: now, createdAt: now },
       ],
     });
     await transaction.applicationEvent.createMany({

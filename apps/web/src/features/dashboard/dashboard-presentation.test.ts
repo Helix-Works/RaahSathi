@@ -75,6 +75,18 @@ describe("dashboard next-action presentation", () => {
     }, copy)).toEqual({ description: "appointment booked" });
   });
 
+  it("links appointment review with booked-appointment copy", () => {
+    expect(resolveNextActionCard({
+      id: "application-id",
+      statusCode: "APPOINTMENT_BOOKED",
+      nextActionCode: "REVIEW_APPOINTMENT",
+    }, copy)).toEqual({
+      description: "appointment booked",
+      actionLabel: "Continue",
+      actionHref: "/applications/application-id",
+    });
+  });
+
   it("links ordinary actionable states back to the application", () => {
     expect(resolveNextActionCard({
       id: "application-id",

@@ -47,6 +47,14 @@ export function resolveNextActionCard(
     };
   }
 
+  if (application.nextActionCode === "REVIEW_APPOINTMENT") {
+    return {
+      description: copy.appointmentBookedDescription,
+      actionLabel: copy.continueLabel,
+      actionHref: `/applications/${application.id}`,
+    };
+  }
+
   if (application.nextActionCode !== "NONE") {
     return {
       description: copy.defaultDescription,
