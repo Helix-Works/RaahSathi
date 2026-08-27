@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { IconTile } from "@/components/shared/icon-tile";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -174,15 +175,15 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
   };
 
   return (
-    <Card className="overflow-hidden border-0 bg-transparent">
-      <CardHeader>
-        <div className="grid size-12 place-items-center border border-foreground bg-primary text-primary-foreground">
+    <Card className="overflow-hidden border-0 bg-transparent shadow-none">
+      <CardHeader className="px-0 pt-0">
+        <IconTile size="lg">
           {challenge ? (
             <MessageSquareText className="size-6" aria-hidden="true" />
           ) : (
             <ShieldCheck className="size-6" aria-hidden="true" />
           )}
-        </div>
+        </IconTile>
         <CardTitle>
           {challenge ? authMessages.sentTitle : authMessages.requestTitle}
         </CardTitle>
@@ -196,7 +197,7 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
         ) : null}
       </CardHeader>
 
-      <CardContent className="space-y-5">
+      <CardContent className="space-y-5 px-0 pb-0">
         <Alert variant="info">
           <AlertDescription>{authMessages.syntheticNotice}</AlertDescription>
         </Alert>

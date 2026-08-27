@@ -1,25 +1,47 @@
 import { ShieldCheck } from "lucide-react";
+import { useId } from "react";
+
+import { IconTile } from "@/components/shared/icon-tile";
+import { cn } from "@/lib/utils";
 
 type PrototypeDisclosureProps = Readonly<{
   title: string;
   description: string;
+  tone?: "default" | "inverse";
 }>;
 
 export function PrototypeDisclosure({
   title,
   description,
+  tone = "default",
 }: PrototypeDisclosureProps) {
+  const titleId = useId();
+
   return (
     <aside
-      className="flex gap-3 rounded-md border border-primary-foreground/30 bg-primary-foreground/5 p-4 text-primary-foreground"
-      aria-labelledby="prototype-disclosure-title"
+      className={cn(
+        "flex gap-3 rounded-panel border p-4",
+        tone === "inverse"
+          ? "border-primary-foreground/20 bg-primary-foreground/8 text-primary-foreground"
+          : "border-primary/20 bg-secondary text-secondary-foreground",
+      )}
+      aria-labelledby={titleId}
     >
-      <ShieldCheck className="mt-0.5 size-5 shrink-0" aria-hidden="true" />
+      <IconTile tone={tone === "inverse" ? "inverse" : "default"} size="sm">
+        <ShieldCheck aria-hidden="true" />
+      </IconTile>
       <div className="space-y-1">
-        <h2 id="prototype-disclosure-title" className="text-sm font-extrabold">
+        <h2 id={titleId} className="text-sm font-bold">
           {title}
         </h2>
-        <p className="text-sm leading-6">{description}</p>
+        <p
+          className={cn(
+            "text-sm leading-6",
+            tone === "inverse" && "text-primary-foreground/78",
+          )}
+        >
+          {description}
+        </p>
       </div>
     </aside>
   );

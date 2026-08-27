@@ -155,7 +155,7 @@ test("brand and desktop navigation expose active and interactive states", async 
   await brandLink.hover();
   await expect.poll(() => brandMark.evaluate((element) => getComputedStyle(element).transform))
     .not.toBe("none");
-  await expect(brandWordmark).toHaveCSS("color", "rgb(216, 255, 82)");
+  await expect(brandWordmark).toHaveCSS("color", "rgb(7, 90, 168)");
 
   await servicesLink.hover();
   await expect.poll(() => servicesIcon.evaluate((element) => getComputedStyle(element).transform))
@@ -213,7 +213,29 @@ test("reduced motion suppresses interactive scaling", async ({ page }, testInfo)
     .toBe("none");
   await expect(brandLink.locator(".brand-wordmark")).toHaveCSS(
     "color",
-    "rgb(216, 255, 82)",
+    "rgb(7, 90, 168)",
+  );
+});
+
+test("design foundation exposes the approved type and radius hierarchy", async ({
+  page,
+}, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium");
+  await page.goto("/");
+
+  await expect
+    .poll(() => page.locator("body").evaluate((element) => getComputedStyle(element).fontFamily))
+    .toContain("Noto Sans");
+
+  const primaryAction = page.getByRole("link", { name: "Explore services" }).first();
+  await expect(primaryAction).toHaveCSS("border-radius", "8px");
+  await expect(page.getByRole("contentinfo").locator("aside")).toHaveCSS(
+    "border-radius",
+    "12px",
+  );
+  await expect(page.getByTestId("language-toggle-indicator")).toHaveCSS(
+    "background-color",
+    "rgb(7, 90, 168)",
   );
 });
 

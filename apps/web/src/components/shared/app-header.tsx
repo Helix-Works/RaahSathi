@@ -7,6 +7,7 @@ import {
   type NavigationItem,
 } from "@/components/shared/app-navigation";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
+import { PageContainer } from "@/components/shared/page-container";
 import {
   LogoutButton,
   type AccountPresentation,
@@ -22,11 +23,12 @@ type AppHeaderProps = Readonly<{
 
 export function AppHeader({ locale, messages, navigation, account }: AppHeaderProps) {
   return (
-    <header className="sticky top-0 z-40 border-b border-primary-foreground/15 bg-primary/95 text-primary-foreground shadow-[0_10px_30px_rgba(17,17,15,0.12)] backdrop-blur-xl">
-      <div className="relative mx-auto flex min-h-[4.5rem] max-w-[80rem] items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-40 border-b border-border bg-card/95 text-foreground shadow-subtle backdrop-blur-xl">
+      <PageContainer className="relative flex min-h-[4.5rem] items-center gap-2 sm:gap-3">
         <Link
           href="/"
-          className="brand-link group/brand flex min-h-11 shrink-0 items-center rounded-xl focus-visible:outline-brand-accent"
+          className="brand-link group/brand flex min-h-11 shrink-0 items-center rounded-control focus-visible:outline-focus"
+          data-tone="default"
           aria-label={`${messages.landing.name} · ${messages.navigation.home}`}
         >
           <RaahSathiLogo
@@ -51,13 +53,13 @@ export function AppHeader({ locale, messages, navigation, account }: AppHeaderPr
         />
 
         {account ? (
-          <div className="hidden items-center gap-1 border-l border-primary-foreground/15 pl-2 lg:flex">
-            <span className="hidden max-w-36 px-2 text-right text-xs font-bold leading-4 text-primary-foreground/65 xl:block">
+          <div className="hidden items-center gap-1 border-l border-border pl-2 lg:flex">
+            <span className="hidden max-w-36 px-2 text-right text-xs font-semibold leading-4 text-muted-foreground xl:block">
               {account.label}
             </span>
             <LogoutButton
               presentation={account}
-              buttonClassName="text-primary-foreground! hover:bg-primary-foreground/10 hover:text-brand-accent!"
+              buttonClassName="text-foreground! hover:bg-secondary hover:text-primary!"
             />
           </div>
         ) : null}
@@ -69,7 +71,7 @@ export function AppHeader({ locale, messages, navigation, account }: AppHeaderPr
           closeMenuLabel={messages.navigation.closeMenu}
           account={account}
         />
-      </div>
+      </PageContainer>
     </header>
   );
 }

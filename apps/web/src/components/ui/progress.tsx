@@ -13,7 +13,7 @@ export function Progress({ className, value, label, ...props }: ProgressProps) {
 
   return (
     <div
-      className={cn("h-2.5 overflow-hidden border border-border-strong bg-muted", className)}
+      className={cn("h-2.5 overflow-hidden rounded-control bg-muted", className)}
       role="progressbar"
       aria-label={label}
       aria-valuemin={0}
@@ -21,7 +21,7 @@ export function Progress({ className, value, label, ...props }: ProgressProps) {
       aria-valuenow={normalizedValue}
       {...props}
     >
-      <div className="h-full bg-primary" style={{ width: `${normalizedValue}%` }} />
+      <div className="h-full rounded-control bg-primary" style={{ width: `${normalizedValue}%` }} />
     </div>
   );
 }
