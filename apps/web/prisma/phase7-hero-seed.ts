@@ -275,8 +275,7 @@ export async function resetPhase7Hero(
       },
       select: { id: true, mobileLookupHash: true },
     });
-    if (conflicts.some((record) => !applicants.some((expected) =>
-      expected.id === record.id && expected.mobileLookupHash === record.mobileLookupHash))) {
+    if (conflicts.some((record) => !applicants.some((expected) => expected.id === record.id))) {
       throw new Error("Phase 7 hero identifiers conflict with records outside the enumerated synthetic fixture.");
     }
 
@@ -426,7 +425,7 @@ export async function advancePhase7Hero(
 
     await transaction.applicationSection.update({
       where: { applicationId_sectionKey: { applicationId: learner.id, sectionKey: "ADDRESS" } },
-      data: { data: { district: "NORTH_WEST", postalCode: "110085" }, revision: { increment: 1 }, completedAt: now },
+      data: { completedAt: now },
     });
     await transaction.applicationSection.createMany({
       data: [
