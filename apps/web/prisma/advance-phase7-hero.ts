@@ -1,10 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 
+import { assertPhase7HeroCommandEnvironment } from "./phase7-hero-command-safety";
 import { advancePhase7Hero, phase7HeroSeedNow } from "./phase7-hero-seed";
 
 const database = new PrismaClient();
 
 async function main(): Promise<void> {
+  assertPhase7HeroCommandEnvironment();
   const result = await advancePhase7Hero(
     database,
     process.env.RAAHSATHI_DEMO_RESET_CONFIRMATION,

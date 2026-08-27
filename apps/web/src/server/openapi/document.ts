@@ -115,3 +115,8 @@ export function createOpenApiDocument(): OpenApiDocument {
 export function serializeOpenApiDocument(): string {
   return `${JSON.stringify(createOpenApiDocument(), null, 2)}\n`;
 }
+
+/** Git may materialize a text artifact with platform line endings. */
+export function normalizeOpenApiLineEndings(value: string): string {
+  return value.replace(/\r\n/g, "\n");
+}

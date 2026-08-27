@@ -120,4 +120,20 @@ describe.skipIf(!database)("Phase 7 deterministic hero fixture", () => {
     expect(audits).toHaveLength(1);
     expect(JSON.stringify(audits[0]?.metadata)).not.toMatch(/token|otp|secret/i);
   });
+
+  it("fails closed before deleting a fixture account with an incompatible identity", async () => {
+    if (!database) return;
+    await database.applicant.update({
+      where: { id: phase7HeroApplicants.hero.id },
+      data: { displayName: "Unexpected account" },
+    });
+    await expect(resetPhase7Hero(database, pepper, phase7HeroConfirmation, fixtureNow))
+      .rejects.toThrow(/fixture conflict/i);
+    expect(await database.application.findUnique({ where: { id: phase7HeroApplications.learner.id } }))
+      .not.toBeNull();
+    await database.applicant.update({
+      where: { id: phase7HeroApplicants.hero.id },
+      data: { displayName: phase7HeroApplicants.hero.name },
+    });
+  });
 });
