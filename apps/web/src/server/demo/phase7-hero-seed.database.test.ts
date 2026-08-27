@@ -49,6 +49,12 @@ describe.skipIf(!database)("Phase 7 deterministic hero fixture", () => {
       progressPercent: 25,
     });
     expect(learner.sections.find(({ sectionKey }) => sectionKey === "ADDRESS")).toMatchObject({ completed: false });
+    const learnerFixture = await database.application.findUniqueOrThrow({
+      where: { id: phase7HeroApplications.learner.id },
+      include: { sections: true },
+    });
+    expect(learnerFixture.createdAt).toEqual(fixtureNow);
+    expect(learnerFixture.sections.every(({ createdAt }) => createdAt.getTime() === fixtureNow.getTime())).toBe(true);
     expect(await database.application.count({ where: { id: phase7HeroApplications.permanent.id } })).toBe(0);
     expect(await database.licenceRecord.count({ where: { applicantId: phase7HeroApplicants.hero.id } })).toBe(0);
     expect(await database.session.count({ where: { applicantId: phase7HeroApplicants.hero.id } })).toBe(0);

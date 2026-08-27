@@ -69,7 +69,10 @@ const copies = {
   },
 } as const;
 
-function runDemoCommand(command: "demo:reset" | "demo:stage:permanent" | "demo:release-slot"): void {
+function runDemoCommand(
+  command: "demo:reset" | "demo:stage:permanent" | "demo:release-slot",
+  seedDate: string,
+): void {
   const pnpmCli = process.env.npm_execpath;
   if (!pnpmCli) throw new Error("npm_execpath is required to run the approved Phase 7 demo commands.");
   const result = spawnSync(pnpmCli, ["--filter", "@raahsathi/web", command], {
@@ -78,6 +81,7 @@ function runDemoCommand(command: "demo:reset" | "demo:stage:permanent" | "demo:r
       ...process.env,
       DATABASE_URL: testDatabaseUrl,
       DIRECT_URL: testDatabaseUrl,
+      RAAHSATHI_DEMO_SEED_DATE: seedDate,
     },
     encoding: "utf8",
   });
@@ -91,8 +95,8 @@ function runDemoCommand(command: "demo:reset" | "demo:stage:permanent" | "demo:r
   }
 }
 
-function tomorrowDate(): string {
-  const date = new Date();
+function tomorrowDate(seedDate: string): string {
+  const date = new Date(`${seedDate}T00:00:00.000Z`);
   date.setUTCDate(date.getUTCDate() + 1);
   return date.toISOString().slice(0, 10);
 }
@@ -151,7 +155,8 @@ async function assertNoCriticalEnglishFallback(page: Page): Promise<void> {
 for (const locale of ["en", "hi"] as const) {
   test(`completes the deterministic Phase 7 hero journey in ${locale === "en" ? "English" : "Hindi"}`, async ({ page }) => {
     const copy = copies[locale];
-    runDemoCommand("demo:reset");
+    const seedDate = new Date().toISOString().slice(0, 10);
+    runDemoCommand("demo:reset", seedDate);
 
     await login(page, locale);
     await expectNoHorizontalOverflow(page);
@@ -173,7 +178,7 @@ for (const locale of ["en", "hi"] as const) {
     await expect(page).toHaveURL(new RegExp(`/applications/${heroApplicationId}$`));
     await expect(page.getByRole("heading", { name: copy.serviceDetails })).toBeVisible();
 
-    runDemoCommand("demo:stage:permanent");
+    runDemoCommand("demo:stage:permanent", seedDate);
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: copy.permanent })).toBeVisible();
     await page.getByRole("link", { name: copy.continue, exact: true }).click();
@@ -185,7 +190,7 @@ for (const locale of ["en", "hi"] as const) {
     await expect(page.getByText(copy.full, { exact: true })).toBeVisible();
     await expect(page.getByText(copy.unreleased, { exact: true }).first()).toBeVisible();
 
-    const slotDate = tomorrowDate();
+    const slotDate = tomorrowDate(seedDate);
     await page.locator("#waitlist-rto").selectOption({ label: copy.rtoName });
     await page.locator("#waitlist-from").fill(slotDate);
     await page.locator("#waitlist-to").fill(slotDate);
@@ -197,7 +202,7 @@ for (const locale of ["en", "hi"] as const) {
     await page.getByRole("button", { name: copy.update }).click();
     await expect(joinedValue).toHaveText(immutableJoinTime ?? "");
 
-    runDemoCommand("demo:release-slot");
+    runDemoCommand("demo:release-slot", seedDate);
     await page.getByRole("button", { name: copy.refresh }).click();
     await expect(page.getByRole("heading", { name: copy.offer, level: 2, exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("09:00–09:30", { exact: true })).toBeVisible();

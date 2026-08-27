@@ -98,6 +98,24 @@ export function phase7HeroSchedule(now: Date): Readonly<{
   };
 }
 
+export function phase7HeroSeedNow(value: string | undefined, fallback = new Date()): Date {
+  if (value === undefined || value === "") return fallback;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    throw new Error("RAAHSATHI_DEMO_SEED_DATE must use YYYY-MM-DD.");
+  }
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== value) {
+    throw new Error("RAAHSATHI_DEMO_SEED_DATE must be a real calendar date.");
+  }
+  parsed.setUTCHours(
+    fallback.getUTCHours(),
+    fallback.getUTCMinutes(),
+    fallback.getUTCSeconds(),
+    fallback.getUTCMilliseconds(),
+  );
+  return parsed;
+}
+
 export function assertPhase7HeroConfirmation(value: string | undefined): void {
   if (value !== phase7HeroConfirmation) {
     throw new Error(`RAAHSATHI_DEMO_RESET_CONFIRMATION must equal ${phase7HeroConfirmation}.`);
@@ -351,6 +369,7 @@ export async function resetPhase7Hero(
         status: "IN_PROGRESS",
         identityScenario: "SUCCESS",
         paymentScenario: "SUCCESS",
+        createdAt: now,
         sections: {
           create: [
             {
@@ -358,11 +377,13 @@ export async function resetPhase7Hero(
               sectionKey: "PERSONAL_DETAILS",
               data: { fullName: phase7HeroApplicants.hero.name, dateOfBirth: "1995-01-15" },
               completedAt: now,
+              createdAt: now,
             },
             {
               id: phase7HeroFixtureId("31000000", 62),
               sectionKey: "ADDRESS",
               data: { district: "NORTH_WEST", postalCode: "110085" },
+              createdAt: now,
             },
           ],
         },

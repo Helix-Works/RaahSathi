@@ -8,6 +8,7 @@ import {
   phase7HeroFixtureId,
   phase7HeroPayments,
   phase7HeroSchedule,
+  phase7HeroSeedNow,
 } from "./phase7-hero-seed";
 
 describe("Phase 7 hero fixture definitions", () => {
@@ -36,6 +37,14 @@ describe("Phase 7 hero fixture definitions", () => {
     const schedule = phase7HeroSchedule(new Date("2026-08-27T20:00:00.000Z"));
     expect(schedule.fullDate.toISOString()).toBe("2026-08-28T00:00:00.000Z");
     expect(schedule.unreleasedDate.toISOString()).toBe("2026-08-29T00:00:00.000Z");
+  });
+
+  it("anchors every demo command to the validated seed date while preserving its clock", () => {
+    const fallback = new Date("2026-08-27T20:15:30.125Z");
+    expect(phase7HeroSeedNow("2026-08-25", fallback).toISOString()).toBe("2026-08-25T20:15:30.125Z");
+    expect(phase7HeroSeedNow(undefined, fallback)).toBe(fallback);
+    expect(() => phase7HeroSeedNow("2026-02-30", fallback)).toThrow(/real calendar date/);
+    expect(() => phase7HeroSeedNow("27-08-2026", fallback)).toThrow(/YYYY-MM-DD/);
   });
 
   it("fails closed without the explicit reset confirmation", () => {
