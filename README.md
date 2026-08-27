@@ -58,6 +58,10 @@ Phase 4 adds server-calculated synthetic fee snapshots, idempotent payment attem
 
 After the Phase 5/6 migrations, `pnpm --filter @raahsathi/web prisma:seed:phase6-demo` creates the deterministic appointment/waitlist demo accounts. Re-running that command is the supported repair path for the seed-owned Phase 6 fixtures: it preserves durable journey progress and reconciles only the three legacy malformed payment references after exact applicant, application, fee, payment, event, RTO, and slot identity checks. It fails closed if any deterministic identifier contains unexpected data.
 
+## Phase 7 hero journey
+
+Use synthetic account `9000000007` with the configured demo OTP. The deterministic commands are `pnpm demo:reset`, `pnpm demo:stage:permanent`, and `pnpm demo:release-slot`; the production-mode bilingual gate is `pnpm test:e2e:hero`. See the [Phase 7 demo runbook](docs/demo/README.md) for the exact rehearsal, safety confirmation, expected states, and real-versus-simulated boundary.
+
 ## Quality checks
 
 ```bash
