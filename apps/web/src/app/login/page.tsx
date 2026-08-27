@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation";
 
+import { JourneyIllustration } from "@/components/brand/journey-illustration";
+import { IconTile } from "@/components/shared/icon-tile";
+import { PageContainer } from "@/components/shared/page-container";
 import { PageHeader } from "@/components/shared/page-header";
+import { PrototypeDisclosure } from "@/components/shared/prototype-disclosure";
 import { LoginFlow } from "@/features/auth/components/login-flow";
 import { getSafeReturnPath } from "@/features/auth/safe-return-path";
 import { getShellSession } from "@/features/auth/session";
@@ -25,33 +29,37 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-12 lg:px-8 lg:py-14">
-      <div className="grid overflow-hidden border border-border-strong bg-card lg:grid-cols-[0.9fr_1.1fr]">
-        <aside className="bg-primary p-6 text-primary-foreground sm:p-8 lg:p-10">
-          <div className="[&_.eyebrow]:text-primary-foreground/60 [&_h1]:text-primary-foreground [&_p]:text-primary-foreground/75">
+    <PageContainer className="max-w-6xl py-10 sm:py-12 lg:py-16">
+      <div className="grid overflow-hidden rounded-feature border border-border bg-card shadow-subtle lg:grid-cols-[0.92fr_1.08fr]">
+        <aside className="relative overflow-hidden border-b border-border bg-surface-muted p-6 sm:p-8 lg:border-b-0 lg:border-r lg:p-10">
+          <div className="relative space-y-8">
             <PageHeader
               eyebrow={messages.auth.eyebrow}
               title={messages.auth.title}
               description={messages.auth.description}
             />
-          </div>
-          <ol className="mt-8 grid gap-0 border-t border-primary-foreground/25">
+            <ol className="grid gap-3" aria-label={messages.auth.benefitsLabel}>
             {[
-              messages.landing.recoveryTitle,
-              messages.landing.statusTitle,
-              messages.landing.languageTitle,
-            ].map((item, index) => (
-              <li key={item} className="grid grid-cols-[2rem_1fr] gap-3 border-b border-primary-foreground/25 py-3 text-sm font-bold leading-6">
-                <span className="text-primary-foreground/55" aria-hidden="true">0{index + 1}</span>
-                {item}
+              messages.auth.benefitRecovery,
+              messages.auth.benefitStatus,
+              messages.auth.benefitLanguage,
+            ].map((item) => (
+              <li key={item} className="flex items-start gap-3 rounded-item border border-primary/15 bg-card/70 p-3 text-sm font-semibold leading-6 text-secondary-foreground">
+                <IconTile size="sm"><span className="text-xs font-bold">✓</span></IconTile>
+                <span>{item}</span>
               </li>
             ))}
-          </ol>
+            </ol>
+            <JourneyIllustration className="mx-auto max-w-md" />
+          </div>
         </aside>
-        <div className="p-5 sm:p-7 lg:p-8">
-          <LoginFlow messages={messages} returnTo={returnTo} locale={locale} />
+        <div className="space-y-6 p-5 sm:p-7 lg:p-10">
+          <div className="max-w-md">
+            <LoginFlow messages={messages} returnTo={returnTo} locale={locale} />
+          </div>
+          <PrototypeDisclosure title={messages.disclosure.title} description={messages.disclosure.description} />
         </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

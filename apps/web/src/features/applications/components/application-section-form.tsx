@@ -215,7 +215,7 @@ function FormActions<TValues extends FieldValues>({
   const pending = form.formState.isSubmitting || Boolean(pendingAction);
 
   return (
-    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+    <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:flex-wrap">
       <Button type="button" variant="secondary" disabled={pending} onClick={() => run("save")}>
         {pendingAction === "save" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : null}
         {pendingAction === "save" ? messages.saving : messages.saveDraft}
@@ -248,19 +248,19 @@ function PersonalDetailsForm(props: SectionFormProps) {
   const dateError = fieldMessage(form.formState.errors.dateOfBirth, props.messages.applications.invalidDateError);
 
   return (
-    <form className="space-y-5" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
+    <form className="space-y-6" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
       <FormSummary applicationId={props.applicationId} localValidation={form.formState.isSubmitted && !form.formState.isValid} messages={props.messages.applications} summary={errors.summary} />
       <div className="space-y-2">
         <Label htmlFor="fullName">{props.messages.applications.fullName}</Label>
         <Input id="fullName" autoComplete="off" aria-invalid={Boolean(fullNameError)} aria-describedby="fullName-help fullName-error" {...form.register("fullName")} />
         <p id="fullName-help" className="text-sm leading-6 text-muted-foreground">{props.messages.applications.fullNameHelp}</p>
-        {fullNameError ? <p id="fullName-error" className="text-sm font-bold" role="alert">{fullNameError}</p> : null}
+        {fullNameError ? <p id="fullName-error" className="text-sm font-bold text-error" role="alert">{fullNameError}</p> : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor="dateOfBirth">{props.messages.applications.dateOfBirth}</Label>
         <Input id="dateOfBirth" type="date" aria-invalid={Boolean(dateError)} aria-describedby="dateOfBirth-help dateOfBirth-error" {...form.register("dateOfBirth")} />
         <p id="dateOfBirth-help" className="text-sm leading-6 text-muted-foreground">{props.messages.applications.dateOfBirthHelp}</p>
-        {dateError ? <p id="dateOfBirth-error" className="text-sm font-bold" role="alert">{dateError}</p> : null}
+        {dateError ? <p id="dateOfBirth-error" className="text-sm font-bold text-error" role="alert">{dateError}</p> : null}
       </div>
       <FormActions form={form} pendingAction={pendingAction} setPendingAction={setPendingAction} submit={submit} messages={props.messages.applications} />
     </form>
@@ -287,20 +287,20 @@ function AddressForm(props: SectionFormProps) {
   const postalError = fieldMessage(form.formState.errors.postalCode, props.messages.applications.invalidPostalError);
 
   return (
-    <form className="space-y-5" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
+    <form className="space-y-6" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
       <FormSummary applicationId={props.applicationId} localValidation={form.formState.isSubmitted && !form.formState.isValid} messages={props.messages.applications} summary={errors.summary} />
       <div className="space-y-2">
         <Label htmlFor="district">{props.messages.applications.district}</Label>
-        <select id="district" className="min-h-11 w-full rounded-md border border-border-strong bg-card px-3 py-2 text-base leading-7" aria-invalid={Boolean(districtError)} aria-describedby={districtError ? "district-error" : undefined} {...form.register("district")}>
+        <select id="district" className="min-h-11 w-full rounded-control border border-input bg-card px-3 py-2 text-base leading-7 text-foreground outline-none transition-[border-color,box-shadow] focus-visible:border-primary focus-visible:outline-focus disabled:cursor-not-allowed disabled:opacity-55" aria-invalid={Boolean(districtError)} aria-describedby={districtError ? "district-error" : undefined} {...form.register("district")}>
           {districtValues.map((value) => <option key={value} value={value}>{districtLabels[props.locale][value]}</option>)}
         </select>
-        {districtError ? <p id="district-error" className="text-sm font-bold" role="alert">{districtError}</p> : null}
+        {districtError ? <p id="district-error" className="text-sm font-bold text-error" role="alert">{districtError}</p> : null}
       </div>
       <div className="space-y-2">
         <Label htmlFor="postalCode">{props.messages.applications.postalCode}</Label>
         <Input id="postalCode" inputMode="numeric" maxLength={6} autoComplete="off" aria-invalid={Boolean(postalError)} aria-describedby="postalCode-help postalCode-error" {...form.register("postalCode")} />
         <p id="postalCode-help" className="text-sm leading-6 text-muted-foreground">{props.messages.applications.postalCodeHelp}</p>
-        {postalError ? <p id="postalCode-error" className="text-sm font-bold" role="alert">{postalError}</p> : null}
+        {postalError ? <p id="postalCode-error" className="text-sm font-bold text-error" role="alert">{postalError}</p> : null}
       </div>
       <FormActions form={form} pendingAction={pendingAction} setPendingAction={setPendingAction} submit={submit} messages={props.messages.applications} />
     </form>
@@ -329,7 +329,7 @@ function ServiceDetailsForm(props: SectionFormProps) {
   const learnerError = fieldMessage(form.formState.errors.learnerLicenceReference, props.messages.applications.invalidLearnerError);
 
   return (
-    <form className="space-y-5" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
+    <form className="space-y-6" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
       <FormSummary applicationId={props.applicationId} localValidation={form.formState.isSubmitted && !form.formState.isValid} messages={props.messages.applications} summary={errors.summary} />
       <div className="space-y-2">
         <Label htmlFor="vehicleClass">{props.messages.applications.vehicleClass}</Label>
@@ -340,7 +340,7 @@ function ServiceDetailsForm(props: SectionFormProps) {
           <Label htmlFor="learnerLicenceReference">{props.messages.applications.learnerReference}</Label>
           <Input id="learnerLicenceReference" autoComplete="off" aria-invalid={Boolean(learnerError)} aria-describedby="learnerLicenceReference-help learnerLicenceReference-error" {...form.register("learnerLicenceReference")} />
           <p id="learnerLicenceReference-help" className="text-sm leading-6 text-muted-foreground">{props.messages.applications.learnerReferenceHelp}</p>
-          {learnerError ? <p id="learnerLicenceReference-error" className="text-sm font-bold" role="alert">{learnerError}</p> : null}
+          {learnerError ? <p id="learnerLicenceReference-error" className="text-sm font-bold text-error" role="alert">{learnerError}</p> : null}
         </div>
       ) : null}
       <FormActions form={form} pendingAction={pendingAction} setPendingAction={setPendingAction} submit={submit} messages={props.messages.applications} />
@@ -368,14 +368,14 @@ function DeclarationForm(props: SectionFormProps) {
   const acceptedError = fieldMessage(form.formState.errors.accepted, props.messages.applications.declarationError);
 
   return (
-    <form className="space-y-5" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
+    <form className="space-y-6" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
       <FormSummary applicationId={props.applicationId} localValidation={form.formState.isSubmitted && !form.formState.isValid} messages={props.messages.applications} summary={errors.summary} />
       <div className="space-y-2">
         <label className="flex min-h-11 items-start gap-3 leading-7" htmlFor="accepted">
-          <input id="accepted" className="mt-1 size-5 shrink-0 accent-black" type="checkbox" aria-invalid={Boolean(acceptedError)} aria-describedby="accepted-error" {...form.register("accepted")} />
+          <input id="accepted" className="mt-1 size-5 shrink-0 accent-primary" type="checkbox" aria-invalid={Boolean(acceptedError)} aria-describedby="accepted-error" {...form.register("accepted")} />
           <span>{props.messages.applications.declarationLabel}</span>
         </label>
-        {acceptedError ? <p id="accepted-error" className="text-sm font-bold" role="alert">{acceptedError}</p> : null}
+        {acceptedError ? <p id="accepted-error" className="text-sm font-bold text-error" role="alert">{acceptedError}</p> : null}
       </div>
       <FormActions form={form} pendingAction={pendingAction} setPendingAction={setPendingAction} submit={submit} messages={props.messages.applications} />
     </form>

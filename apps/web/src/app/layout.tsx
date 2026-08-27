@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Noto_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/shared/app-shell";
@@ -9,6 +10,12 @@ import { getDictionary } from "@/i18n";
 import { getRequestLocale } from "@/i18n/locale";
 
 import "./globals.css";
+
+const notoSans = Noto_Sans({
+  subsets: ["latin", "devanagari"],
+  display: "swap",
+  variable: "--font-noto-sans",
+});
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getRequestLocale();
@@ -50,7 +57,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale}>
-      <body>
+      <body className={notoSans.variable}>
         <AppShell
           locale={locale}
           messages={messages}

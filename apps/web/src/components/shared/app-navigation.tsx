@@ -68,15 +68,15 @@ function NavigationEntry({
   );
   const login = !mobile && item.href === "/login";
   const className = cn(
-    "nav-entry group/nav inline-flex min-h-11 items-center gap-2.5 rounded-xl px-3 text-sm font-bold transition-[color,background-color,border-color] duration-200",
+    "nav-entry group/nav inline-flex min-h-11 items-center gap-2.5 rounded-control px-3 text-sm font-semibold transition-[color,background-color,border-color] duration-200",
     mobile
       ? "w-full justify-between px-4 text-foreground hover:bg-muted active:bg-secondary"
-      : "text-primary-foreground/70 hover:bg-brand-accent/10 hover:text-primary-foreground focus-visible:bg-brand-accent/10",
+      : "text-muted-foreground hover:bg-secondary hover:text-primary focus-visible:bg-secondary",
     active && (mobile
-      ? "border-l-4 border-brand-accent bg-secondary text-secondary-foreground"
-      : "bg-brand-accent/12 text-primary-foreground"),
+      ? "border-l-4 border-primary bg-secondary text-primary"
+      : "bg-secondary text-primary"),
     login
-      && "ml-1 border border-brand-accent/55 bg-brand-accent px-4 text-brand-accent-foreground! hover:bg-brand-accent/90 hover:text-brand-accent-foreground!",
+      && "ml-1 border border-primary bg-primary px-4 text-primary-foreground! shadow-subtle hover:bg-primary-hover hover:text-primary-foreground!",
   );
 
   const content = (
@@ -84,14 +84,14 @@ function NavigationEntry({
       <Icon
         className={cn(
           "nav-entry-icon size-4 shrink-0",
-          active && "text-brand-accent",
-          login && "text-brand-accent-foreground",
+          active && "text-primary",
+          login && "text-primary-foreground",
         )}
         strokeWidth={2.2}
         aria-hidden="true"
         data-testid={`nav-icon-${item.icon}`}
       />
-      <span className="nav-entry-label relative truncate">{item.label}</span>
+      <span className="nav-entry-label relative">{item.label}</span>
     </span>
   );
 
@@ -171,7 +171,7 @@ export function MobileNavigation({
         ref={menuButtonRef}
         variant="ghost"
         size="icon"
-        className="border border-primary-foreground/20 text-primary-foreground! hover:border-brand-accent/50 hover:bg-brand-accent/10 hover:text-brand-accent!"
+        className="border border-border bg-card text-foreground! hover:border-primary/45 hover:bg-secondary hover:text-primary!"
         aria-expanded={isOpen}
         aria-controls="mobile-navigation-panel"
         aria-label={isOpen ? closeMenuLabel : openMenuLabel}
@@ -183,7 +183,7 @@ export function MobileNavigation({
       {isOpen ? (
         <div
           id="mobile-navigation-panel"
-          className="absolute inset-x-0 top-full border-b border-border-strong bg-card/98 px-4 py-4 text-foreground shadow-2xl backdrop-blur-xl"
+          className="absolute inset-x-0 top-full border-b border-border bg-card/98 px-4 py-4 text-foreground shadow-elevated backdrop-blur-xl"
         >
           <nav className="mx-auto grid max-w-6xl gap-1" aria-label={mobileLabel}>
             {items.map((item) => (
@@ -197,7 +197,7 @@ export function MobileNavigation({
             ))}
             {account ? (
               <div className="mt-2 border-t border-border pt-3">
-                <p className="px-4 pb-1 text-xs font-bold text-muted-foreground">{account.label}</p>
+                <p className="px-4 pb-1 text-xs font-semibold text-muted-foreground">{account.label}</p>
                 <LogoutButton presentation={account} className="px-1" />
               </div>
             ) : null}

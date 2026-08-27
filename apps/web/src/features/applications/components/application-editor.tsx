@@ -6,27 +6,25 @@ import {
   type ApplicationSectionData,
   type ApplicationSectionKey,
 } from "@raahsathi/contracts/applications";
+import type { Appointment } from "@raahsathi/contracts/appointments";
 import type { IdentityContext } from "@raahsathi/contracts/identity";
 import type { PaymentContext } from "@raahsathi/contracts/payments";
-import type { Appointment } from "@raahsathi/contracts/appointments";
 import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 
-import { StatusBadge } from "@/components/shared/state-presentations";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ApplicationCurrentSection } from "@/features/applications/components/application-current-section";
+import { ApplicationHistory } from "@/features/applications/components/application-history";
+import { ApplicationOverview } from "@/features/applications/components/application-overview";
+import { ApplicationSectionForm, type SectionSubmitAction } from "@/features/applications/components/application-section-form";
+import { ApplicationStepper } from "@/features/applications/components/application-stepper";
 import { completeSection, getApplication, saveSection } from "@/features/applications/api";
 import { applicationBlockingReasonMessage } from "@/features/applications/status-presentation";
-import {
-  ApplicationSectionForm,
-  type SectionSubmitAction,
-} from "@/features/applications/components/application-section-form";
-import { IdentityRecoveryPanel } from "@/features/identity/components/identity-recovery-panel";
 import { AppointmentPanel } from "@/features/appointments/components/appointment-panel";
-import { WaitlistPanel } from "@/features/waitlist/components/waitlist-panel";
+import { IdentityRecoveryPanel } from "@/features/identity/components/identity-recovery-panel";
 import { PaymentPanel } from "@/features/payments/components/payment-panel";
 import { isPaymentRelevantApplicationStatus } from "@/features/payments/payment-flow";
+import { WaitlistPanel } from "@/features/waitlist/components/waitlist-panel";
 import type { Locale, MessageDictionary } from "@/i18n";
 
 type ApplicationMessages = MessageDictionary["applications"];
@@ -45,16 +43,14 @@ function formatDelhiDate(value: string, locale: Locale): string {
   });
 }
 
-function ApplicationStatusCard({
-  application,
-  locale,
-  messages,
-}: Readonly<{
-  application: ApplicationDetail;
-  locale: Locale;
-  messages: ApplicationMessages;
-}>) {
-  const statuses = {
+function serviceName(application: ApplicationDetail, messages: MessageDictionary): string {
+  return application.serviceKey === "LEARNER_LICENCE"
+    ? messages.services.learnerName
+    : messages.services.permanentName;
+}
+
+function statusLabel(application: ApplicationDetail, messages: ApplicationMessages): string {
+  const statuses: Readonly<Record<ApplicationDetail["statusCode"], string>> = {
     DRAFT: messages.statusDraft,
     IN_PROGRESS: messages.statusInProgress,
     READY_FOR_IDENTITY: messages.statusReadyForIdentity,
@@ -64,7 +60,11 @@ function ApplicationStatusCard({
     SLOT_OFFERED: messages.statusSlotOffered,
     APPOINTMENT_BOOKED: messages.statusAppointmentBooked,
   };
-  const actions = {
+  return statuses[application.statusCode];
+}
+
+function nextActionLabel(application: ApplicationDetail, messages: ApplicationMessages): string {
+  const actions: Readonly<Record<ApplicationDetail["nextActionCode"], string>> = {
     COMPLETE_PERSONAL_DETAILS: messages.nextPersonalDetails,
     COMPLETE_ADDRESS: messages.nextAddress,
     COMPLETE_SERVICE_DETAILS: messages.nextServiceDetails,
@@ -77,98 +77,10 @@ function ApplicationStatusCard({
     REVIEW_APPOINTMENT: messages.nextReviewAppointment,
     NONE: messages.nextActionNone,
   };
-  const blocking = application.blockingReasonCode
-    ? applicationBlockingReasonMessage(application.blockingReasonCode, messages)
-    : undefined;
-
-  return (
-    <Card>
-      <CardHeader>
-        <p className="text-sm font-bold uppercase tracking-widest">{messages.eyebrow}</p>
-        <h1 className="text-3xl font-black">{messages.detailTitle}</h1>
-        <p className="text-muted-foreground">{messages.detailDescription}</p>
-      </CardHeader>
-      <CardContent className="grid gap-4 sm:grid-cols-2">
-        <div>
-          <p className="text-sm text-muted-foreground">{messages.statusLabel}</p>
-          <StatusBadge tone="neutral">{statuses[application.statusCode]}</StatusBadge>
-        </div>
-        <div>
-          <p className="text-sm text-muted-foreground">{messages.updatedLabel}</p>
-          <p className="font-bold">{formatDelhiDate(application.updatedAt, locale)}</p>
-        </div>
-        <div className="sm:col-span-2">
-          <div className="mb-2 flex justify-between font-bold">
-            <span>{messages.progressLabel}</span>
-            <span>{application.progressPercent}%</span>
-          </div>
-          <Progress value={application.progressPercent} label={messages.progressLabel} />
-        </div>
-        <div className="sm:col-span-2">
-          <p className="text-sm text-muted-foreground">{messages.nextActionLabel}</p>
-          <p className="font-bold">{actions[application.nextActionCode]}</p>
-        </div>
-        {blocking ? (
-          <Alert className="sm:col-span-2">
-            <AlertTitle>{messages.blockingTitle}</AlertTitle>
-            <AlertDescription>{blocking}</AlertDescription>
-          </Alert>
-        ) : null}
-      </CardContent>
-    </Card>
-  );
+  return actions[application.nextActionCode];
 }
 
-function ApplicationSectionsCard({
-  application,
-  currentKey,
-  messages,
-  sectionNames,
-}: Readonly<{
-  application: ApplicationDetail;
-  currentKey?: ApplicationSectionKey;
-  messages: ApplicationMessages;
-  sectionNames: SectionNames;
-}>) {
-  return (
-    <Card>
-      <CardHeader><CardTitle>{messages.sectionsTitle}</CardTitle></CardHeader>
-      <CardContent>
-        <ol className="grid gap-3 sm:grid-cols-2">
-          {applicationSectionOrder.map((key) => {
-            const completed = application.sections.some(
-              (section) => section.sectionKey === key && section.completed,
-            );
-            const state = completed
-              ? messages.completedSection
-              : key === currentKey
-                ? messages.currentSection
-                : messages.upcomingSection;
-
-            return (
-              <li key={key} className="rounded-xl border p-4">
-                <p className="font-bold">{sectionNames[key]}</p>
-                <p className="text-sm text-muted-foreground">{state}</p>
-              </li>
-            );
-          })}
-        </ol>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ApplicationHistoryCard({
-  application,
-  locale,
-  messages,
-  sectionNames,
-}: Readonly<{
-  application: ApplicationDetail;
-  locale: Locale;
-  messages: ApplicationMessages;
-  sectionNames: SectionNames;
-}>) {
+function historyItems(application: ApplicationDetail, locale: Locale, messages: ApplicationMessages, sectionNames: SectionNames) {
   const historyLabels: Readonly<Record<ApplicationDetail["history"][number]["eventType"], string>> = {
     APPLICATION_CREATED: messages.historyApplicationCreated,
     SECTION_SAVED: messages.historySectionSaved,
@@ -191,27 +103,12 @@ function ApplicationHistoryCard({
     SLOT_OFFER_EXPIRED: messages.historyOfferExpired,
   };
 
-  return (
-    <Card>
-      <CardHeader><CardTitle>{messages.historyTitle}</CardTitle></CardHeader>
-      <CardContent>
-        {application.history.length ? (
-          <ol className="space-y-3">
-            {application.history.slice(-6).reverse().map((event) => (
-              <li key={event.id} className="border-l-2 pl-3 text-sm">
-                <strong>{historyLabels[event.eventType] ?? messages.historyGeneric}</strong>
-                {event.sectionKey ? ` — ${sectionNames[event.sectionKey]}` : ""}
-                <br />
-                <span className="text-muted-foreground">
-                  {formatDelhiDate(event.createdAt, locale)}
-                </span>
-              </li>
-            ))}
-          </ol>
-        ) : <p>{messages.historyEmpty}</p>}
-      </CardContent>
-    </Card>
-  );
+  return application.history.slice(-6).reverse().map((event) => ({
+    id: event.id,
+    label: historyLabels[event.eventType] ?? messages.historyGeneric,
+    sectionName: event.sectionKey ? sectionNames[event.sectionKey] : undefined,
+    timestamp: formatDelhiDate(event.createdAt, locale),
+  }));
 }
 
 export function ApplicationEditor({
@@ -243,11 +140,7 @@ export function ApplicationEditor({
     DECLARATION: applicationMessages.declaration,
   };
 
-  const persist = async (
-    data: ApplicationSectionData,
-    action: SectionSubmitAction,
-    dirty: boolean,
-  ) => {
+  const persist = async (data: ApplicationSectionData, action: SectionSubmitAction, dirty: boolean) => {
     if (!currentKey) return;
     let updated = application;
     if (dirty || !stored) {
@@ -263,69 +156,66 @@ export function ApplicationEditor({
     setNotice(action === "save" ? applicationMessages.saved : applicationMessages.completed);
   };
   const refresh = async () => setApplication(await getApplication(application.id));
+  const blocking = application.blockingReasonCode
+    ? { title: applicationMessages.blockingTitle, description: applicationBlockingReasonMessage(application.blockingReasonCode, applicationMessages) }
+    : undefined;
 
   return (
     <div className="space-y-6">
-      <ApplicationStatusCard application={application} locale={locale} messages={applicationMessages} />
-      <ApplicationSectionsCard
-        application={application}
-        currentKey={currentKey}
-        messages={applicationMessages}
-        sectionNames={sectionNames}
+      <ApplicationOverview
+        eyebrow={applicationMessages.eyebrow}
+        title={applicationMessages.detailTitle}
+        description={applicationMessages.detailDescription}
+        serviceLabel={applicationMessages.serviceLabel}
+        serviceName={serviceName(application, messages)}
+        statusLabel={applicationMessages.statusLabel}
+        status={statusLabel(application, applicationMessages)}
+        progressLabel={applicationMessages.progressLabel}
+        progress={application.progressPercent}
+        progressText={`${new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(application.progressPercent)}%`}
+        updatedLabel={applicationMessages.updatedLabel}
+        updatedValue={formatDelhiDate(application.updatedAt, locale)}
+        nextActionLabel={applicationMessages.nextActionLabel}
+        nextAction={nextActionLabel(application, applicationMessages)}
+        blocking={blocking}
+      />
+      <ApplicationStepper
+        title={applicationMessages.sectionsTitle}
+        steps={applicationSectionOrder.map((key) => {
+          const completed = application.sections.some((section) => section.sectionKey === key && section.completed);
+          const state = completed ? "completed" : key === currentKey ? "current" : "upcoming";
+          return {
+            key,
+            name: sectionNames[key],
+            state,
+            stateLabel: state === "completed" ? applicationMessages.completedSection : state === "current" ? applicationMessages.currentSection : applicationMessages.upcomingSection,
+          };
+        })}
       />
 
       {currentKey ? (
-        <Card>
-          <CardHeader><CardTitle>{sectionNames[currentKey]}</CardTitle></CardHeader>
-          <CardContent className="space-y-4">
-            {notice ? <Alert role="status"><AlertDescription>{notice}</AlertDescription></Alert> : null}
-            <ApplicationSectionForm
-              key={`${currentKey}-${stored?.revision ?? 0}`}
-              applicationId={application.id}
-              sectionKey={currentKey}
-              serviceKey={application.serviceKey}
-              initialData={stored?.data}
-              locale={locale}
-              messages={messages}
-              onPersist={persist}
-            />
-          </CardContent>
-        </Card>
+        <ApplicationCurrentSection eyebrow={applicationMessages.formTitle} title={sectionNames[currentKey]}>
+          {notice ? <Alert role="status"><AlertDescription>{notice}</AlertDescription></Alert> : null}
+          <ApplicationSectionForm
+            key={`${currentKey}-${stored?.revision ?? 0}`}
+            applicationId={application.id}
+            sectionKey={currentKey}
+            serviceKey={application.serviceKey}
+            initialData={stored?.data}
+            locale={locale}
+            messages={messages}
+            onPersist={persist}
+          />
+        </ApplicationCurrentSection>
       ) : application.statusCode === "READY_FOR_IDENTITY" ? (
-        <Alert>
-          <CheckCircle2 className="size-5" aria-hidden="true" />
-          <AlertDescription>{applicationMessages.allSectionsComplete}</AlertDescription>
-        </Alert>
+        <Alert><CheckCircle2 className="size-5" aria-hidden="true" /><AlertDescription>{applicationMessages.allSectionsComplete}</AlertDescription></Alert>
       ) : null}
 
-      {application.progressPercent === 100 ? (
-        <IdentityRecoveryPanel
-          applicationId={application.id}
-          initialContext={initialIdentity}
-          messages={messages}
-          onApplicationChanged={refresh}
-        />
-      ) : null}
-
-      {isPaymentRelevantApplicationStatus(application.statusCode) ? (
-        <PaymentPanel
-          initialContext={initialPayment}
-          locale={locale}
-          messages={messages.payments}
-          onApplicationChanged={refresh}
-        />
-      ) : null}
-
+      {application.progressPercent === 100 ? <IdentityRecoveryPanel applicationId={application.id} initialContext={initialIdentity} messages={messages} onApplicationChanged={refresh} /> : null}
+      {isPaymentRelevantApplicationStatus(application.statusCode) ? <PaymentPanel initialContext={initialPayment} locale={locale} messages={messages.payments} onApplicationChanged={refresh} /> : null}
       <AppointmentPanel application={application} initialAppointment={initialAppointment} locale={locale} messages={messages.appointments} onApplicationChanged={refresh} />
-
       <WaitlistPanel application={application} locale={locale} messages={messages} onApplicationChanged={refresh} />
-
-      <ApplicationHistoryCard
-        application={application}
-        locale={locale}
-        messages={applicationMessages}
-        sectionNames={sectionNames}
-      />
+      <ApplicationHistory title={applicationMessages.historyTitle} emptyLabel={applicationMessages.historyEmpty} items={historyItems(application, locale, applicationMessages, sectionNames)} />
     </div>
   );
 }

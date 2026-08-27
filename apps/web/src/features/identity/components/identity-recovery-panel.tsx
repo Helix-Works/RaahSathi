@@ -1,18 +1,16 @@
 "use client";
 
 import type { IdentityContext, IdentityOutcome } from "@raahsathi/contracts/identity";
-import { FileCheck2, LoaderCircle, RefreshCw, ShieldCheck } from "lucide-react";
+import { LoaderCircle, RefreshCw, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 
-import { StatusBadge } from "@/components/shared/state-presentations";
+import { JourneyStageHeader, StageActionPanel } from "@/components/shared/journey-stage";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent } from "@/components/ui/card";
 import { retryIdentity, startIdentity } from "@/features/identity/api";
+import { IdentityOutcomeView, SyntheticDocumentMetadata } from "@/features/identity/components/identity-stage-views";
 import type { MessageDictionary } from "@/i18n";
-
-function outcomeTone(outcome: IdentityOutcome): "success" | "warning" | "neutral" {
-  return outcome === "VERIFIED" ? "success" : outcome === "USER_MISMATCH" ? "neutral" : "warning";
-}
 
 export function IdentityRecoveryPanel({ applicationId, initialContext, messages: dictionary, onApplicationChanged }: Readonly<{
   applicationId: string;
@@ -66,40 +64,35 @@ export function IdentityRecoveryPanel({ applicationId, initialContext, messages:
 
   return (
     <Card>
-      <CardHeader className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-2xl font-black">{messages.title}</h2>
-          {context.attempt ? <StatusBadge tone={outcomeTone(context.attempt.outcome)}>{outcomeLabels[context.attempt.outcome]}</StatusBadge> : null}
-        </div>
-        <p className="leading-7 text-muted-foreground">{messages.description}</p>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {context.attempt ? <p role="status" className="rounded-xl border bg-muted/40 p-4 font-semibold">{outcomes[context.attempt.outcome]}</p> : null}
-        {failure ? <p role="alert" className="rounded-xl border border-destructive/40 p-4 text-sm font-semibold text-destructive">{failure === "refresh" ? messages.refreshError : messages.genericError}</p> : null}
-        {context.documents.length > 0 ? (
-          <section className="space-y-3" aria-labelledby="synthetic-documents-title">
-            <h3 id="synthetic-documents-title" className="font-black">{messages.documents}</h3>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {context.documents.map((document) => (
-                <div key={document.id} className="rounded-xl border p-4">
-                  <FileCheck2 className="mb-3 size-5 text-primary" aria-hidden="true" />
-                  <p className="font-bold">{document.kind === "SYNTHETIC_IDENTITY_PROOF" ? messages.identityProof : messages.addressProof}</p>
-                  <p className="mt-1 break-all text-sm text-muted-foreground">{messages.reference}: {document.syntheticReference}</p>
-                </div>
-              ))}
-            </div>
-          </section>
-        ) : null}
+      <JourneyStageHeader
+        title={messages.title}
+        description={messages.description}
+        icon={ShieldCheck}
+        status={context.attempt ? {
+          label: outcomeLabels[context.attempt.outcome],
+          tone: context.attempt.outcome === "VERIFIED" ? "success" : context.attempt.outcome === "USER_MISMATCH" ? "neutral" : "warning",
+        } : undefined}
+      />
+      <CardContent className="space-y-5 pt-5 sm:pt-6">
+        {context.attempt ? <IdentityOutcomeView outcome={context.attempt.outcome} label={outcomeLabels[context.attempt.outcome]} description={outcomes[context.attempt.outcome]} /> : null}
+        {failure ? <Alert variant="error" role="alert"><AlertDescription>{failure === "refresh" ? messages.refreshError : messages.genericError}</AlertDescription></Alert> : null}
+        <SyntheticDocumentMetadata
+          documents={context.documents}
+          title={messages.documents}
+          identityProofLabel={messages.identityProof}
+          addressProofLabel={messages.addressProof}
+          referenceLabel={messages.reference}
+        />
         {!context.attempt ? (
-          <Button type="button" disabled={pending} onClick={() => run("start")}>
+          <StageActionPanel><Button type="button" disabled={pending} aria-busy={pending} onClick={() => run("start")}>
             {pending ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <ShieldCheck className="size-4" aria-hidden="true" />}
             {pending ? messages.pending : messages.start}
-          </Button>
+          </Button></StageActionPanel>
         ) : context.attempt.retryable ? (
-          <Button type="button" disabled={pending} onClick={() => run("retry")}>
+          <StageActionPanel><Button type="button" disabled={pending} aria-busy={pending} onClick={() => run("retry")}>
             {pending ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : <RefreshCw className="size-4" aria-hidden="true" />}
             {pending ? messages.pending : messages.retry}
-          </Button>
+          </Button></StageActionPanel>
         ) : null}
       </CardContent>
     </Card>
