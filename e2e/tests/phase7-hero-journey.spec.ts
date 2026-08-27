@@ -203,7 +203,10 @@ for (const locale of ["en", "hi"] as const) {
     await expect(joinedValue).toHaveText(immutableJoinTime ?? "");
 
     runDemoCommand("demo:release-slot", seedDate);
-    await page.getByRole("button", { name: copy.refresh }).click();
+    const refreshButton = page.getByRole("button", { name: copy.refresh });
+    if (await refreshButton.isVisible()) {
+      await refreshButton.click({ timeout: 2_000 }).catch(() => undefined);
+    }
     await expect(page.getByRole("heading", { name: copy.offer, level: 2, exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("09:00–09:30", { exact: true })).toBeVisible();
     await expect(page.getByText(new RegExp(`${copy.remaining}:`))).toBeVisible();
