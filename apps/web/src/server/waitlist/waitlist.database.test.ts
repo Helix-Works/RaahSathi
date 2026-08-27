@@ -7,7 +7,17 @@ import { isDisposableDatabaseApproved } from "@/server/auth/database-test-safety
 import { bookAppointment } from "@/server/appointments/appointment-service";
 import { createDatabaseTestClient } from "@/server/database/database-test-client";
 
-import { acceptOffer, allocateSlot, declineOffer, leaveWaitlist, listWaitlistEntries } from "./waitlist-service";
+import {
+  acceptOffer,
+  allocateSlot,
+  declineOffer,
+  getWaitlistEntry,
+  joinWaitlist,
+  leaveWaitlist,
+  listWaitlistEntries,
+  processWaitlistState,
+  updateWaitlistEntry,
+} from "./waitlist-service";
 
 const testUrl = process.env.TEST_DATABASE_URL;
 const approved = isDisposableDatabaseApproved({
@@ -23,6 +33,10 @@ const applicantIds: string[] = [];
 const rtoIds: string[] = [];
 const testDate = new Date("2026-09-10T00:00:00.000Z");
 const releasedAt = new Date("2026-08-25T00:00:00.000Z");
+
+function dateKey(value: Date): string {
+  return value.toISOString().slice(0, 10);
+}
 
 async function createApplication(
   status: ApplicationStatus,
@@ -173,30 +187,41 @@ describe.skipIf(!database)("Phase 6 disposable PostgreSQL waitlist invariants", 
     }
   });
 
-  it("expires only the requesting applicant's offers and never releases a hold twice", async () => {
+  it("keeps list/detail reads pure and explicitly expires and reallocates exactly once", async () => {
     if (!database) return;
     const now = new Date("2026-08-26T12:00:00.000Z");
     const rto = await createRto();
-    const first = await createApplication("APPOINTMENT_BOOKED");
-    const second = await createApplication("SLOT_OFFERED");
+    const first = await createApplication("SLOT_OFFERED");
+    const second = await createApplication("WAITLISTED");
+    const third = await createApplication("WAITLISTED");
     const firstSlot = await createSlot(rto.id, { heldCount: 1 });
-    const secondSlot = await createSlot(rto.id, { heldCount: 1, startTime: "14:00" });
     const firstEntry = await createEntry(first, rto.id, { status: "OFFERED" });
-    const secondEntry = await createEntry(second, rto.id, { status: "OFFERED", timeBuckets: ["AFTERNOON"] });
+    const secondEntry = await createEntry(second, rto.id, { joinedAt: new Date("2026-08-26T09:00:00.000Z") });
+    const thirdEntry = await createEntry(third, rto.id, { joinedAt: new Date("2026-08-26T10:00:00.000Z") });
     const firstOffer = await createActiveOffer(firstEntry.id, firstSlot.id, new Date("2026-08-26T11:00:00.000Z"));
-    const secondOffer = await createActiveOffer(secondEntry.id, secondSlot.id, new Date("2026-08-26T11:00:00.000Z"));
+    const eventCount = await database.applicationEvent.count({ where: { applicationId: first.applicationId } });
+    const auditCount = await database.auditEvent.count({ where: { actorApplicantId: first.applicantId } });
 
-    await listWaitlistEntries(first.context, { now, correlationId: "phase6-scoped-expiry" }, database);
+    await listWaitlistEntries(first.context, { applicationId: first.applicationId }, database);
+    await getWaitlistEntry(first.context, firstEntry.id, database);
+    expect(await database.slotOffer.findUniqueOrThrow({ where: { id: firstOffer.id } })).toMatchObject({ status: "ACTIVE" });
+    expect((await database.appointmentSlot.findUniqueOrThrow({ where: { id: firstSlot.id } })).heldCount).toBe(1);
+    expect(await database.applicationEvent.count({ where: { applicationId: first.applicationId } })).toBe(eventCount);
+    expect(await database.auditEvent.count({ where: { actorApplicantId: first.applicantId } })).toBe(auditCount);
+
+    await Promise.all([
+      processWaitlistState(first.context, { applicationId: first.applicationId, now, correlationId: "phase6-process-a" }, database),
+      processWaitlistState(first.context, { applicationId: first.applicationId, now, correlationId: "phase6-process-b" }, database),
+    ]);
     expect(await database.slotOffer.findUniqueOrThrow({ where: { id: firstOffer.id } })).toMatchObject({ status: "EXPIRED" });
-    expect(await database.slotOffer.findUniqueOrThrow({ where: { id: secondOffer.id } })).toMatchObject({ status: "ACTIVE" });
-    expect((await database.appointmentSlot.findUniqueOrThrow({ where: { id: firstSlot.id } })).heldCount).toBe(0);
-    expect((await database.appointmentSlot.findUniqueOrThrow({ where: { id: secondSlot.id } })).heldCount).toBe(1);
-    expect((await database.application.findUniqueOrThrow({ where: { id: first.applicationId } })).status).toBe("APPOINTMENT_BOOKED");
-    expect(await database.slotOffer.count({ where: { waitlistEntryId: firstEntry.id, slotId: firstSlot.id } })).toBe(1);
-
-    await listWaitlistEntries(first.context, { now: new Date(now.getTime() + 1_000), correlationId: "phase6-repeat-expiry" }, database);
-    expect((await database.appointmentSlot.findUniqueOrThrow({ where: { id: firstSlot.id } })).heldCount).toBe(0);
+    expect((await database.application.findUniqueOrThrow({ where: { id: first.applicationId } })).status).toBe("WAITLISTED");
+    expect((await database.waitlistEntry.findUniqueOrThrow({ where: { id: firstEntry.id } })).status).toBe("ACTIVE");
     expect(await database.applicationEvent.count({ where: { applicationId: first.applicationId, eventType: "SLOT_OFFER_EXPIRED" } })).toBe(1);
+    expect(await database.slotOffer.count({ where: { waitlistEntryId: secondEntry.id, slotId: firstSlot.id, status: "ACTIVE" } })).toBe(1);
+    expect(await database.slotOffer.count({ where: { waitlistEntryId: thirdEntry.id, slotId: firstSlot.id, status: "ACTIVE" } })).toBe(0);
+    expect((await database.appointmentSlot.findUniqueOrThrow({ where: { id: firstSlot.id } })).heldCount).toBe(1);
+    expect((await database.appointmentSlot.findUniqueOrThrow({ where: { id: firstSlot.id } })).bookedCount +
+      (await database.appointmentSlot.findUniqueOrThrow({ where: { id: firstSlot.id } })).heldCount).toBeLessThanOrEqual(1);
   });
 
   it("decline and leave release holds once without regressing booked applications", async () => {
@@ -314,6 +339,170 @@ describe.skipIf(!database)("Phase 6 disposable PostgreSQL waitlist invariants", 
     expect((await database.slotOffer.findUniqueOrThrow({ where: { id: offer.id } })).status).toBe("EXPIRED");
     expect((await database.appointmentSlot.findUniqueOrThrow({ where: { id: slot.id } })).heldCount).toBe(0);
     expect(await database.appointment.count({ where: { applicationId: application.applicationId } })).toBe(0);
+  });
+
+  it("serializes waitlist join against direct booking on the application row", async () => {
+    if (!database) return;
+    const now = new Date("2026-08-26T12:00:00.000Z");
+    const rto = await createRto();
+    const application = await createApplication("READY_FOR_APPOINTMENT", { paid: true });
+    const directSlot = await createSlot(rto.id);
+    const request = {
+      applicationId: application.applicationId,
+      rtoId: rto.id,
+      acceptableDateFrom: dateKey(testDate),
+      acceptableDateTo: dateKey(testDate),
+      timeBuckets: ["AFTERNOON" as const],
+      vehicleClass: "LMV" as const,
+      now,
+      correlationId: "phase6-join-book-race",
+    };
+
+    const [joinResult, bookingResult] = await Promise.allSettled([
+      joinWaitlist(application.context, request, database),
+      bookAppointment(application.context, {
+        applicationId: application.applicationId,
+        slotId: directSlot.id,
+        now,
+        correlationId: "phase6-book-join-race",
+      }, database),
+    ]);
+
+    expect(bookingResult.status).toBe("fulfilled");
+    expect(["fulfilled", "rejected"]).toContain(joinResult.status);
+    expect(await database.appointment.count({ where: { applicationId: application.applicationId, status: "CONFIRMED" } })).toBe(1);
+    expect(await database.waitlistEntry.count({
+      where: { applicationId: application.applicationId, status: { in: ["ACTIVE", "OFFERED"] } },
+    })).toBe(0);
+    expect((await database.application.findUniqueOrThrow({ where: { id: application.applicationId } })).status).toBe("APPOINTMENT_BOOKED");
+
+    const bookingFirst = await createApplication("READY_FOR_APPOINTMENT", { paid: true });
+    const bookingFirstSlot = await createSlot(rto.id, { startTime: "10:00" });
+    await bookAppointment(bookingFirst.context, {
+      applicationId: bookingFirst.applicationId,
+      slotId: bookingFirstSlot.id,
+      now,
+      correlationId: "phase6-booking-first",
+    }, database);
+    await expect(joinWaitlist(bookingFirst.context, {
+      ...request,
+      applicationId: bookingFirst.applicationId,
+      correlationId: "phase6-join-after-booking",
+    }, database)).rejects.toThrowError(/WAITLIST_NOT_ELIGIBLE/);
+    expect(await database.waitlistEntry.count({ where: { applicationId: bookingFirst.applicationId } })).toBe(0);
+
+    const joiningFirst = await createApplication("READY_FOR_APPOINTMENT", { paid: true });
+    const joiningFirstSlot = await createSlot(rto.id, { startTime: "11:00" });
+    const joined = await joinWaitlist(joiningFirst.context, {
+      ...request,
+      applicationId: joiningFirst.applicationId,
+      correlationId: "phase6-joining-first",
+    }, database);
+    await bookAppointment(joiningFirst.context, {
+      applicationId: joiningFirst.applicationId,
+      slotId: joiningFirstSlot.id,
+      now,
+      correlationId: "phase6-book-after-joining",
+    }, database);
+    expect((await database.waitlistEntry.findUniqueOrThrow({ where: { id: joined.id } })).status).toBe("FULFILLED");
+    expect((await database.application.findUniqueOrThrow({ where: { id: joiningFirst.applicationId } })).status).toBe("APPOINTMENT_BOOKED");
+  });
+
+  it("converges equivalent concurrent joins on one durable FIFO membership", async () => {
+    if (!database) return;
+    const now = new Date("2026-08-26T12:00:00.000Z");
+    const rto = await createRto();
+    const application = await createApplication("READY_FOR_APPOINTMENT", { paid: true });
+    const request = {
+      applicationId: application.applicationId,
+      rtoId: rto.id,
+      acceptableDateFrom: dateKey(testDate),
+      acceptableDateTo: dateKey(testDate),
+      timeBuckets: ["MORNING" as const],
+      vehicleClass: "LMV" as const,
+      now,
+      correlationId: "phase6-duplicate-join",
+    };
+
+    const [first, second] = await Promise.all([
+      joinWaitlist(application.context, request, database),
+      joinWaitlist(application.context, request, database),
+    ]);
+
+    expect(second.id).toBe(first.id);
+    expect(first.joinedAt).toBe(now.toISOString());
+    expect(await database.waitlistEntry.count({
+      where: { applicationId: application.applicationId, status: { in: ["ACTIVE", "OFFERED"] } },
+    })).toBe(1);
+    expect(await database.applicationEvent.count({
+      where: { applicationId: application.applicationId, eventType: "WAITLIST_JOINED" },
+    })).toBe(1);
+  });
+
+  it("does not let a preference update overwrite a concurrently allocated offer", async () => {
+    if (!database) return;
+    const now = new Date("2026-08-26T12:00:00.000Z");
+    const rto = await createRto();
+    const application = await createApplication("WAITLISTED");
+    const slot = await createSlot(rto.id);
+    const joinedAt = new Date("2026-08-26T09:00:00.000Z");
+    const entry = await createEntry(application, rto.id, { joinedAt });
+
+    const [updateResult] = await Promise.allSettled([
+      updateWaitlistEntry(application.context, entry.id, {
+        rtoId: rto.id,
+        acceptableDateFrom: dateKey(testDate),
+        acceptableDateTo: dateKey(testDate),
+        timeBuckets: ["AFTERNOON"],
+        vehicleClass: "LMV",
+        now,
+        correlationId: "phase6-update-allocation-race",
+      }, database),
+      allocateSlot(slot.id, { now, correlationId: "phase6-allocation-update-race" }, database),
+    ]);
+
+    const persisted = await database.waitlistEntry.findUniqueOrThrow({ where: { id: entry.id } });
+    const activeOffer = await database.slotOffer.findFirst({ where: { waitlistEntryId: entry.id, status: "ACTIVE" } });
+    expect(persisted.joinedAt).toEqual(joinedAt);
+    if (activeOffer) {
+      expect(updateResult.status).toBe("rejected");
+      expect(persisted.status).toBe("OFFERED");
+      expect(persisted.timeBuckets).toEqual(["MORNING"]);
+    } else {
+      expect(updateResult.status).toBe("fulfilled");
+      expect(persisted.status).toBe("ACTIVE");
+      expect(persisted.timeBuckets).toEqual(["AFTERNOON"]);
+    }
+  });
+
+  it("returns RESOURCE_NOT_FOUND for an unknown RTO in join and update mutations", async () => {
+    if (!database) return;
+    const now = new Date("2026-08-26T12:00:00.000Z");
+    const unknownRtoId = randomUUID();
+    const joining = await createApplication("READY_FOR_APPOINTMENT", { paid: true });
+    await expect(joinWaitlist(joining.context, {
+      applicationId: joining.applicationId,
+      rtoId: unknownRtoId,
+      acceptableDateFrom: dateKey(testDate),
+      acceptableDateTo: dateKey(testDate),
+      timeBuckets: ["MORNING"],
+      vehicleClass: "LMV",
+      now,
+      correlationId: "phase6-missing-rto-join",
+    }, database)).rejects.toThrowError(/RESOURCE_NOT_FOUND/);
+
+    const rto = await createRto();
+    const updating = await createApplication("WAITLISTED");
+    const entry = await createEntry(updating, rto.id);
+    await expect(updateWaitlistEntry(updating.context, entry.id, {
+      rtoId: unknownRtoId,
+      acceptableDateFrom: dateKey(testDate),
+      acceptableDateTo: dateKey(testDate),
+      timeBuckets: ["MORNING"],
+      vehicleClass: "LMV",
+      now,
+      correlationId: "phase6-missing-rto-update",
+    }, database)).rejects.toThrowError(/RESOURCE_NOT_FOUND/);
   });
 
   it("allocates concurrently by compatibility, join time, and UUID without exceeding capacity", async () => {

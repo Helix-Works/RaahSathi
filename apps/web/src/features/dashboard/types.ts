@@ -13,14 +13,22 @@ export type DashboardApplicationSummary = Readonly<{
 
 export type DashboardAppointmentSummary = Readonly<{
   id: string;
-  rtoCode: string;
-  startsAt: string;
+  rto: Readonly<{ nameEn: string; nameHi: string }>;
+  date: string;
+  startTime: string;
+  endTime: string;
 }>;
 
 export type DashboardOfferSummary = Readonly<{
   id: string;
-  rtoCode: string;
+  rto: Readonly<{ nameEn: string; nameHi: string }>;
   expiresAt: string;
+}>;
+
+export type DashboardWaitlistSummary = Readonly<{
+  id: string;
+  rto: Readonly<{ nameEn: string; nameHi: string }>;
+  joinedAt: string;
 }>;
 
 export type DashboardLicenceSummary = Readonly<{
@@ -32,5 +40,6 @@ export type DashboardSummary = Readonly<{
   application?: DashboardApplicationSummary;
   appointment?: DashboardAppointmentSummary;
   offer?: DashboardOfferSummary;
+  waitlist?: DashboardWaitlistSummary;
   licence?: DashboardLicenceSummary;
 }>;

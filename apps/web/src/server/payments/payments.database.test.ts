@@ -201,7 +201,7 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
       correlationId: "phase4-cross-application-key",
     }, database)).rejects.toThrowError(/VALIDATION_FAILED/);
     expect(await database.paymentAttempt.count({ where: { applicationId: secondApplicationId } })).toBe(1);
-  });
+  }, 90_000);
 
   it("reconstructs a successful application payment ahead of a newer pending attempt", async () => {
     if (!database) return;

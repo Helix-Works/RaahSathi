@@ -18,7 +18,7 @@ async function entryId(context: Context): Promise<string> {
 export async function GET(request: Request, context: Context): Promise<Response> {
   return handleApiRequest(request, async ({ correlationId }) => {
     const auth = await requireAuthenticatedSession(request, correlationId);
-    const response = Response.json(waitlistEntrySchema.parse(await getWaitlistEntry(auth, await entryId(context), { correlationId })));
+    const response = Response.json(waitlistEntrySchema.parse(await getWaitlistEntry(auth, await entryId(context))));
     response.headers.set("cache-control", "no-store"); return response;
   });
 }

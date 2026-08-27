@@ -56,6 +56,8 @@ Phase 3 adds synthetic document metadata, persisted identity outcomes, safe retr
 
 Phase 4 adds server-calculated synthetic fee snapshots, idempotent payment attempts, signed simulated-provider events, browser-independent delayed convergence, duplicate-event safety, and bilingual payment/recovery presentation. No real payment network or financial data is used.
 
+After the Phase 5/6 migrations, `pnpm --filter @raahsathi/web prisma:seed:phase6-demo` creates the deterministic appointment/waitlist demo accounts. Re-running that command is the supported repair path for the seed-owned Phase 6 fixtures: it preserves durable journey progress and reconciles only the three legacy malformed payment references after exact applicant, application, fee, payment, event, RTO, and slot identity checks. It fails closed if any deterministic identifier contains unexpected data.
+
 ## Quality checks
 
 ```bash

@@ -22,6 +22,7 @@ export const waitlistPreferencesSchema = z.object(waitlistPreferenceFields).stri
 export const joinWaitlistRequestSchema = z.object({
   applicationId: z.uuid(), ...waitlistPreferenceFields,
 }).strict().refine(orderedDateRange, dateRangeIssue);
+export const processWaitlistRequestSchema = z.object({ applicationId: z.uuid() }).strict();
 export const updateWaitlistRequestSchema = waitlistPreferencesSchema;
 
 export const slotOfferSchema = z.object({
@@ -40,4 +41,5 @@ export const waitlistListSchema = z.object({ entries: z.array(waitlistEntrySchem
 export type WaitlistTimeBucket = z.infer<typeof waitlistTimeBucketSchema>;
 export type WaitlistPreferences = z.infer<typeof waitlistPreferencesSchema>;
 export type JoinWaitlistRequest = z.infer<typeof joinWaitlistRequestSchema>;
+export type ProcessWaitlistRequest = z.infer<typeof processWaitlistRequestSchema>;
 export type WaitlistEntry = z.infer<typeof waitlistEntrySchema>;

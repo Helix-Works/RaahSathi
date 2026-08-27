@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { resolveNextActionCard } from "@/features/dashboard/dashboard-presentation";
+import { formatAppointmentDate } from "@/features/appointments/appointment-date";
 import type { DashboardSummary } from "@/features/dashboard/types";
 import type { Locale, MessageDictionary } from "@/i18n";
 
@@ -66,6 +67,7 @@ function nextActionPresentation(
     return messages.nextActionReviewOffer;
   }
   if (code === "REVIEW_WAITLIST") return messages.nextActionReviewWaitlist;
+  if (code === "REVIEW_APPOINTMENT") return messages.nextActionReviewAppointment;
 
   if (code === "NONE") {
     return messages.nextActionNone;
@@ -84,6 +86,7 @@ function blockingReasonPresentation(
   messages: MessageDictionary["dashboard"],
 ): string {
   if (code === "NO_SUITABLE_SLOT") return messages.blockingNoSuitableSlot;
+  if (code === "WAITLIST_OFFER_PENDING") return messages.blockingWaitlistOfferPending;
   if (code === "IDENTITY_VERIFICATION_REQUIRED") return messages.blockingIdentityRequired;
   if (code === "PAYMENT_REQUIRED") return messages.blockingPaymentRequired;
   return messages.blockingUnknown;
@@ -136,6 +139,8 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
         defaultDescription: dashboard.nextActionDescription,
         readyForAppointmentDescription: dashboard.nextActionUnavailableDescription,
         appointmentBookedDescription: dashboard.nextActionBookedDescription,
+        waitlistedDescription: dashboard.nextActionWaitlistedDescription,
+        slotOfferedDescription: dashboard.nextActionOfferDescription,
         noActionDescription: dashboard.nextActionNoneDescription,
         continueLabel: messages.common.continue,
       })
@@ -228,12 +233,29 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
         </section>
       )}
 
-      {summary.offer || summary.appointment || summary.licence ? (
+      {summary.waitlist || summary.offer || summary.appointment || summary.licence ? (
         <section className="space-y-5 pt-2" aria-labelledby="support-summary-title">
           <h2 id="support-summary-title" className="text-2xl font-black tracking-[-0.025em]">
             {dashboard.supportTitle}
           </h2>
           <div className="border-t border-border-strong">
+            {summary.waitlist ? (
+              <article className="grid gap-4 border-b border-border-strong py-5 md:grid-cols-[3rem_0.65fr_1.35fr] md:items-center">
+                <span className="grid size-11 place-items-center border border-foreground bg-card">
+                  <Clock3 className="size-5" aria-hidden="true" />
+                </span>
+                <div className="space-y-2">
+                  <StatusBadge tone="warning">{dashboard.waitlistStatus}</StatusBadge>
+                  <h3 className="text-xl font-extrabold">{dashboard.waitlistTitle}</h3>
+                </div>
+                <p className="leading-6 text-muted-foreground">
+                  {replaceDashboardTokens(dashboard.waitlistDescription, {
+                    rto: locale === "hi" ? summary.waitlist.rto.nameHi : summary.waitlist.rto.nameEn,
+                    time: formatDateTime(summary.waitlist.joinedAt, locale, messages.status.unavailable),
+                  })}
+                </p>
+              </article>
+            ) : null}
             {summary.offer ? (
               <article className="grid gap-4 border-b border-border-strong py-5 md:grid-cols-[3rem_0.65fr_1.35fr] md:items-center">
                   <span className="grid size-11 place-items-center border border-foreground bg-card">
@@ -245,11 +267,7 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                   </div>
                   <p className="leading-6 text-muted-foreground">
                       {replaceDashboardTokens(dashboard.offerDescription, {
-                        rto: localizedCodeLabel(
-                          dashboard.rtoNames,
-                          summary.offer.rtoCode,
-                          messages.status.unavailable,
-                        ),
+                        rto: locale === "hi" ? summary.offer.rto.nameHi : summary.offer.rto.nameEn,
                         time: formatDateTime(
                           summary.offer.expiresAt,
                           locale,
@@ -271,16 +289,10 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                   </div>
                   <p className="leading-6 text-muted-foreground">
                       {replaceDashboardTokens(dashboard.appointmentDescription, {
-                        rto: localizedCodeLabel(
-                          dashboard.rtoNames,
-                          summary.appointment.rtoCode,
-                          messages.status.unavailable,
-                        ),
-                        time: formatDateTime(
-                          summary.appointment.startsAt,
-                          locale,
-                          messages.status.unavailable,
-                        ),
+                        rto: locale === "hi"
+                          ? summary.appointment.rto.nameHi
+                          : summary.appointment.rto.nameEn,
+                        time: `${formatAppointmentDate(summary.appointment.date, locale)}, ${summary.appointment.startTime}–${summary.appointment.endTime}`,
                       })}
                   </p>
               </article>

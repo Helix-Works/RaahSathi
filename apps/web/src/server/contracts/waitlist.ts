@@ -1,5 +1,11 @@
 import { appointmentSchema } from "@raahsathi/contracts/appointments";
-import { joinWaitlistRequestSchema, updateWaitlistRequestSchema, waitlistEntrySchema, waitlistListSchema } from "@raahsathi/contracts/waitlist";
+import {
+  joinWaitlistRequestSchema,
+  processWaitlistRequestSchema,
+  updateWaitlistRequestSchema,
+  waitlistEntrySchema,
+  waitlistListSchema,
+} from "@raahsathi/contracts/waitlist";
 import { z } from "zod";
 
 import type { EndpointContract } from "./endpoint";
@@ -13,6 +19,11 @@ const mutationErrors = [
   { status: 409, description: "Waitlist or offer state conflict." }, { status: 429, description: "Mutation rate limit reached." },
   { status: 500, description: "Sanitized server error." },
 ] as const;
+const jsonMutationErrors = [
+  ...mutationErrors,
+  { status: 413, description: "JSON request body exceeds the allowed size." },
+  { status: 415, description: "JSON request body content type is unsupported." },
+] as const;
 const readErrors = [{ status: 401, description: "Authentication required." }, { status: 404, description: "Owner-scoped resource not found." },
   { status: 500, description: "Sanitized server error." }] as const;
 const listReadErrors = [{ status: 400, description: "Query validation failed." },
@@ -22,7 +33,11 @@ export const waitlistEndpointContracts: readonly EndpointContract[] = [
   { method: "post", path: "/api/v1/waitlist", operationId: "joinWaitlist", summary: "Join the compatible strict-FIFO waitlist",
     request: { schemaName: "JoinWaitlistRequest", schema: joinWaitlistRequestSchema },
     success: { status: 201, description: "Persisted waitlist entry.", schemaName: "WaitlistEntry", schema: waitlistEntrySchema, headers },
-    errors: mutationErrors, security: ["cookieAuth"] },
+    errors: jsonMutationErrors, security: ["cookieAuth"] },
+  { method: "post", path: "/api/v1/waitlist/process", operationId: "processWaitlistState", summary: "Expire and allocate waitlist state for one owned application",
+    request: { schemaName: "ProcessWaitlistRequest", schema: processWaitlistRequestSchema },
+    success: { status: 204, description: "Waitlist state processed.", headers },
+    errors: jsonMutationErrors, security: ["cookieAuth"] },
   { method: "get", path: "/api/v1/waitlist", operationId: "listWaitlist", summary: "List the current applicant's waitlist entries",
     queryParameters: [{ name: "applicationId", description: "Optional application UUID filter.", required: false, schema: z.uuid() }],
     success: { status: 200, description: "Owner-scoped waitlist entries.", schemaName: "WaitlistList", schema: waitlistListSchema, headers },
@@ -31,7 +46,7 @@ export const waitlistEndpointContracts: readonly EndpointContract[] = [
     success: { status: 200, description: "Waitlist entry and latest offer.", schemaName: "WaitlistEntry", schema: waitlistEntrySchema, headers }, errors: readErrors, security: ["cookieAuth"] },
   { method: "patch", path: "/api/v1/waitlist/{id}", operationId: "updateWaitlist", summary: "Update preferences without changing FIFO join time", pathParameters: [id],
     request: { schemaName: "UpdateWaitlistRequest", schema: updateWaitlistRequestSchema },
-    success: { status: 200, description: "Updated waitlist entry.", schemaName: "WaitlistEntry", schema: waitlistEntrySchema, headers }, errors: mutationErrors, security: ["cookieAuth"] },
+    success: { status: 200, description: "Updated waitlist entry.", schemaName: "WaitlistEntry", schema: waitlistEntrySchema, headers }, errors: jsonMutationErrors, security: ["cookieAuth"] },
   { method: "delete", path: "/api/v1/waitlist/{id}", operationId: "leaveWaitlist", summary: "Leave the waitlist and release any active hold", pathParameters: [id],
     success: { status: 204, description: "Waitlist entry left.", headers }, errors: mutationErrors, security: ["cookieAuth"] },
   { method: "post", path: "/api/v1/offers/{id}/accept", operationId: "acceptSlotOffer", summary: "Accept an unexpired held slot", pathParameters: [id],

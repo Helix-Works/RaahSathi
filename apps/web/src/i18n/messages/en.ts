@@ -242,7 +242,7 @@ export const enMessages = {
     timeout: "Timed out",
     providerUnavailable: "Provider unavailable",
     retryRequired: "Retry required",
-    verifiedDescription: "Identity is verified. The application is ready for synthetic fee payment.",
+    verifiedDescription: "Identity is verified. Continue with the backend-provided next action shown above.",
     otpInvalidDescription: "The simulated provider rejected the OTP. Retry without re-entering application details.",
     userMismatchDescription: "The synthetic identity does not match this application. Automatic retry is not allowed.",
     timeoutDescription: "The simulated provider timed out. Your application progress is safe and this attempt can be retried.",
@@ -323,7 +323,7 @@ export const enMessages = {
     notStarted: "No payment attempt has started. Review the server-provided fee before continuing.",
     reference: "Synthetic payment reference",
     attempt: "Payment attempt",
-    readyForAppointment: "Payment is complete. Appointment selection is the next backend-approved step and will be available in Phase 5.",
+    readyForAppointment: "Payment is complete. Choose a synthetic Delhi RTO, date, and available appointment time.",
     updateError:
       "Payment status could not be updated. Your application and fee snapshot remain safe.",
     applicationRefreshError: "The payment response was saved, but the application summary could not refresh. Reload to see the latest authoritative status and history.",
@@ -373,6 +373,20 @@ export const enMessages = {
     },
   },
   waitlist: {
+    title: "Join the appointment waitlist",
+    description: "Direct booking remains available whenever a suitable slot is released. Join only if the available dates or times do not work for you.",
+    join: "Join waitlist", joining: "Joining waitlist…", waiting: "Waiting for a suitable appointment slot",
+    fifo: "When a compatible slot is released, offers are made in first-joined order.",
+    rto: "Preferred RTO", dateFrom: "Earliest acceptable date", dateTo: "Latest acceptable date",
+    buckets: "Acceptable time of day", morning: "Morning", afternoon: "Afternoon", vehicleClass: "Vehicle class",
+    update: "Update preferences", updating: "Updating preferences…", leave: "Leave waitlist", leaving: "Leaving waitlist…",
+    joined: "Joined", refresh: "Refresh waitlist status", processing: "Checking authoritative waitlist status…",
+    offerTitle: "Temporary appointment offer", offerDescription: "This slot is held temporarily by the service. Accept before it expires.",
+    expires: "Offer expires", remaining: "Time remaining", accept: "Accept offer", accepting: "Accepting offer…",
+    decline: "Decline offer", declining: "Declining offer…", offerExpired: "The offer time has passed. Checking the latest server state…",
+    leaveTitle: "Leave this waitlist?", leaveDescription: "You will stop being considered for matching slots. Your application will return to the appointment step if the service permits it.",
+    declineTitle: "Decline this offer?", declineDescription: "The held slot will be released. You may remain on the waitlist if the service allows it.",
+    confirmLeave: "Leave waitlist", confirmDecline: "Decline offer", keep: "Keep current status", noEntry: "No active waitlist entry was found.",
     errors: {
       notEligible: "This application is not eligible to join or change the waitlist.",
       alreadyActive: "This application already has an active waitlist entry.",
@@ -408,6 +422,7 @@ export const enMessages = {
     statusUnknown: "Status unavailable",
     nextActionReviewOffer: "Review temporary slot offer",
     nextActionReviewWaitlist: "Review your appointment waitlist",
+    nextActionReviewAppointment: "Review your appointment",
     nextActionNone: "No action needed right now",
     nextActionResumeApplication: "Resume the next application section",
     nextActionVerifyIdentity: "Complete synthetic identity verification",
@@ -417,14 +432,18 @@ export const enMessages = {
     nextActionDescription:
       "This next action is supplied directly by the dashboard summary; RaahSathi does not infer it in the browser. Selecting it opens the application and identity recovery flow.",
     nextActionUnavailableDescription:
-      "Payment is complete and your progress is safe. Appointment selection will become available in Phase 5.",
+      "Payment is complete and your progress is safe. Choose a Delhi RTO, date, and available time.",
     nextActionBookedDescription:
       "Your appointment is already confirmed. Review its date, time, and synthetic RTO below.",
+    nextActionWaitlistedDescription: "You are waiting for a compatible appointment slot. Review or change your saved preferences in the application.",
+    nextActionOfferDescription: "A temporary slot offer needs your decision before its server-provided expiry time. Open the application to review it.",
     nextActionNoneDescription:
       "There is no action to take right now. Your latest saved status remains available here.",
     blockingTitle: "Why you cannot continue yet",
     blockingNoSuitableSlot:
-      "No suitable appointment slot was available. Review the temporary offer shown below.",
+      "No suitable direct appointment slot is available. Your saved waitlist preferences remain active.",
+    blockingWaitlistOfferPending:
+      "A temporary appointment slot is held for you. Accept or decline it before the displayed expiry time.",
     blockingIdentityRequired: "Complete synthetic identity verification. Your application progress is saved.",
     blockingPaymentRequired: "Identity is verified. The simulated payment phase is the next required step.",
     blockingUnknown:
@@ -433,6 +452,9 @@ export const enMessages = {
     noApplicationDescription:
       "This synthetic account has no work in progress. Explore services when you are ready to begin.",
     supportTitle: "Items that may need attention",
+    waitlistTitle: "Appointment waitlist",
+    waitlistStatus: "Waiting",
+    waitlistDescription: "Waiting for a compatible slot at {rto} since {time}.",
     offerTitle: "Temporary slot offer",
     offerStatus: "Review required",
     offerDescription: "A synthetic slot is being held at {rto} until {time}.",

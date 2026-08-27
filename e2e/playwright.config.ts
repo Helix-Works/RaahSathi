@@ -29,7 +29,7 @@ export default defineConfig({
   webServer: {
     command: `corepack pnpm --filter @raahsathi/web exec next dev -p ${port}`,
     env: {
-      NEXT_PUBLIC_DATA_SOURCE: "mock",
+      NEXT_PUBLIC_DATA_SOURCE: process.env.E2E_DATA_SOURCE ?? "mock",
       NEXT_DIST_DIR: ".next-e2e",
     },
     url: baseURL,
