@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "test:e2e": "playwright test",
+    "test:e2e:hero": "node --env-file-if-exists=../apps/web/.env --env-file-if-exists=../apps/web/.env.local node_modules/@playwright/test/cli.js test --config=playwright.hero.config.ts",
     "test:headed": "playwright test --headed",
     "typecheck": "tsc --noEmit"
   },

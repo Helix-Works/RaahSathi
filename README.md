@@ -28,7 +28,7 @@ docs/                     Architecture, API, decision, and demo notes
 
 ## Prerequisites
 
-- Node.js 22 or newer
+- Node.js 22.12.0 or newer
 - pnpm 11 (use `corepack pnpm` if the pnpm shim is not installed)
 - PostgreSQL when exercising readiness or database-backed features
 
@@ -57,6 +57,10 @@ Phase 3 adds synthetic document metadata, persisted identity outcomes, safe retr
 Phase 4 adds server-calculated synthetic fee snapshots, idempotent payment attempts, signed simulated-provider events, browser-independent delayed convergence, duplicate-event safety, and bilingual payment/recovery presentation. No real payment network or financial data is used.
 
 After the Phase 5/6 migrations, `pnpm --filter @raahsathi/web prisma:seed:phase6-demo` creates the deterministic appointment/waitlist demo accounts. Re-running that command is the supported repair path for the seed-owned Phase 6 fixtures: it preserves durable journey progress and reconciles only the three legacy malformed payment references after exact applicant, application, fee, payment, event, RTO, and slot identity checks. It fails closed if any deterministic identifier contains unexpected data.
+
+## Phase 7 hero journey
+
+Use synthetic account `9000000007` with the configured demo OTP. The deterministic commands are `pnpm demo:reset`, `pnpm demo:stage:permanent`, and `pnpm demo:release-slot`; the production-mode bilingual gate is `pnpm test:e2e:hero`. See the [Phase 7 demo runbook](docs/demo/README.md) for the exact rehearsal, safety confirmation, expected states, and real-versus-simulated boundary.
 
 ## Quality checks
 

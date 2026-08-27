@@ -84,22 +84,20 @@ test("public routes remain fluid across the required English viewports", async (
   }
 });
 
-test("public routes remain fluid across the required Hindi viewports", async ({ page }, testInfo) => {
-  test.skip(testInfo.project.name !== "desktop-chromium");
-  await selectHindi(page);
-
-  for (const viewport of viewports) {
-    await page.setViewportSize(viewport);
-
-    for (const route of publicRoutes) {
+for (const viewport of viewports) {
+  for (const route of publicRoutes) {
+    test(`public route ${route} remains fluid in Hindi at ${viewport.width}px`, async ({ page }, testInfo) => {
+      test.skip(testInfo.project.name !== "desktop-chromium");
+      await page.setViewportSize(viewport);
+      await selectHindi(page);
       await page.goto(route);
       await expect(page.locator("main")).toBeVisible();
       await expect(page.locator("html")).toHaveAttribute("lang", "hi");
       await expectNoHorizontalClipping(page);
       await captureIfRequested(page, testInfo, "hi", route, viewport.width);
-    }
+    });
   }
-});
+}
 
 test("dashboard remains fluid in English and Hindi at every required viewport", async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== "desktop-chromium");

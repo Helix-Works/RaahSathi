@@ -5,6 +5,7 @@ const baseURL = `http://localhost:${port}`;
 
 export default defineConfig({
   testDir: "./tests",
+  testIgnore: "phase7-hero-journey.spec.ts",
   // Next.js development Server Actions intermittently close response streams under
   // multi-worker compilation; serial execution keeps the documented local gate deterministic.
   fullyParallel: false,

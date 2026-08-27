@@ -388,6 +388,7 @@ export const enMessages = {
     },
   },
   appointments: {
+    chooseRto: "Choose an RTO",
     title: "Choose an appointment",
     intro: "Choose a synthetic Delhi RTO, date, and available time. Capacity always comes from the server.",
     rto: "Choose an RTO",

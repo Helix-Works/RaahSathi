@@ -1,5 +1,18 @@
 import type { DashboardApplicationSummary } from "@/features/dashboard/types";
 
+export function selectHeroApplication(
+  applications: readonly DashboardApplicationSummary[],
+): DashboardApplicationSummary | undefined {
+  const latest = [...applications].sort((left, right) =>
+    right.updatedAt.localeCompare(left.updatedAt))[0];
+  return applications.find(({ statusCode }) => statusCode === "SLOT_OFFERED")
+    ?? applications.find(({ statusCode }) => statusCode === "WAITLISTED")
+    ?? applications.find(({ serviceKey, statusCode }) =>
+      serviceKey === "PERMANENT_DRIVING_LICENCE" && statusCode !== "APPOINTMENT_BOOKED")
+    ?? applications.find(({ statusCode }) => statusCode !== "APPOINTMENT_BOOKED")
+    ?? latest;
+}
+
 type NextActionCopy = Readonly<{
   defaultDescription: string;
   readyForAppointmentDescription: string;
@@ -29,6 +42,14 @@ export function resolveNextActionCard(
   if (application.nextActionCode === "SELECT_APPOINTMENT") {
     return {
       description: copy.readyForAppointmentDescription,
+      actionLabel: copy.continueLabel,
+      actionHref: `/applications/${application.id}`,
+    };
+  }
+
+  if (application.nextActionCode === "REVIEW_APPOINTMENT") {
+    return {
+      description: copy.appointmentBookedDescription,
       actionLabel: copy.continueLabel,
       actionHref: `/applications/${application.id}`,
     };

@@ -62,6 +62,11 @@ export default async function ApplicationPage({
 
   return (
     <PageContainer className="max-w-5xl space-y-6 py-10 sm:py-12 lg:py-16">
+      <LicenceContextCard
+        licences={licences}
+        locale={locale}
+        messages={messages.identity.licenceContext}
+      />
       <ApplicationEditor
         initialApplication={application}
         initialIdentity={identity}
@@ -69,12 +74,6 @@ export default async function ApplicationPage({
         initialAppointment={appointment}
         locale={locale}
         messages={messages}
-      />
-
-      <LicenceContextCard
-        licences={licences}
-        locale={locale}
-        messages={messages.identity.licenceContext}
       />
     </PageContainer>
   );

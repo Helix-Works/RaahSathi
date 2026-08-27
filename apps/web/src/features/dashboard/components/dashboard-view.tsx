@@ -1,4 +1,9 @@
-import type { ServiceKey } from "@raahsathi/contracts";
+import type {
+  ApplicationBlockingReasonCode,
+  ApplicationNextActionCode,
+  ApplicationStatusCode,
+  ServiceKey,
+} from "@raahsathi/contracts/applications";
 import { CalendarClock, Clock3, IdCard, TicketCheck } from "lucide-react";
 import Link from "next/link";
 
@@ -28,10 +33,9 @@ function serviceName(serviceKey: ServiceKey, messages: MessageDictionary): strin
 }
 
 function statusPresentation(
-  code: string,
+  code: ApplicationStatusCode | "",
   messages: MessageDictionary["dashboard"],
 ): Readonly<{ label: string; tone: "neutral" | "success" | "warning" }> {
-  if (code === "APPOINTMENT_REQUIRED") return { label: messages.statusAppointmentRequired, tone: "warning" };
   if (code === "APPOINTMENT_BOOKED") return { label: messages.statusAppointmentBooked, tone: "success" };
   if (code === "WAITLISTED") return { label: messages.statusWaitlisted, tone: "warning" };
   if (code === "SLOT_OFFERED") return { label: messages.statusSlotOffered, tone: "success" };
@@ -43,7 +47,10 @@ function statusPresentation(
   return { label: messages.statusUnknown, tone: "neutral" };
 }
 
-function nextActionPresentation(code: string, messages: MessageDictionary["dashboard"]): string {
+function nextActionPresentation(
+  code: ApplicationNextActionCode,
+  messages: MessageDictionary["dashboard"],
+): string {
   if (code === "REVIEW_OFFER") return messages.nextActionReviewOffer;
   if (code === "REVIEW_WAITLIST") return messages.nextActionReviewWaitlist;
   if (code === "REVIEW_APPOINTMENT") return messages.nextActionReviewAppointment;
@@ -55,7 +62,10 @@ function nextActionPresentation(code: string, messages: MessageDictionary["dashb
   return messages.nextActionUnknown;
 }
 
-function blockingReasonPresentation(code: string, messages: MessageDictionary["dashboard"]): string {
+function blockingReasonPresentation(
+  code: ApplicationBlockingReasonCode,
+  messages: MessageDictionary["dashboard"],
+): string {
   if (code === "NO_SUITABLE_SLOT") return messages.blockingNoSuitableSlot;
   if (code === "WAITLIST_OFFER_PENDING") return messages.blockingWaitlistOfferPending;
   if (code === "IDENTITY_VERIFICATION_REQUIRED") return messages.blockingIdentityRequired;
@@ -224,7 +234,7 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
                   "{vehicleClass}",
                   localizedCodeLabel(
                     dashboard.vehicleClassNames,
-                    summary.licence.vehicleClassCode,
+                    summary.licence.vehicleClass,
                     messages.status.unavailable,
                   ),
                 )}
