@@ -76,7 +76,7 @@ export const phase7HeroWaitlistId = "53000000-0000-4000-8000-000000000007";
 export const phase7HeroOfferId = "54000000-0000-4000-8000-000000000007";
 
 export function phase7HeroFixtureId(prefix: string, ordinal: number): string {
-  return `${prefix}-0000-4000-8000-${String(ordinal).padStart(12, "0")}`;
+  return `${prefix}-0000-4000-8000-${String(7_000 + ordinal).padStart(12, "0")}`;
 }
 
 export function phase7HeroSchedule(now: Date): Readonly<{

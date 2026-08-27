@@ -5,11 +5,16 @@ import {
   assertPhase7HeroConfirmation,
   phase7HeroApplications,
   phase7HeroConfirmation,
+  phase7HeroFixtureId,
   phase7HeroPayments,
   phase7HeroSchedule,
 } from "./phase7-hero-seed";
 
 describe("Phase 7 hero fixture definitions", () => {
+  it("keeps generated record IDs in a Phase 7-only ordinal namespace", () => {
+    expect(phase7HeroFixtureId("31000000", 61)).toBe("31000000-0000-4000-8000-000000007061");
+  });
+
   it("uses stable application ownership and contract-valid payment references", () => {
     expect(phase7HeroApplications.learner.applicantId).toBe(phase7HeroApplications.permanent.applicantId);
     expect(phase7HeroApplications.holder.applicantId).not.toBe(phase7HeroApplications.learner.applicantId);

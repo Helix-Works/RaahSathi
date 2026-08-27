@@ -57,14 +57,15 @@ describe.skipIf(!database)("Phase 7 deterministic hero fixture", () => {
   it("preserves the active session and derives Permanent DL appointment readiness", async () => {
     if (!database) return;
     const sessionId = randomUUID();
+    const sessionNow = new Date();
     await database.session.create({
       data: {
         id: sessionId,
         applicantId: phase7HeroApplicants.hero.id,
         tokenHash: `phase7-${sessionId}`,
         csrfSecretHash: `phase7-csrf-${sessionId}`,
-        idleExpiresAt: new Date(fixtureNow.getTime() + 60 * 60 * 1000),
-        absoluteExpiresAt: new Date(fixtureNow.getTime() + 2 * 60 * 60 * 1000),
+        idleExpiresAt: new Date(sessionNow.getTime() + 60 * 60 * 1000),
+        absoluteExpiresAt: new Date(sessionNow.getTime() + 2 * 60 * 60 * 1000),
       },
     });
 
