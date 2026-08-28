@@ -13,7 +13,7 @@ export function CardHoverEffect({ children, className = "" }: CardHoverEffectPro
   return (
     <div className={cn("group relative", className)}>
       <div
-        className="absolute -inset-0.5 rounded-feature bg-gradient-to-r from-primary/20 to-brand-accent/20 opacity-0 blur transition-all duration-300 group-hover:opacity-100 group-hover:blur-sm"
+        className="absolute -inset-0.5 rounded-feature bg-linear-to-r from-primary/20 to-brand-accent/20 opacity-0 blur transition-all duration-300 group-hover:opacity-100 group-hover:blur-sm"
         aria-hidden="true"
       />
       <div className="relative">{children}</div>

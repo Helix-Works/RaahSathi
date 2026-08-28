@@ -4,19 +4,29 @@ import { Moon, Sun } from "lucide-react";
 
 import { useTheme } from "@/components/shared/theme-provider";
 
-const themeOptions = [
-  { value: "light" as const, icon: Sun, label: "Light mode" },
-  { value: "dark" as const, icon: Moon, label: "Dark mode" },
-];
+type ThemeToggleProps = Readonly<{
+  label?: string;
+  lightLabel?: string;
+  darkLabel?: string;
+}>;
 
-export function ThemeToggle() {
+export function ThemeToggle({
+  label = "Theme selection",
+  lightLabel = "Light mode",
+  darkLabel = "Dark mode",
+}: ThemeToggleProps) {
   const { theme, setTheme } = useTheme();
+
+  const themeOptions = [
+    { value: "light" as const, icon: Sun, label: lightLabel },
+    { value: "dark" as const, icon: Moon, label: darkLabel },
+  ];
 
   return (
     <div
       className="flex items-center gap-0.5 rounded-control border border-border bg-surface p-0.5"
       role="radiogroup"
-      aria-label="Theme selection"
+      aria-label={label}
     >
       {themeOptions.map(({ value, icon: Icon, label }) => (
         <button

@@ -8,7 +8,7 @@ import { POST as createApplication, GET as listApplications } from "./applicatio
 import { GET as getApplication } from "./applications/[id]/route";
 import { PATCH as saveSection } from "./applications/[id]/sections/[sectionKey]/route";
 import { GET as listLicences } from "./licences/route";
-import { createListWaitlistHandler, POST as joinWaitlist } from "./waitlist/route";
+import { createListWaitlistHandler, GET as listWaitlist, POST as joinWaitlist } from "./waitlist/route";
 import { GET as getWaitlistEntry, PATCH as updateWaitlistEntry, DELETE as leaveWaitlist } from "./waitlist/[id]/route";
 import { POST as acceptOffer } from "./offers/[id]/accept/route";
 import { POST as bookAppointment, GET as listAppointments } from "./appointments/route";
@@ -256,7 +256,7 @@ describe("Waitlist — parameter validation, auth, and security", () => {
   });
 
   it("GET returns 401 when no session cookie is present", async () => {
-    const response = await listApplications(
+    const response = await listWaitlist(
       noSessionReq("/api/v1/waitlist"),
     );
     expect(response.status).toBe(401);

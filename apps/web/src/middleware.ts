@@ -14,9 +14,13 @@ const securityHeaders: Record<string, string> = {
     : "max-age=0",
 };
 
+const scriptSrc = isProduction
+  ? "script-src 'self' 'unsafe-inline'"
+  : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+
 const cspDirectives = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+  scriptSrc,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",

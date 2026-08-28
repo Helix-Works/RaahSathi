@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 export function useAbortController(): {
   getSignal: (key: string) => AbortSignal;
@@ -27,6 +27,8 @@ export function useAbortController(): {
     }
     controllers.current.clear();
   }, []);
+
+  useEffect(() => () => abortAll(), [abortAll]);
 
   return { getSignal, abort, abortAll };
 }

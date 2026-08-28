@@ -8,7 +8,7 @@ export default function DashboardLoading() {
       <div className="space-y-2">
         <Skeleton className="h-5 w-32" />
         <Skeleton className="h-9 w-64" />
-        <Skeleton className="h-5 w-96" />
+        <Skeleton className="h-5 w-full max-w-96" />
       </div>
       <Card>
         <CardContent className="space-y-4 pt-6">

@@ -31,6 +31,7 @@ const copies = {
     joined: "Joined",
     afternoon: "Afternoon",
     update: "Update preferences",
+    updating: "Updating preferences…",
     waiting: "Waiting for a suitable appointment slot",
     statusWaitlisted: "Waiting for a suitable appointment slot",
     refresh: "Refresh waitlist status",
@@ -60,6 +61,7 @@ const copies = {
     joined: "शामिल होने का समय",
     afternoon: "दोपहर",
     update: "पसंद बदलें",
+    updating: "पसंद बदली जा रही है…",
     waiting: "उपयुक्त अपॉइंटमेंट स्लॉट की प्रतीक्षा",
     statusWaitlisted: "उपयुक्त अपॉइंटमेंट स्लॉट की प्रतीक्षा में",
     refresh: "वेटलिस्ट स्थिति ताज़ा करें",
@@ -235,8 +237,9 @@ for (const locale of ["en", "hi"] as const) {
     { timeout: 30_000 },
     );
     await updateButton.click();
+    await expect(page.getByRole("button", { name: copy.updating })).toBeVisible({ timeout: 30_000 });
     expect((await updateResponse).ok()).toBe(true);
-    await expect(updateButton).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole("button", { name: copy.update })).toBeVisible({ timeout: 30_000 });
     await expect(joinedValue).toHaveText(immutableJoinTime ?? "");
 
     runDemoCommand("demo:release-slot", seedDate);

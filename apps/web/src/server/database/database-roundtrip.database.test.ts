@@ -18,10 +18,12 @@ const database = safeTestUrl ? createDatabaseTestClient(testUrl) : undefined;
 
 describe.skipIf(!database)("Neon database roundtrip integration", () => {
   const applicantId = randomUUID();
+  const duplicateHash = `dup-test-${randomUUID()}`;
 
   afterAll(async () => {
     if (!database) return;
     try {
+      await database.applicant.deleteMany({ where: { mobileLookupHash: duplicateHash } });
       await database.session.deleteMany({ where: { applicantId } });
       await database.auditEvent.deleteMany({ where: { actorApplicantId: applicantId } });
       await database.authAttempt.deleteMany({ where: { applicantId } });
@@ -69,8 +71,6 @@ describe.skipIf(!database)("Neon database roundtrip integration", () => {
   it("enforces unique constraint on mobileLookupHash", async () => {
     if (!database) return;
 
-    const duplicateHash = `dup-test-${randomUUID()}`;
-
     await database.applicant.create({
       data: {
         mobileLookupHash: duplicateHash,
@@ -87,7 +87,7 @@ describe.skipIf(!database)("Neon database roundtrip integration", () => {
           displayName: "Second",
         },
       }),
-    ).rejects.toThrow();
+    ).rejects.toMatchObject({ code: "P2002" });
   });
 
   it("returns null for a nonexistent id", async () => {

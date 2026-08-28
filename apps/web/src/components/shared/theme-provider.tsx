@@ -12,6 +12,7 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 const themeListeners = new Set<() => void>();
+let inMemoryTheme: Theme = "light";
 
 function applyTheme(resolvedTheme: "light" | "dark"): void {
   const root = document.documentElement;
@@ -20,7 +21,7 @@ function applyTheme(resolvedTheme: "light" | "dark"): void {
 }
 
 function getStoredTheme(): Theme {
-  if (typeof window === "undefined") return "light";
+  if (typeof window === "undefined") return inMemoryTheme;
   try {
     const stored = localStorage.getItem("raahsathi_theme");
     if (stored === "light" || stored === "dark") {
@@ -29,7 +30,7 @@ function getStoredTheme(): Theme {
   } catch {
     // localStorage unavailable
   }
-  return "light";
+  return inMemoryTheme;
 }
 
 function subscribeToStoredTheme(onStoreChange: () => void): () => void {
@@ -55,10 +56,11 @@ export function ThemeProvider({ children }: Readonly<{ children: React.ReactNode
   useEffect(() => applyTheme(resolvedTheme), [resolvedTheme]);
 
   const setTheme = useCallback((newTheme: Theme) => {
+    inMemoryTheme = newTheme;
     try {
       localStorage.setItem("raahsathi_theme", newTheme);
     } catch {
-      // localStorage unavailable
+      // localStorage unavailable; the in-memory snapshot still applies.
     }
     themeListeners.forEach((listener) => listener());
   }, []);

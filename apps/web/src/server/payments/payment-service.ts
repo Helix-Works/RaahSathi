@@ -66,18 +66,23 @@ async function projectMaintenanceService(
   correlationId: string,
 ): Promise<void> {
   if (!isLicenceMaintenanceService(application.serviceKey) || !application.targetLicenceId) {
-    throw new Error("Maintenance service completion invariant failed.");
+    throw apiErrors.invalidTransition();
   }
   await database.$queryRaw(Prisma.sql`SELECT "id" FROM "LicenceRecord" WHERE "id" = ${application.targetLicenceId}::uuid FOR UPDATE`);
   const licence = await database.licenceRecord.findFirst({
     where: { id: application.targetLicenceId, applicantId: application.applicantId, kind: "PERMANENT" },
   });
-  if (!licence) throw new Error("Target licence completion invariant failed.");
+  if (!licence) throw apiErrors.invalidTransition();
   const addressSection = await database.applicationSection.findUnique({
     where: { applicationId_sectionKey: { applicationId: application.id, sectionKey: "ADDRESS" } },
   });
-  if (!addressSection?.completedAt) throw new Error("Completed address section invariant failed.");
-  const address = addressDataSchema.parse(addressSection.data);
+  if (!addressSection?.completedAt) throw apiErrors.invalidTransition();
+  let address: ReturnType<typeof addressDataSchema.parse>;
+  try {
+    address = addressDataSchema.parse(addressSection.data);
+  } catch {
+    throw apiErrors.invalidTransition();
+  }
   if (application.serviceKey === "DRIVING_LICENCE_RENEWAL") {
     const extensionBase = licence.validUntil > occurredAt ? licence.validUntil : occurredAt;
     await database.licenceRecord.update({

@@ -46,7 +46,11 @@ export function AppHeader({ locale, messages, navigation, account }: AppHeaderPr
           />
         </div>
 
-        <ThemeToggle />
+        <ThemeToggle
+          label={messages.theme.label}
+          lightLabel={messages.theme.light}
+          darkLabel={messages.theme.dark}
+        />
 
         <LanguageSwitcher
           locale={locale}

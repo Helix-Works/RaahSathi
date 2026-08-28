@@ -33,6 +33,20 @@ export const enMessages = {
     english: "English",
     hindi: "हिंदी",
   },
+  theme: {
+    label: "Theme selection",
+    light: "Light mode",
+    dark: "Dark mode",
+  },
+  fallback: {
+    errorTitle: "Something went wrong",
+    errorMessage: "An unexpected error occurred. Please try again.",
+    errorDigestLabel: "Error ID",
+    retry: "Try again",
+    notFoundTitle: "Page not found",
+    notFoundMessage: "The page you are looking for does not exist or has been moved.",
+    home: "Go to home",
+  },
   status: {
     loading: "Loading",
     saved: "Saved",
@@ -47,6 +61,7 @@ export const enMessages = {
     requestFailed: "We could not complete that request.",
     network: "Check your connection and try again.",
     invalidResponse: "The service returned an unexpected response.",
+    rateLimitExceeded: "Too many requests were made. Please wait and try again.",
     servicesTitle: "Services are temporarily unavailable",
     servicesDescription:
       "Your progress is safe. Please try loading the service list again.",
