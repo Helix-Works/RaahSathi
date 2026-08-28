@@ -229,9 +229,9 @@ for (const locale of ["en", "hi"] as const) {
       && response.ok(),
     );
     await updateButton.click();
-    await updateResponse;
     const updatingLabel = locale === "en" ? "Updating preferences…" : "पसंद बदली जा रही है…";
     await expect(page.getByRole("button", { name: updatingLabel })).toBeVisible({ timeout: 5_000 });
+    await updateResponse;
     await expect(updateButton).toBeVisible({ timeout: 30_000 });
     await expect(joinedValue).toHaveText(immutableJoinTime ?? "");
 
