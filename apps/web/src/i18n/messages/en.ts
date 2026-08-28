@@ -70,7 +70,7 @@ export const enMessages = {
     primaryActionsLabel: "Licence service actions",
     applyTitle: "Start a licence application",
     applyDescription:
-      "Choose a supported learner or permanent driving-licence journey.",
+      "Choose a supported driving-licence journey.",
     applyAction: "View available services",
     resumeTitle: "Resume saved work",
     resumeDescription:
@@ -97,7 +97,7 @@ export const enMessages = {
       "Switch languages without leaving your current page or losing context.",
     nextTitle: "Start with the service that fits your journey",
     nextDescription:
-      "Review the two core licence journeys prepared for this prototype before application flows are connected.",
+      "Review the four licence journeys available in this prototype.",
     servicesTitle: "Start with a service that matches your journey",
     servicesDescription:
       "Choose from the services that are actually available in this prototype. Each journey keeps its saved progress and returns you to the next approved step.",
