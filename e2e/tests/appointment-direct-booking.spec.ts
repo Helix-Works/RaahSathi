@@ -6,9 +6,9 @@ const realAppointmentsEnabled = process.env.E2E_DATA_SOURCE === "real" && Boolea
 
 async function loginForDirectBooking(page: Page) {
   await page.goto(`/login?returnTo=/applications/${directBookingApplicationId}`);
-  await page.getByLabel("Synthetic mobile number").fill("9000000005");
-  await page.getByRole("button", { name: "Send synthetic OTP" }).click();
-  await expect(page.getByRole("heading", { name: "Synthetic OTP sent" })).toBeVisible();
+  await page.getByLabel("Mobile number").fill("9000000005");
+  await page.getByRole("button", { name: "Send OTP" }).click();
+  await expect(page.getByRole("heading", { name: "OTP sent" })).toBeVisible();
   await page.getByLabel("One-time password").fill(demoOtp ?? "");
   await page.getByRole("button", { name: "Verify and continue" }).click();
   await expect(page).toHaveURL(new RegExp(`/applications/${directBookingApplicationId}$`));

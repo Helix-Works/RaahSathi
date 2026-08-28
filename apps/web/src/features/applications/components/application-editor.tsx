@@ -172,9 +172,6 @@ export function ApplicationEditor({
         serviceName={serviceName(application, messages)}
         statusLabel={applicationMessages.statusLabel}
         status={statusLabel(application, applicationMessages)}
-        progressLabel={applicationMessages.progressLabel}
-        progress={application.progressPercent}
-        progressText={`${new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(application.progressPercent)}%`}
         updatedLabel={applicationMessages.updatedLabel}
         updatedValue={formatDelhiDate(application.updatedAt, locale)}
         nextActionLabel={applicationMessages.nextActionLabel}

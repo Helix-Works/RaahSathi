@@ -55,6 +55,25 @@ async function main() {
     update: {},
   });
   await database.licenceRecord.upsert({
+    where: { applicantId_kind: { applicantId: applicants[0].id, kind: "PERMANENT" } },
+    create: {
+      id: "33000000-0000-4000-8000-000000000003",
+      applicantId: applicants[0].id,
+      kind: "PERMANENT",
+      syntheticReference: "SYN-DL-DEMO-0001",
+      vehicleClass: "LMV",
+      issuedAt: new Date("2024-01-15T00:00:00.000Z"),
+      validUntil: new Date("2029-01-14T23:59:59.000Z"),
+      addressDistrict: "NORTH_WEST",
+      addressPostalCode: "110085",
+    },
+    update: {
+      validUntil: new Date("2029-01-14T23:59:59.000Z"),
+      addressDistrict: "NORTH_WEST",
+      addressPostalCode: "110085",
+    },
+  });
+  await database.licenceRecord.upsert({
     where: { applicantId_kind: { applicantId: applicants[2].id, kind: "PERMANENT" } },
     create: {
       id: "33000000-0000-4000-8000-000000000009",

@@ -10,6 +10,9 @@ import { SectionHeader } from "@/components/shared/section-header";
 import { ServiceCard } from "@/components/shared/service-card";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { BackgroundGradient } from "@/components/ui/aceternity/background-gradient";
+import { CardHoverEffect } from "@/components/ui/aceternity/card-hover-effect";
+import { TextGenerateEffect } from "@/components/ui/aceternity/text-generate-effect";
 import { StartApplicationButton } from "@/features/applications/components/start-application-button";
 import { getMockServices } from "@/features/services/api/mock";
 import { getServiceCopy } from "@/features/services/presentation";
@@ -44,11 +47,10 @@ export default async function Home() {
         <PageContainer className="grid items-center gap-10 py-12 sm:py-16 lg:grid-cols-[1.03fr_0.97fr] lg:gap-14 lg:py-20">
           <div className="space-y-7">
             <div className="space-y-4">
-              <p className="eyebrow">{landing.eyebrow}</p>
               <h1 id="landing-title" className="max-w-3xl text-[clamp(2.25rem,4.25vw,3.35rem)] font-bold leading-[1.08] tracking-[-0.045em] text-balance">
-                {landing.title}
+                <TextGenerateEffect words={landing.title} />
               </h1>
-              <p className="max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
+              <p className="hero-copy-reveal max-w-2xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
                 {landing.tagline}
               </p>
             </div>
@@ -72,10 +74,10 @@ export default async function Home() {
               </div>
             </div>
           </div>
-          <div className="relative rounded-feature border border-primary/20 bg-surface-muted p-4 shadow-subtle sm:p-6">
+          <BackgroundGradient className="relative rounded-feature border border-primary/20 bg-surface-muted p-4 shadow-subtle sm:p-6">
             <div className="absolute inset-x-6 top-6 h-20 rounded-panel bg-accent/60 blur-2xl" aria-hidden="true" />
             <JourneyIllustration className="relative mx-auto max-w-[42rem]" />
-          </div>
+          </BackgroundGradient>
         </PageContainer>
       </section>
 
@@ -92,7 +94,11 @@ export default async function Home() {
             <div className="grid gap-5 md:grid-cols-2">
               {services.map((service) => {
                 const copy = getServiceCopy(service.serviceKey, messages.services);
-                return <ServiceCard key={service.serviceKey} serviceKey={service.serviceKey} name={copy.name} description={copy.description} availabilityLabel={messages.services.availableStatus} action={<StartApplicationButton serviceKey={service.serviceKey} label={messages.common.continue} errorLabel={messages.services.startFailed} eligibleLicenceRequiredLabel={messages.services.eligibleLicenceRequired} loginPath="/login?returnTo=/services" />} />;
+                return (
+                  <CardHoverEffect key={service.serviceKey}>
+                    <ServiceCard serviceKey={service.serviceKey} name={copy.name} description={copy.description} availabilityLabel={messages.services.availableStatus} action={<StartApplicationButton serviceKey={service.serviceKey} label={messages.common.continue} errorLabel={messages.services.startFailed} eligibleLicenceRequiredLabel={messages.services.eligibleLicenceRequired} />} />
+                  </CardHoverEffect>
+                );
               })}
             </div>
           ) : (
@@ -124,7 +130,7 @@ export default async function Home() {
 
       <section id="benefits" className="border-t border-border bg-surface" aria-labelledby="benefits-title">
         <PageContainer className="grid gap-9 py-14 sm:py-16 lg:grid-cols-[0.7fr_1.3fr] lg:gap-14 lg:py-20">
-          <div className="space-y-4 lg:sticky lg:top-28 lg:self-start"><p className="eyebrow">{landing.eyebrow}</p><h2 id="benefits-title" className="text-3xl font-bold leading-tight tracking-[-0.035em] sm:text-4xl">{landing.benefitsTitle}</h2><p className="max-w-xl leading-7 text-muted-foreground">{landing.benefitsDescription}</p></div>
+          <div className="space-y-4 lg:sticky lg:top-28 lg:self-start"><h2 id="benefits-title" className="text-3xl font-bold leading-tight tracking-[-0.035em] sm:text-4xl">{landing.benefitsTitle}</h2><p className="max-w-xl leading-7 text-muted-foreground">{landing.benefitsDescription}</p></div>
           <div className="grid gap-4 sm:grid-cols-2">
             {strengths.map(({ title, description, icon: Icon }) => <Card key={title} variant="default"><CardContent className="space-y-4 pt-5 sm:pt-6"><IconTile tone="neutral"><Icon aria-hidden="true" /></IconTile><div className="space-y-2"><h3 className="text-lg font-bold leading-snug">{title}</h3><p className="text-sm leading-6 text-muted-foreground">{description}</p></div></CardContent></Card>)}
           </div>

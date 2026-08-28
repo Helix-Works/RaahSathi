@@ -17,7 +17,7 @@ const entry = {
   acceptableDateTo: "2026-08-30",
   timeBuckets: ["MORNING"],
   joinedAt: "2026-08-27T10:00:00.000Z",
-  rto: { id: "30000000-0000-4000-8000-000000000001", code: "SYNTHETIC_ROHINI", nameEn: "Synthetic Rohini RTO", nameHi: "कृत्रिम रोहिणी आरटीओ", district: "North Delhi", status: "AVAILABLE" },
+  rto: { id: "30000000-0000-4000-8000-000000000001", code: "SYNTHETIC_ROHINI", nameEn: "Rohini RTO", nameHi: "रोहिणी आरटीओ", district: "North Delhi", status: "AVAILABLE" },
   offer: {
     id: "40000000-0000-4000-8000-000000000001",
     status: "ACTIVE",
@@ -41,7 +41,7 @@ describe("waitlist offer presentation", () => {
     expect(html).toContain("Accept offer");
     expect(html).toContain("Decline offer");
     expect(html).toContain("Leave waitlist");
-    expect(html).toContain("Synthetic Rohini RTO");
+    expect(html).toContain("Rohini RTO");
   });
 
   it("announces an expired offer in Hindi", () => {

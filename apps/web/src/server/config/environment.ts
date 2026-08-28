@@ -18,6 +18,7 @@ const environmentSchema = z
     AUTH_OTP_PEPPER: z.string().min(32),
     AUTH_DEMO_OTP: z.string().regex(/^[0-9]{6}$/),
     PAYMENT_PROVIDER_WEBHOOK_SECRET: z.string().min(32),
+    TRUST_PROXY_HEADERS: z.enum(["true", "false"]).optional(),
   })
   .transform((environment, context) => {
     if (environment.NODE_ENV === "production") {

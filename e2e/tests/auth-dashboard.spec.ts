@@ -1,14 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
 
 async function requestOtp(page: Page, mobileNumber = "9000000000") {
-  await page.getByLabel("Synthetic mobile number").fill(mobileNumber);
-  await page.getByRole("button", { name: "Send synthetic OTP" }).click();
+  await page.getByLabel("Mobile number").fill(mobileNumber);
+  await page.getByRole("button", { name: "Send OTP" }).click();
 }
 
 async function completeMockLogin(page: Page, otp: string) {
   await page.goto("/login");
   await requestOtp(page);
-  await expect(page.getByRole("heading", { name: "Synthetic OTP sent" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "OTP sent" })).toBeVisible();
   await page.getByLabel("One-time password").fill(otp);
   await page.getByRole("button", { name: "Verify and continue" }).click();
 }
@@ -23,7 +23,7 @@ test("login page presents the English synthetic OTP request form", async ({ page
       name: "Continue with a one-time password",
     }),
   ).toBeVisible();
-  await expect(page.getByLabel("Synthetic mobile number")).toBeVisible();
+  await expect(page.getByLabel("Mobile number")).toBeVisible();
   await expect(page.getByText(/Do not enter your real mobile number/)).toBeVisible();
 });
 
@@ -38,15 +38,15 @@ test("login page switches completely to Hindi", async ({ page }) => {
   await expect(
     page.getByRole("heading", { level: 1, name: "वन-टाइम पासवर्ड से आगे बढ़ें" }),
   ).toBeVisible();
-  await expect(page.getByLabel("कृत्रिम मोबाइल नंबर")).toBeVisible();
-  await expect(page.getByRole("button", { name: "कृत्रिम ओटीपी भेजें" })).toBeVisible();
+  await expect(page.getByLabel("मोबाइल नंबर")).toBeVisible();
+  await expect(page.getByRole("button", { name: "ओटीपी भेजें" })).toBeVisible();
 });
 
 test("OTP request reaches the deterministic sent state", async ({ page }) => {
   await page.goto("/login");
   await requestOtp(page);
 
-  await expect(page.getByRole("heading", { name: "Synthetic OTP sent" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "OTP sent" })).toBeVisible();
   await expect(page.getByText(/••••••0000/)).toBeVisible();
   await expect(page.getByLabel("One-time password")).toBeFocused();
 });
@@ -58,11 +58,11 @@ test("OTP verification presents invalid and expired states safely", async ({ pag
   const otp = page.getByLabel("One-time password");
   await otp.fill("111111");
   await page.getByRole("button", { name: "Verify and continue" }).click();
-  await expect(page.getByText(/synthetic OTP is not valid/)).toBeVisible();
+  await expect(page.getByText(/That OTP is not valid/)).toBeVisible();
 
   await otp.fill("222222");
   await page.getByRole("button", { name: "Verify and continue" }).click();
-  await expect(page.getByText(/synthetic OTP has expired/)).toBeVisible();
+  await expect(page.getByText(/That OTP has expired/)).toBeVisible();
 });
 
 test("request rate-limit and provider-unavailable states are distinct", async ({ page }) => {
@@ -70,8 +70,8 @@ test("request rate-limit and provider-unavailable states are distinct", async ({
   await requestOtp(page, "9000000001");
   await expect(page.getByText(/Too many requests were made/)).toBeVisible();
 
-  await page.getByLabel("Synthetic mobile number").fill("9000000002");
-  await page.getByRole("button", { name: "Send synthetic OTP" }).click();
+  await page.getByLabel("Mobile number").fill("9000000002");
+  await page.getByRole("button", { name: "Send OTP" }).click();
   await expect(page.getByText(/simulated OTP provider is temporarily unavailable/)).toBeVisible();
 });
 
@@ -149,6 +149,6 @@ test("mobile login and dashboard remain usable at 320px", async ({ page }, testI
   ).toBe(true);
   await page.getByRole("button", { name: "Open menu" }).click();
   await expect(page.getByRole("navigation", { name: "Mobile navigation" })).toContainText(
-    "Synthetic citizen account",
+    "Citizen account",
   );
 });

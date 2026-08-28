@@ -22,9 +22,19 @@ async function expectNoHorizontalClipping(page: Page) {
         const bounds = element.getBoundingClientRect();
         return bounds.width > 0 && (bounds.left < -1 || bounds.right > viewportWidth + 1);
       })
-      .map((element) => element.textContent?.trim().slice(0, 60) ?? element.tagName);
+      .map((element) => {
+        const bounds = element.getBoundingClientRect();
+        return {
+          name: element.getAttribute("aria-label") ?? element.textContent?.trim().slice(0, 60) ?? element.tagName,
+          tag: element.tagName,
+          className: element.className,
+          left: bounds.left,
+          right: bounds.right,
+        };
+      });
 
     return {
+      viewportWidth,
       documentOverflows: document.documentElement.scrollWidth > viewportWidth,
       clippedControls,
     };
@@ -61,8 +71,8 @@ async function selectHindi(page: Page) {
 
 async function completeMockLogin(page: Page) {
   await page.goto("/login");
-  await page.getByLabel("Synthetic mobile number").fill("9000000000");
-  await page.getByRole("button", { name: "Send synthetic OTP" }).click();
+  await page.getByLabel("Mobile number").fill("9000000000");
+  await page.getByRole("button", { name: "Send OTP" }).click();
   await page.getByLabel("One-time password").fill("123456");
   await page.getByRole("button", { name: "Verify and continue" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);

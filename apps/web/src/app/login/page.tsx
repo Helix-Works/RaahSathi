@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { serviceKeySchema } from "@raahsathi/contracts/applications";
 
 import { JourneyIllustration } from "@/components/brand/journey-illustration";
 import { IconTile } from "@/components/shared/icon-tile";
@@ -14,6 +15,7 @@ import { getRequestLocale } from "@/i18n/locale";
 type LoginPageProps = Readonly<{
   searchParams: Promise<{
     returnTo?: string | string[];
+    serviceKey?: string | string[];
   }>;
 }>;
 
@@ -23,6 +25,10 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const session = await getShellSession();
   const query = await searchParams;
   const returnTo = getSafeReturnPath(query.returnTo);
+  const serviceKeyResult = serviceKeySchema.safeParse(query.serviceKey);
+  const serviceKey = returnTo === "/services" && serviceKeyResult.success
+    ? serviceKeyResult.data
+    : undefined;
 
   if (session.kind === "authenticated") {
     redirect(returnTo);
@@ -55,7 +61,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </aside>
         <div className="space-y-6 p-5 sm:p-7 lg:p-10">
           <div className="max-w-md">
-            <LoginFlow messages={messages} returnTo={returnTo} locale={locale} />
+            <LoginFlow messages={messages} returnTo={returnTo} locale={locale} serviceKey={serviceKey} />
           </div>
           <PrototypeDisclosure title={messages.disclosure.title} description={messages.disclosure.description} />
         </div>
