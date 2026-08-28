@@ -171,8 +171,9 @@ export async function createApplication(
 ): Promise<ApplicationDetail> {
   try {
     return await databaseClient.$transaction(async (database) => {
-    const existing = await database.application.findUnique({
-      where: { applicantId_serviceKey: { applicantId: context.applicantId, serviceKey } },
+    const existing = await database.application.findFirst({
+      where: { applicantId: context.applicantId, serviceKey, NOT: { status: "COMPLETED" } },
+      orderBy: { updatedAt: "desc" },
       include: { sections: { orderBy: { createdAt: "asc" } }, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true, appointment: true },
     });
     if (existing) return derive(existing);
@@ -196,8 +197,9 @@ export async function createApplication(
     }, { isolationLevel: "Serializable" });
   } catch (reason) {
     if (reason instanceof Prisma.PrismaClientKnownRequestError && reason.code === "P2002") {
-      const existing = await databaseClient.application.findUnique({
-        where: { applicantId_serviceKey: { applicantId: context.applicantId, serviceKey } },
+      const existing = await databaseClient.application.findFirst({
+        where: { applicantId: context.applicantId, serviceKey, NOT: { status: "COMPLETED" } },
+        orderBy: { updatedAt: "desc" },
         include: { sections: true, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true, appointment: true },
       });
       if (existing) return derive(existing);
