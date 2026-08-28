@@ -305,6 +305,7 @@ export async function applyPaymentProviderEvent(
             actorApplicantId: payment.application.applicantId,
             eventType: "PAYMENT_SUCCEEDED",
             correlationId,
+            createdAt: occurredAt,
           } });
           if (maintenanceService) {
             await projectMaintenanceService(database, payment.application, occurredAt, correlationId);

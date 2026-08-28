@@ -270,7 +270,6 @@ model Application {
   appointment      Appointment?
   waitlistEntries  WaitlistEntry[]
 
-  @@unique([applicantId, serviceKey])
   @@index([applicantId, updatedAt])
   @@index([targetLicenceId])
 }
