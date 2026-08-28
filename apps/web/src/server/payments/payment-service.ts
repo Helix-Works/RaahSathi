@@ -299,17 +299,16 @@ export async function applyPaymentProviderEvent(
           where: { id: payment.applicationId, status: "READY_FOR_PAYMENT" },
           data: { status: maintenanceService ? "COMPLETED" : "READY_FOR_APPOINTMENT" },
         });
-        if (advancement.count === 1) {
-          await database.applicationEvent.create({ data: {
+        if (advancement.count !== 1) throw apiErrors.invalidTransition();
+        await database.applicationEvent.create({ data: {
             applicationId: payment.applicationId,
             actorApplicantId: payment.application.applicantId,
             eventType: "PAYMENT_SUCCEEDED",
             correlationId,
             createdAt: occurredAt,
-          } });
-          if (maintenanceService) {
-            await projectMaintenanceService(database, payment.application, occurredAt, correlationId);
-          }
+        } });
+        if (maintenanceService) {
+          await projectMaintenanceService(database, payment.application, occurredAt, correlationId);
         }
       }
 
@@ -372,6 +371,7 @@ export async function startPayment(
         },
       });
       if (!application) throw apiErrors.notFound();
+      if (application.status !== "READY_FOR_PAYMENT") throw apiErrors.invalidTransition();
       if (!application.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED")) throw apiErrors.invalidTransition();
 
       if (application.paymentAttempts.some((attempt) => attempt.status === "SUCCEEDED")) {
