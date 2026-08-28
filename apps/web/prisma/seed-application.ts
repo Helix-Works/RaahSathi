@@ -4,7 +4,7 @@ export const syntheticApplicationId = "30000000-0000-4000-8000-000000000001";
 
 export async function seedSyntheticApplication(database: PrismaClient, applicantId: string) {
   const existing = await database.application.findFirst({
-    where: { applicantId, serviceKey: "LEARNER_LICENCE", NOT: { status: "COMPLETED" } },
+    where: { applicantId, serviceKey: "LEARNER_LICENCE" },
     orderBy: { updatedAt: "desc" },
   });
   if (existing) {
