@@ -223,7 +223,13 @@ for (const locale of ["en", "hi"] as const) {
     const immutableJoinTime = await joinedValue.textContent();
     await page.getByLabel(copy.afternoon).check();
     const updateButton = page.getByRole("button", { name: copy.update });
+    const updateResponse = page.waitForResponse((response) =>
+      response.request().method() === "PATCH"
+      && response.url().includes("/api/v1/waitlist/")
+      && response.ok(),
+    );
     await updateButton.click();
+    await updateResponse;
     const updatingLabel = locale === "en" ? "Updating preferences…" : "पसंद बदली जा रही है…";
     await expect(page.getByRole("button", { name: updatingLabel })).toBeVisible({ timeout: 5_000 });
     await expect(updateButton).toBeVisible({ timeout: 30_000 });
