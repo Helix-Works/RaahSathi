@@ -21,7 +21,10 @@ export async function seedSyntheticApplication(database: PrismaClient, applicant
           data: { fullName: "Aditi Sharma", dateOfBirth: "1995-01-15" },
           completedAt: new Date("2026-08-23T00:00:00.000Z"),
         },
-        update: { data: { fullName: "Aditi Sharma", dateOfBirth: "1995-01-15" } },
+        update: {
+          data: { fullName: "Aditi Sharma", dateOfBirth: "1995-01-15" },
+          completedAt: new Date("2026-08-23T00:00:00.000Z"),
+        },
       });
       return application;
     });
