@@ -2197,7 +2197,7 @@
             "name": "service",
             "in": "query",
             "required": true,
-            "description": "Licence service key.",
+            "description": "Appointment-capable licence service key.",
             "schema": {
               "type": "string",
               "enum": [
@@ -2302,7 +2302,7 @@
             "name": "service",
             "in": "query",
             "required": true,
-            "description": "Licence service key.",
+            "description": "Appointment-capable licence service key.",
             "schema": {
               "type": "string",
               "enum": [
@@ -3934,7 +3934,9 @@
             "type": "string",
             "enum": [
               "LEARNER_LICENCE",
-              "PERMANENT_DRIVING_LICENCE"
+              "PERMANENT_DRIVING_LICENCE",
+              "DRIVING_LICENCE_RENEWAL",
+              "DRIVING_LICENCE_ADDRESS_CHANGE"
             ]
           }
         },
@@ -4258,7 +4260,9 @@
               "type": "string",
               "enum": [
                 "LEARNER_LICENCE",
-                "PERMANENT_DRIVING_LICENCE"
+                "PERMANENT_DRIVING_LICENCE",
+                "DRIVING_LICENCE_RENEWAL",
+                "DRIVING_LICENCE_ADDRESS_CHANGE"
               ]
             }
           },
@@ -4280,7 +4284,9 @@
             "type": "string",
             "enum": [
               "LEARNER_LICENCE",
-              "PERMANENT_DRIVING_LICENCE"
+              "PERMANENT_DRIVING_LICENCE",
+              "DRIVING_LICENCE_RENEWAL",
+              "DRIVING_LICENCE_ADDRESS_CHANGE"
             ]
           },
           "statusCode": {
@@ -4293,7 +4299,8 @@
               "READY_FOR_APPOINTMENT",
               "WAITLISTED",
               "SLOT_OFFERED",
-              "APPOINTMENT_BOOKED"
+              "APPOINTMENT_BOOKED",
+              "COMPLETED"
             ]
           },
           "progressPercent": {
@@ -4314,6 +4321,7 @@
               "REVIEW_WAITLIST",
               "REVIEW_OFFER",
               "REVIEW_APPOINTMENT",
+              "REVIEW_COMPLETION",
               "NONE"
             ]
           },
@@ -4330,6 +4338,18 @@
             "type": "string",
             "format": "date-time",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "targetLicenceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid",
+                "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "sections": {
             "type": "array",
@@ -4481,7 +4501,8 @@
                     "SLOT_OFFER_CREATED",
                     "SLOT_OFFER_ACCEPTED",
                     "SLOT_OFFER_DECLINED",
-                    "SLOT_OFFER_EXPIRED"
+                    "SLOT_OFFER_EXPIRED",
+                    "SERVICE_COMPLETED"
                   ]
                 },
                 "sectionKey": {
@@ -4515,6 +4536,7 @@
           "progressPercent",
           "nextActionCode",
           "updatedAt",
+          "targetLicenceId",
           "sections",
           "history"
         ],
@@ -4537,7 +4559,9 @@
                   "type": "string",
                   "enum": [
                     "LEARNER_LICENCE",
-                    "PERMANENT_DRIVING_LICENCE"
+                    "PERMANENT_DRIVING_LICENCE",
+                    "DRIVING_LICENCE_RENEWAL",
+                    "DRIVING_LICENCE_ADDRESS_CHANGE"
                   ]
                 },
                 "statusCode": {
@@ -4550,7 +4574,8 @@
                     "READY_FOR_APPOINTMENT",
                     "WAITLISTED",
                     "SLOT_OFFERED",
-                    "APPOINTMENT_BOOKED"
+                    "APPOINTMENT_BOOKED",
+                    "COMPLETED"
                   ]
                 },
                 "progressPercent": {
@@ -4571,6 +4596,7 @@
                     "REVIEW_WAITLIST",
                     "REVIEW_OFFER",
                     "REVIEW_APPOINTMENT",
+                    "REVIEW_COMPLETION",
                     "NONE"
                   ]
                 },
@@ -4717,12 +4743,13 @@
                 "kind": {
                   "type": "string",
                   "enum": [
-                    "LEARNER"
+                    "LEARNER",
+                    "PERMANENT"
                   ]
                 },
                 "syntheticReference": {
                   "type": "string",
-                  "pattern": "^SYN-LL-[A-Z0-9-]{8,40}$"
+                  "pattern": "^SYN-(?:LL|DL)-[A-Z0-9-]{8,40}$"
                 },
                 "vehicleClass": {
                   "type": "string",
@@ -4739,6 +4766,44 @@
                   "type": "string",
                   "format": "date-time",
                   "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                },
+                "address": {
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "district": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 80
+                        },
+                        "postalCode": {
+                          "type": "string",
+                          "pattern": "^11\\d{4}$"
+                        }
+                      },
+                      "required": [
+                        "district",
+                        "postalCode"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "renewedAt": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "date-time",
+                      "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
                 }
               },
               "required": [
@@ -4747,7 +4812,9 @@
                 "syntheticReference",
                 "vehicleClass",
                 "issuedAt",
-                "validUntil"
+                "validUntil",
+                "address",
+                "renewedAt"
               ],
               "additionalProperties": false
             }
@@ -4769,12 +4836,13 @@
           "kind": {
             "type": "string",
             "enum": [
-              "LEARNER"
+              "LEARNER",
+              "PERMANENT"
             ]
           },
           "syntheticReference": {
             "type": "string",
-            "pattern": "^SYN-LL-[A-Z0-9-]{8,40}$"
+            "pattern": "^SYN-(?:LL|DL)-[A-Z0-9-]{8,40}$"
           },
           "vehicleClass": {
             "type": "string",
@@ -4791,6 +4859,44 @@
             "type": "string",
             "format": "date-time",
             "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "district": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "postalCode": {
+                    "type": "string",
+                    "pattern": "^11\\d{4}$"
+                  }
+                },
+                "required": [
+                  "district",
+                  "postalCode"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "renewedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d(?::[0-5]\\d(?:\\.\\d+)?)?(?:Z))$"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -4799,7 +4905,9 @@
           "syntheticReference",
           "vehicleClass",
           "issuedAt",
-          "validUntil"
+          "validUntil",
+          "address",
+          "renewedAt"
         ],
         "additionalProperties": false
       },

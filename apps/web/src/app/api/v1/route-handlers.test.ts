@@ -48,11 +48,12 @@ describe("Route Handlers", () => {
     expect(await response.json()).toEqual({ error: { code: "RESOURCE_NOT_FOUND", messageKey: "errors.resourceNotFound", correlationId: "missing-route" } });
   });
 
-  it("serves the Phase 2 catalogue and blocks cross-origin application creation before database access", async () => {
+  it("serves all four Phase 8 services and blocks cross-origin application creation before database access", async () => {
     const services = await getServices(new Request("http://localhost/api/v1/services"));
     expect(services.status).toBe(200);
     expect(await services.json()).toEqual([
       { serviceKey: "LEARNER_LICENCE" }, { serviceKey: "PERMANENT_DRIVING_LICENCE" },
+      { serviceKey: "DRIVING_LICENCE_RENEWAL" }, { serviceKey: "DRIVING_LICENCE_ADDRESS_CHANGE" },
     ]);
     const rejected = await createApplication(new Request("http://localhost/api/v1/applications", {
       method: "POST", headers: { origin: "https://attacker.invalid", "content-type": "application/json" },

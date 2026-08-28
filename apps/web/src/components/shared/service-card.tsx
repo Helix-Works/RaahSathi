@@ -1,5 +1,5 @@
 import type { ServiceKey } from "@raahsathi/contracts";
-import { BookOpenCheck, CarFront, CheckCircle2 } from "lucide-react";
+import { BookOpenCheck, CarFront, CheckCircle2, MapPinned, RefreshCw } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { IconTile } from "@/components/shared/icon-tile";
@@ -20,6 +20,10 @@ function ServiceIcon({ serviceKey }: Readonly<{ serviceKey: ServiceKey }>) {
       return <BookOpenCheck aria-hidden="true" />;
     case "PERMANENT_DRIVING_LICENCE":
       return <CarFront aria-hidden="true" />;
+    case "DRIVING_LICENCE_RENEWAL":
+      return <RefreshCw aria-hidden="true" />;
+    case "DRIVING_LICENCE_ADDRESS_CHANGE":
+      return <MapPinned aria-hidden="true" />;
   }
 }
 

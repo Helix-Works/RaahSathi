@@ -7,15 +7,16 @@ import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { startApplication } from "@/features/applications/api";
+import { ApiClientError } from "@/lib/api";
 
-export function StartApplicationButton({ serviceKey, label, errorLabel, loginPath }: Readonly<{ serviceKey: ServiceKey; label: string; errorLabel: string; loginPath: string }>) {
+export function StartApplicationButton({ serviceKey, label, errorLabel, eligibleLicenceRequiredLabel, loginPath }: Readonly<{ serviceKey: ServiceKey; label: string; errorLabel: string; eligibleLicenceRequiredLabel: string; loginPath: string }>) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<string>();
 
   const start = async () => {
     setPending(true);
-    setFailed(false);
+    setFailure(undefined);
     try {
       const application = await startApplication(serviceKey);
       router.push(`/applications/${application.id}`);
@@ -25,7 +26,9 @@ export function StartApplicationButton({ serviceKey, label, errorLabel, loginPat
         router.push(loginPath);
         return;
       }
-      setFailed(true);
+      setFailure(error instanceof ApiClientError && error.code === "ELIGIBLE_LICENCE_REQUIRED"
+        ? eligibleLicenceRequiredLabel
+        : errorLabel);
     } finally {
       setPending(false);
     }
@@ -37,7 +40,7 @@ export function StartApplicationButton({ serviceKey, label, errorLabel, loginPat
         {pending ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : null}
         {label}
       </Button>
-      {failed ? <p className="border-l-2 border-foreground pl-2 text-sm font-bold text-foreground" role="alert">{errorLabel}</p> : null}
+      {failure ? <p className="border-l-2 border-foreground pl-2 text-sm font-bold text-foreground" role="alert">{failure}</p> : null}
     </div>
   );
 }

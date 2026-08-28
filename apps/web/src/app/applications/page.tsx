@@ -8,13 +8,14 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/state-presentations";
 import { buttonVariants } from "@/components/ui/button";
 import { ApplicationListItem } from "@/features/applications/components/application-list-item";
+import { getServiceCopy } from "@/features/services/presentation";
 import { getDictionary, type MessageDictionary } from "@/i18n";
 import { getRequestLocale } from "@/i18n/locale";
 import { listApplications } from "@/server/applications/application-service";
 import { resolveSessionFromCookie } from "@/server/auth/session-service";
 
 function serviceName(serviceKey: ServiceKey, messages: MessageDictionary): string {
-  return serviceKey === "LEARNER_LICENCE" ? messages.services.learnerName : messages.services.permanentName;
+  return getServiceCopy(serviceKey, messages.services).name;
 }
 
 export default async function ApplicationsPage() {
@@ -34,6 +35,7 @@ export default async function ApplicationsPage() {
     WAITLISTED: messages.applications.statusWaitlisted,
     SLOT_OFFERED: messages.applications.statusSlotOffered,
     APPOINTMENT_BOOKED: messages.applications.statusAppointmentBooked,
+    COMPLETED: messages.applications.statusCompleted,
   };
   const actionLabels = {
     COMPLETE_PERSONAL_DETAILS: messages.applications.nextPersonalDetails,
@@ -46,6 +48,7 @@ export default async function ApplicationsPage() {
     REVIEW_WAITLIST: messages.applications.nextReviewWaitlist,
     REVIEW_OFFER: messages.applications.nextReviewOffer,
     REVIEW_APPOINTMENT: messages.applications.nextReviewAppointment,
+    REVIEW_COMPLETION: messages.applications.nextReviewCompletion,
     NONE: messages.applications.nextActionNone,
   };
 

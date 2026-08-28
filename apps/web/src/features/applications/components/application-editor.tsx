@@ -24,6 +24,7 @@ import { AppointmentPanel } from "@/features/appointments/components/appointment
 import { IdentityRecoveryPanel } from "@/features/identity/components/identity-recovery-panel";
 import { PaymentPanel } from "@/features/payments/components/payment-panel";
 import { isPaymentRelevantApplicationStatus } from "@/features/payments/payment-flow";
+import { getServiceCopy } from "@/features/services/presentation";
 import { WaitlistPanel } from "@/features/waitlist/components/waitlist-panel";
 import type { Locale, MessageDictionary } from "@/i18n";
 
@@ -44,9 +45,7 @@ function formatDelhiDate(value: string, locale: Locale): string {
 }
 
 function serviceName(application: ApplicationDetail, messages: MessageDictionary): string {
-  return application.serviceKey === "LEARNER_LICENCE"
-    ? messages.services.learnerName
-    : messages.services.permanentName;
+  return getServiceCopy(application.serviceKey, messages.services).name;
 }
 
 function statusLabel(application: ApplicationDetail, messages: ApplicationMessages): string {
@@ -59,6 +58,7 @@ function statusLabel(application: ApplicationDetail, messages: ApplicationMessag
     WAITLISTED: messages.statusWaitlisted,
     SLOT_OFFERED: messages.statusSlotOffered,
     APPOINTMENT_BOOKED: messages.statusAppointmentBooked,
+    COMPLETED: messages.statusCompleted,
   };
   return statuses[application.statusCode];
 }
@@ -75,6 +75,7 @@ function nextActionLabel(application: ApplicationDetail, messages: ApplicationMe
     REVIEW_WAITLIST: messages.nextReviewWaitlist,
     REVIEW_OFFER: messages.nextReviewOffer,
     REVIEW_APPOINTMENT: messages.nextReviewAppointment,
+    REVIEW_COMPLETION: messages.nextReviewCompletion,
     NONE: messages.nextActionNone,
   };
   return actions[application.nextActionCode];
@@ -101,6 +102,7 @@ function historyItems(application: ApplicationDetail, locale: Locale, messages: 
     SLOT_OFFER_ACCEPTED: messages.historyOfferAccepted,
     SLOT_OFFER_DECLINED: messages.historyOfferDeclined,
     SLOT_OFFER_EXPIRED: messages.historyOfferExpired,
+    SERVICE_COMPLETED: messages.historyServiceCompleted,
   };
 
   return application.history.slice(-6).reverse().map((event) => ({

@@ -55,7 +55,13 @@ export default async function ServicesPage() {
                 description={copy.description}
                 availabilityLabel={messages.services.availableStatus}
                 action={session.kind === "authenticated" ? (
-                  <StartApplicationButton serviceKey={service.serviceKey} label={messages.common.continue} errorLabel={messages.services.startFailed} loginPath="/login?returnTo=/services" />
+                  <StartApplicationButton
+                    serviceKey={service.serviceKey}
+                    label={messages.common.continue}
+                    errorLabel={messages.services.startFailed}
+                    eligibleLicenceRequiredLabel={messages.services.eligibleLicenceRequired}
+                    loginPath="/login?returnTo=/services"
+                  />
                 ) : (
                   <Link className={buttonVariants({ size: "lg" })} href="/login?returnTo=/services">
                     {messages.common.continue}<ArrowRight className="size-4" aria-hidden="true" />

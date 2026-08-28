@@ -64,7 +64,7 @@ export const enMessages = {
     primaryActionsLabel: "Licence service actions",
     applyTitle: "Start a licence application",
     applyDescription:
-      "Choose a supported learner or permanent driving-licence journey.",
+      "Choose a supported driving-licence journey.",
     applyAction: "View available services",
     resumeTitle: "Resume saved work",
     resumeDescription:
@@ -91,7 +91,7 @@ export const enMessages = {
       "Switch languages without leaving your current page or losing context.",
     nextTitle: "Start with the service that fits your journey",
     nextDescription:
-      "Review the two core licence journeys available through RaahSathi.",
+      "Review the available driving-licence journeys through RaahSathi.",
     servicesTitle: "Start with a service that matches your journey",
     servicesDescription:
       "Choose an available service. Each journey keeps saved progress and returns you to the next approved step.",
@@ -115,13 +115,19 @@ export const enMessages = {
     eyebrow: "Driving-licence services",
     title: "Choose the journey you need",
     description:
-      "Start or resume one of the available driving-licence journeys.",
+      "Start or resume an available driving-licence journey.",
     learnerName: "New Learner Licence",
     learnerDescription:
       "Prepare for a first learner-licence application with clear progress and recovery.",
     permanentName: "Permanent Driving Licence",
     permanentDescription:
       "Continue from learner eligibility toward the permanent driving-licence journey.",
+    renewalName: "Driving Licence Renewal",
+    renewalDescription:
+      "Renew an eligible permanent driving licence through a durable, recoverable journey.",
+    addressChangeName: "Change of Address",
+    addressChangeDescription:
+      "Update the Delhi address on an eligible permanent driving licence.",
     unavailableAction: "Application journey coming soon",
     emptyTitle: "No services are available yet",
     emptyDescription:
@@ -129,6 +135,7 @@ export const enMessages = {
     loading: "Loading driving-licence services",
     availableStatus: "Available",
     startFailed: "Unable to start safely. Please try again.",
+    eligibleLicenceRequired: "This service requires an eligible permanent driving licence on your account.",
     backToHome: "Back to home",
   },
   applications: {
@@ -198,6 +205,7 @@ export const enMessages = {
     statusWaitlisted: "Waiting for a suitable appointment slot",
     statusSlotOffered: "Temporary appointment offer available",
     statusAppointmentBooked: "Appointment booked",
+    statusCompleted: "Service completed",
     nextPersonalDetails: "Complete personal details",
     nextAddress: "Complete the Delhi address",
     nextServiceDetails: "Complete service details",
@@ -208,6 +216,7 @@ export const enMessages = {
     nextReviewWaitlist: "Review your appointment waitlist",
     nextReviewOffer: "Review your temporary slot offer",
     nextReviewAppointment: "Review your appointment",
+    nextReviewCompletion: "Review completed service",
     nextActionNone: "No action is required right now",
     blockingIdentity: "Identity verification is required. All completed application sections remain saved.",
     blockingPayment: "Identity is verified. Complete the fee payment to continue.",
@@ -236,7 +245,11 @@ export const enMessages = {
     historyOfferAccepted: "Temporary slot offer accepted",
     historyOfferDeclined: "Temporary slot offer declined",
     historyOfferExpired: "Temporary slot offer expired",
+    historyServiceCompleted: "Driving-licence service completed",
     historyGeneric: "Application activity recorded",
+    errors: {
+      addressUnchanged: "The new address is the same as your current address.",
+    },
   },
   identity: {
     title: "Identity verification",
@@ -419,6 +432,7 @@ export const enMessages = {
     reconstruct: "Confirmed appointment details could not be loaded.",
     errors: {
       notEligible: "This application is not ready for appointment booking.",
+      serviceNotApplicable: "Appointments are not part of this service.",
       alreadyBooked: "This application already has a confirmed appointment.",
       rateLimited: "Too many appointment changes were requested. Wait briefly and try again.",
     },
@@ -478,6 +492,7 @@ export const enMessages = {
     updatedLabel: "Last updated",
     statusAppointmentRequired: "Appointment required",
     statusAppointmentBooked: "Appointment booked",
+    statusCompleted: "Service completed",
     statusWaitlisted: "Waiting for a suitable slot",
     statusSlotOffered: "Temporary slot offer available",
     statusDraft: "Draft",
@@ -489,6 +504,7 @@ export const enMessages = {
     nextActionReviewOffer: "Review temporary slot offer",
     nextActionReviewWaitlist: "Review your appointment waitlist",
     nextActionReviewAppointment: "Review your appointment",
+    nextActionReviewCompletion: "Review completed service",
     nextActionNone: "No action needed right now",
     nextActionResumeApplication: "Resume the next application section",
     nextActionVerifyIdentity: "Complete identity verification",
@@ -497,6 +513,8 @@ export const enMessages = {
     nextActionUnknown: "Check again for the next action",
     nextActionDescription:
       "This next action is supplied directly by the dashboard summary; RaahSathi does not infer it in the browser. Selecting it opens the application and identity recovery flow.",
+    nextActionCompletionDescription:
+      "This service is complete. Open the application to review its final status and recorded history.",
     nextActionUnavailableDescription:
       "Payment is complete and your progress is safe. Choose a Delhi RTO, date, and available time.",
     nextActionBookedDescription:

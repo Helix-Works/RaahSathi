@@ -75,9 +75,28 @@ function runDemoCommand(
 ): void {
   const pnpmCli = process.env.npm_execpath;
   if (!pnpmCli) throw new Error("npm_execpath is required to run the approved Phase 7 demo commands.");
-  // npm_execpath is a JavaScript CLI entrypoint. Launch it through Node so the
-  // deterministic fixture commands run consistently on Windows and Unix hosts.
-  const result = spawnSync(process.execPath, [pnpmCli, "--filter", "@raahsathi/web", command], {
+  const isJavaScriptCli = /\.[cm]?js$/i.test(pnpmCli);
+  const isWindowsCommandCli = /\.(?:cmd|bat)$/i.test(pnpmCli);
+  const windowsCommandProcessor = process.env.ComSpec ?? process.env.COMSPEC;
+  if (isWindowsCommandCli && /["\r\n]/.test(pnpmCli)) {
+    throw new Error("The Windows package-manager launcher path contains unsafe command characters.");
+  }
+  if (isWindowsCommandCli && !windowsCommandProcessor) {
+    throw new Error("ComSpec is required to run a Windows package-manager command launcher.");
+  }
+  const executable = isJavaScriptCli
+    ? process.execPath
+    : isWindowsCommandCli
+      ? windowsCommandProcessor ?? ""
+      : pnpmCli;
+  const packageManagerArgs = ["--filter", "@raahsathi/web", command];
+  const windowsCommand = `""${pnpmCli}" ${packageManagerArgs.join(" ")}"`;
+  const args = isJavaScriptCli
+    ? [pnpmCli, ...packageManagerArgs]
+    : isWindowsCommandCli
+      ? ["/d", "/s", "/c", windowsCommand]
+      : packageManagerArgs;
+  const result = spawnSync(executable, args, {
     cwd: repositoryRoot,
     env: {
       ...process.env,
@@ -86,6 +105,7 @@ function runDemoCommand(
       RAAHSATHI_DEMO_SEED_DATE: seedDate,
     },
     encoding: "utf8",
+    windowsVerbatimArguments: isWindowsCommandCli,
   });
   if (result.status !== 0) {
     const secrets = [testDatabaseUrl, process.env.DATABASE_URL].filter((value): value is string => Boolean(value));
@@ -202,7 +222,17 @@ for (const locale of ["en", "hi"] as const) {
     await expect(joinedValue).toHaveText(/\S+/);
     const immutableJoinTime = await joinedValue.textContent();
     await page.getByLabel(copy.afternoon).check();
-    await page.getByRole("button", { name: copy.update }).click();
+    const updateButton = page.getByRole("button", { name: copy.update });
+    const updateResponse = page.waitForResponse((response) =>
+      response.request().method() === "PATCH"
+      && response.url().includes("/api/v1/waitlist/")
+      && response.ok(),
+    );
+    await updateButton.click();
+    const updatingLabel = locale === "en" ? "Updating preferences…" : "पसंद बदली जा रही है…";
+    await expect(page.getByRole("button", { name: updatingLabel })).toBeVisible({ timeout: 5_000 });
+    await updateResponse;
+    await expect(updateButton).toBeVisible({ timeout: 30_000 });
     await expect(joinedValue).toHaveText(immutableJoinTime ?? "");
 
     runDemoCommand("demo:release-slot", seedDate);
