@@ -6,9 +6,14 @@ import {
   daySlotsSchema,
   monthAvailabilitySchema,
   rtoListSchema,
+  type AppointmentServiceKey,
 } from "@raahsathi/contracts/appointments";
 
 import { apiRequest, createInvalidResponseError } from "@/lib/api";
+
+export function isAppointmentServiceKey(value: ServiceKey): value is AppointmentServiceKey {
+  return value === "LEARNER_LICENCE" || value === "PERMANENT_DRIVING_LICENCE";
+}
 
 export async function listRtos(signal?: AbortSignal) {
   const parsed = rtoListSchema.safeParse(
@@ -21,7 +26,7 @@ export async function listRtos(signal?: AbortSignal) {
 export async function getRtoMonthAvailability(
   rtoId: string,
   month: string,
-  service: ServiceKey,
+  service: AppointmentServiceKey,
   signal?: AbortSignal,
 ) {
   const query = new URLSearchParams({ month, service });
@@ -38,7 +43,7 @@ export async function getRtoMonthAvailability(
 export async function getRtoDaySlots(
   rtoId: string,
   date: string,
-  service: ServiceKey,
+  service: AppointmentServiceKey,
   signal?: AbortSignal,
 ) {
   const query = new URLSearchParams({ date, service });

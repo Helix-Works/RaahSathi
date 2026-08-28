@@ -14,6 +14,7 @@ import {
   bookAppointment,
   getRtoDaySlots,
   getRtoMonthAvailability,
+  isAppointmentServiceKey,
   listAppointments,
   listRtos,
 } from "@/features/appointments/api";
@@ -67,6 +68,7 @@ export function AppointmentPanel({ application, initialAppointment, locale, mess
   const slotRequest = useRef<AbortController | undefined>(undefined);
   const errorRef = useRef<HTMLDivElement>(null);
   const relevant = ["READY_FOR_APPOINTMENT", "APPOINTMENT_BOOKED"].includes(application.statusCode);
+  const appointmentServiceKey = isAppointmentServiceKey(application.serviceKey) ? application.serviceKey : null;
 
   useEffect(() => { if (error) errorRef.current?.focus(); }, [error]);
   useEffect(() => {
@@ -96,7 +98,7 @@ export function AppointmentPanel({ application, initialAppointment, locale, mess
     return () => { controller.abort(); if (rtoRequest.current === controller) rtoRequest.current = undefined; };
   }, [application.statusCode, locale, relevant, reloadKey]);
   useEffect(() => {
-    if (!rtoId || application.statusCode !== "READY_FOR_APPOINTMENT") return;
+    if (!rtoId || !appointmentServiceKey || application.statusCode !== "READY_FOR_APPOINTMENT") return;
     calendarRequest.current?.abort();
     slotRequest.current?.abort();
     slotRequest.current = undefined;
@@ -105,7 +107,7 @@ export function AppointmentPanel({ application, initialAppointment, locale, mess
     void Promise.resolve().then(() => {
       if (!isActiveAppointmentRequest(calendarRequest.current, controller)) return undefined;
       setLoading("calendar"); setAvailability(undefined); setDate(""); setSlots(undefined); setSlotId(""); setError(undefined);
-      return getRtoMonthAvailability(rtoId, month, application.serviceKey, controller.signal);
+      return getRtoMonthAvailability(rtoId, month, appointmentServiceKey, controller.signal);
     }).then((result) => {
       if (result && isActiveAppointmentRequest(calendarRequest.current, controller)) setAvailability(result);
     }).catch((reason: unknown) => {
@@ -118,7 +120,7 @@ export function AppointmentPanel({ application, initialAppointment, locale, mess
       slotRequest.current?.abort();
       slotRequest.current = undefined;
     };
-  }, [application.serviceKey, application.statusCode, locale, month, reloadKey, rtoId]);
+  }, [appointmentServiceKey, application.statusCode, locale, month, reloadKey, rtoId]);
 
   useEffect(() => () => { slotRequest.current?.abort(); slotRequest.current = undefined; }, []);
 
@@ -126,9 +128,10 @@ export function AppointmentPanel({ application, initialAppointment, locale, mess
   const selectedRto = rtos.find((rto) => rto.id === rtoId);
   const selectedSlot = slots?.slots.find((slot) => slot.slotId === slotId);
   const loadSlots = (chosenDate: string) => {
+    if (!appointmentServiceKey) return;
     slotRequest.current?.abort();
     const controller = new AbortController(); slotRequest.current = controller; setDate(chosenDate); setSlotId(""); setSlots(undefined); setLoading("slots"); setError(undefined);
-    void getRtoDaySlots(rtoId, chosenDate, application.serviceKey, controller.signal)
+    void getRtoDaySlots(rtoId, chosenDate, appointmentServiceKey, controller.signal)
       .then((result) => { if (isActiveAppointmentRequest(slotRequest.current, controller)) setSlots(result); })
       .catch((reason: unknown) => {
         if (!isActiveAppointmentRequest(slotRequest.current, controller)) return;

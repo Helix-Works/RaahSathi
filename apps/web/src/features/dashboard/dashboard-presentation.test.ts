@@ -5,6 +5,7 @@ import { resolveNextActionCard, selectHeroApplication } from "./dashboard-presen
 
 const copy = {
   defaultDescription: "default",
+  completionDescription: "completed",
   readyForAppointmentDescription: "payment complete",
   appointmentBookedDescription: "appointment booked",
   waitlistedDescription: "waitlisted",

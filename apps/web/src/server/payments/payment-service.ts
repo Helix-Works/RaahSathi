@@ -42,10 +42,13 @@ type FeeRule = Readonly<{
 }>;
 
 export function feeForService(serviceKey: ServiceKey): FeeRule {
-  const baseFeeMinor = serviceKey === "LEARNER_LICENCE" ? 50_000
-    : serviceKey === "PERMANENT_DRIVING_LICENCE" ? 70_000
-      : serviceKey === "DRIVING_LICENCE_RENEWAL" ? 40_000
-        : 20_000;
+  const baseFees: Readonly<Record<ServiceKey, number>> = {
+    LEARNER_LICENCE: 50_000,
+    PERMANENT_DRIVING_LICENCE: 70_000,
+    DRIVING_LICENCE_RENEWAL: 40_000,
+    DRIVING_LICENCE_ADDRESS_CHANGE: 20_000,
+  };
+  const baseFeeMinor = baseFees[serviceKey];
   const serviceChargeMinor = 5_000;
   return { baseFeeMinor, serviceChargeMinor, totalAmountMinor: baseFeeMinor + serviceChargeMinor, currency: "INR" };
 }
@@ -393,9 +396,6 @@ export async function startPayment(
         },
       });
       if (!application) throw apiErrors.notFound();
-      if (application.status !== "READY_FOR_PAYMENT") throw apiErrors.invalidTransition();
-      if (!application.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED")) throw apiErrors.invalidTransition();
-
       if (application.paymentAttempts.some((attempt) => attempt.status === "SUCCEEDED")) {
         return { context: toPaymentContext(application) };
       }
@@ -409,6 +409,9 @@ export async function startPayment(
         context: toPaymentContext(application, pending.id),
         scenario: paymentDecisionForScenario(application.paymentScenario, pending.attemptNumber).scenario,
       };
+
+      if (application.status !== "READY_FOR_PAYMENT") throw apiErrors.invalidTransition();
+      if (!application.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED")) throw apiErrors.invalidTransition();
 
       const feeRule = feeForService(application.serviceKey);
       const feeSnapshot = application.feeSnapshot ?? await database.feeSnapshot.create({ data: {
