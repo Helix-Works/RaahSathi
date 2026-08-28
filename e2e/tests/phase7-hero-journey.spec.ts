@@ -224,7 +224,9 @@ for (const locale of ["en", "hi"] as const) {
     await page.getByLabel(copy.afternoon).check();
     const updateButton = page.getByRole("button", { name: copy.update });
     await updateButton.click();
-    await expect(updateButton).toBeEnabled({ timeout: 30_000 });
+    const updatingLabel = locale === "en" ? "Updating preferences…" : "पसंद बदली जा रही है…";
+    await expect(page.getByRole("button", { name: updatingLabel })).toBeVisible({ timeout: 5_000 });
+    await expect(updateButton).toBeVisible({ timeout: 30_000 });
     await expect(joinedValue).toHaveText(immutableJoinTime ?? "");
 
     runDemoCommand("demo:release-slot", seedDate);
