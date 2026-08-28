@@ -1,7 +1,5 @@
 import "server-only";
 
-import { readCookie, sessionCookieName } from "@/server/auth/cookies";
-
 interface RateLimitEntry {
   count: number;
   windowStart: number;
@@ -39,7 +37,7 @@ export function checkRateLimit(
   cleanupExpiredEntries(now);
 
   const existing = store.get(identifier);
-  if (existing && now - existing.windowStart <= existing.windowMs) {
+  if (existing && now - existing.windowStart < existing.windowMs) {
     if (existing.count >= maxRequests) {
       const retryAfterSeconds = Math.ceil(
         (existing.windowStart + existing.windowMs - now) / 1000,
@@ -78,9 +76,9 @@ export function rateLimitKey(
     const ip = trustedClientAddress(request);
     if (ip) return `${ip}:${suffix}`;
   }
-  const session = readCookie(request.headers.get("cookie"), sessionCookieName);
-  const clientScope = session
-    ? `session:${session.slice(0, 16)}`
-    : perInstanceScope;
-  return `${clientScope}:${suffix}`;
+  // Without a verified connection-derived client identity, fail closed to a
+  // per-instance bucket rather than trusting an attacker-controlled forwarded
+  // header or an unverified session cookie a caller could rotate to bypass the
+  // limit.
+  return `${perInstanceScope}:${suffix}`;
 }

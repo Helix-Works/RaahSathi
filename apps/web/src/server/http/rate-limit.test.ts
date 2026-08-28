@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { checkRateLimit, defaultReadRateLimit, rateLimitKey } from "./rate-limit";
 
@@ -7,6 +7,7 @@ const originalTrustProxy = process.env.TRUST_PROXY_HEADERS;
 afterEach(() => {
   if (originalTrustProxy === undefined) delete process.env.TRUST_PROXY_HEADERS;
   else process.env.TRUST_PROXY_HEADERS = originalTrustProxy;
+  vi.useRealTimers();
 });
 
 function request(init?: RequestInit): Request {
@@ -27,10 +28,24 @@ describe("global in-memory rate limiter", () => {
     checkRateLimit("other-id", defaultReadRateLimit);
     expect(checkRateLimit("fresh-id", defaultReadRateLimit).allowed).toBe(true);
   });
+
+  it("starts a new window once the configured window elapses", () => {
+    vi.useFakeTimers();
+    const config = { windowMs: 1000, maxRequests: 2 };
+
+    expect(checkRateLimit("boundary-id", config).allowed).toBe(true);
+    expect(checkRateLimit("boundary-id", config).allowed).toBe(true);
+    expect(checkRateLimit("boundary-id", config).allowed).toBe(false);
+
+    vi.advanceTimersByTime(1000);
+    expect(checkRateLimit("boundary-id", config).allowed).toBe(true);
+
+    vi.useRealTimers();
+  });
 });
 
 describe("rateLimitKey derivation", () => {
-  it("uses the last trusted x-forwarded-for hop when prototype proxies headers are trusted", () => {
+  it("uses the last trusted x-forwarded-for hop when proxy headers are trusted", () => {
     process.env.TRUST_PROXY_HEADERS = "true";
     const key = rateLimitKey(
       request({ headers: { "x-forwarded-for": "1.2.3.4, 5.6.7.8" } }),
@@ -49,17 +64,21 @@ describe("rateLimitKey derivation", () => {
     expect(key).toContain(":read");
   });
 
-  it("scopes to the signed-in session when present", () => {
+  it("fails closed to a per-instance bucket instead of trusting a forged session cookie", () => {
     delete process.env.TRUST_PROXY_HEADERS;
-    const key = rateLimitKey(
+    const keyA = rateLimitKey(
       request({ headers: { cookie: "raahsathi_session=abc123def456ghi789" } }),
       "read",
     );
-    expect(key.startsWith("session:")).toBe(true);
-    expect(key.endsWith(":read")).toBe(true);
+    const keyB = rateLimitKey(
+      request({ headers: { cookie: "raahsathi_session=rotated-value" } }),
+      "read",
+    );
+    expect(keyA.startsWith("instance:")).toBe(true);
+    expect(keyA).toBe(keyB);
   });
 
-  it("scopes to a per-instance bucket instead of collapsing to one shared key", () => {
+  it("scopes to a stable per-instance bucket instead of collapsing to one shared key", () => {
     delete process.env.TRUST_PROXY_HEADERS;
     const keyA = rateLimitKey(request(), "read");
     const keyB = rateLimitKey(request(), "read");
@@ -67,4 +86,3 @@ describe("rateLimitKey derivation", () => {
     expect(keyA).toBe(keyB);
   });
 });
-
