@@ -99,7 +99,6 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
   const dashboard = messages.dashboard;
   const application = summary.application;
   const applicationStatus = statusPresentation(application?.statusCode ?? "", dashboard);
-  const applicationProgress = application ? Math.min(100, Math.max(0, application.progressPercent)) : 0;
   const nextActionCard = application
     ? resolveNextActionCard(application, {
         defaultDescription: dashboard.nextActionDescription,
@@ -161,12 +160,8 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
             <DashboardApplicationSummary
               title={dashboard.activeApplicationTitle}
               serviceName={serviceName(application.serviceKey, messages)}
-              description={dashboard.currentWorkDescription}
               status={applicationStatus.label}
               statusTone={applicationStatus.tone}
-              progressLabel={dashboard.progressLabel}
-              progressValue={applicationProgress}
-              progressText={`${new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(applicationProgress)}%`}
               updatedLabel={dashboard.updatedLabel}
               updatedValue={formatDateTime(application.updatedAt, locale, messages.status.unavailable)}
             />

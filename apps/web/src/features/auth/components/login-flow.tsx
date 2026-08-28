@@ -1,6 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { ServiceKey } from "@raahsathi/contracts/applications";
 import { ArrowLeft, LoaderCircle, MessageSquareText, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -19,6 +20,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authApi } from "@/features/auth/api";
+import { startApplication } from "@/features/applications/api";
 import { getAuthErrorPresentation, type AuthErrorPresentation } from "@/features/auth/errors";
 import {
   mobileFormSchema,
@@ -29,11 +31,13 @@ import {
 import type { SafeReturnPath } from "@/features/auth/safe-return-path";
 import type { OtpChallenge } from "@/features/auth/types";
 import type { Locale, MessageDictionary } from "@/i18n";
+import { ApiClientError } from "@/lib/api";
 
 type LoginFlowProps = Readonly<{
   messages: MessageDictionary;
   returnTo: SafeReturnPath;
   locale: Locale;
+  serviceKey?: ServiceKey;
 }>;
 
 function currentTimestamp(): number {
@@ -68,12 +72,13 @@ function ApiErrorSummary({
   );
 }
 
-export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
+export function LoginFlow({ messages, returnTo, locale, serviceKey }: LoginFlowProps) {
   const router = useRouter();
   const [challenge, setChallenge] = useState<OtpChallenge>();
   const [requestedMobile, setRequestedMobile] = useState<string>();
   const [clock, setClock] = useState(currentTimestamp);
   const [isResending, setIsResending] = useState(false);
+  const [loginCompleted, setLoginCompleted] = useState(false);
   const [apiError, setApiError] = useState<AuthErrorPresentation>();
   const requestForm = useForm<MobileFormValues>({
     resolver: zodResolver(mobileFormSchema),
@@ -143,11 +148,33 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
         otp: values.otp,
         preferredLocale: locale,
       });
-      router.replace(returnTo);
-      router.refresh();
     } catch (error: unknown) {
       presentError(error);
+      return;
     }
+
+    if (serviceKey) {
+      try {
+        const application = await startApplication(serviceKey);
+        router.replace(`/applications/${application.id}`);
+        router.refresh();
+        return;
+      } catch (error: unknown) {
+        setLoginCompleted(true);
+        setApiError({
+          message: error instanceof ApiClientError && error.code === "ELIGIBLE_LICENCE_REQUIRED"
+            ? messages.services.eligibleLicenceRequired
+            : messages.services.startFailed,
+          ...(error instanceof ApiClientError && error.correlationId
+            ? { correlationId: error.correlationId }
+            : {}),
+        });
+        return;
+      }
+    }
+
+    router.replace(returnTo);
+    router.refresh();
   });
 
   const restart = () => {
@@ -205,12 +232,16 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
         {apiError ? (
           <ApiErrorSummary
             error={apiError}
-            title={authMessages.errorSummaryTitle}
+            title={loginCompleted ? messages.services.startFailed : authMessages.errorSummaryTitle}
             correlationLabel={messages.errors.correlationLabel}
           />
         ) : null}
 
-        {!challenge ? (
+        {loginCompleted ? (
+          <Button className="w-full" size="lg" type="button" onClick={() => router.replace(returnTo)}>
+            {messages.navigation.services}
+          </Button>
+        ) : !challenge ? (
           <form className="space-y-5" onSubmit={requestOtp} noValidate>
             <div className="space-y-2">
               <Label htmlFor="synthetic-mobile">{authMessages.mobileLabel}</Label>

@@ -58,7 +58,6 @@ export default async function ApplicationsPage() {
         <PageHeader
           eyebrow={messages.applications.eyebrow}
           title={messages.applications.listTitle}
-          description={messages.applications.listDescription}
         />
         <Link className={buttonVariants({ variant: "outline" })} href="/services">{messages.common.exploreServices}</Link>
       </div>
@@ -74,9 +73,6 @@ export default async function ApplicationsPage() {
               nextAction={actionLabels[application.nextActionCode]}
               updatedLabel={messages.applications.updatedLabel}
               updatedValue={new Intl.DateTimeFormat(locale === "hi" ? "hi-IN" : "en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }).format(new Date(application.updatedAt))}
-              progressLabel={messages.applications.progressLabel}
-              progress={application.progressPercent}
-              progressText={`${new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(application.progressPercent)}%`}
               resumeLabel={messages.applications.resume}
               href={`/applications/${application.id}`}
             />

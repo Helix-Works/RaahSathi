@@ -2,6 +2,11 @@ import { Prisma } from "@prisma/client";
 
 import { ApiError, type ApiErrorBody } from "./api-error";
 import { getCorrelationId } from "./correlation-id";
+import {
+  checkRateLimit,
+  defaultReadRateLimit,
+  rateLimitKey,
+} from "./rate-limit";
 
 export interface ApiRequestContext {
   correlationId: string;
@@ -50,6 +55,21 @@ function errorResponse(error: ApiError, correlationId: string): Response {
 
 export async function handleApiRequest(request: Request, handler: ApiHandler): Promise<Response> {
   const correlationId = getCorrelationId(request);
+
+  if (request.method === "GET") {
+    const key = rateLimitKey(request, "read");
+    const result = checkRateLimit(key, defaultReadRateLimit);
+    if (!result.allowed) {
+      const error = new ApiError(429, "RATE_LIMIT_EXCEEDED", "errors.rateLimitExceeded", {
+        retryable: true,
+        retryAfter: result.retryAfterSeconds,
+      });
+      const response = errorResponse(error, correlationId);
+      response.headers.set("x-request-id", correlationId);
+      return response;
+    }
+  }
+
   let response: Response;
 
   try {
