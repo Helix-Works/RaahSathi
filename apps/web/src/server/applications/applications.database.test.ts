@@ -100,6 +100,11 @@ describe.skipIf(!database)("Phase 2 disposable PostgreSQL persistence", () => {
       "phase8-renewal-ineligible",
       database,
     )).rejects.toThrowError(/ELIGIBLE_LICENCE_REQUIRED/);
+    await expect(database.application.create({ data: {
+      applicantId: applicantB,
+      serviceKey: "DRIVING_LICENCE_RENEWAL",
+      targetLicenceId: permanentLicenceId,
+    } })).rejects.toMatchObject({ code: "P2003" });
 
     const addressChange = await createApplication(
       contextA,

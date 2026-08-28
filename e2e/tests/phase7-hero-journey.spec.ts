@@ -76,8 +76,26 @@ function runDemoCommand(
   const pnpmCli = process.env.npm_execpath;
   if (!pnpmCli) throw new Error("npm_execpath is required to run the approved Phase 7 demo commands.");
   const isJavaScriptCli = /\.[cm]?js$/i.test(pnpmCli);
-  const executable = isJavaScriptCli ? process.execPath : pnpmCli;
-  const args = [...(isJavaScriptCli ? [pnpmCli] : []), "--filter", "@raahsathi/web", command];
+  const isWindowsCommandCli = /\.(?:cmd|bat)$/i.test(pnpmCli);
+  const windowsCommandProcessor = process.env.ComSpec ?? process.env.COMSPEC;
+  if (isWindowsCommandCli && /["\r\n]/.test(pnpmCli)) {
+    throw new Error("The Windows package-manager launcher path contains unsafe command characters.");
+  }
+  if (isWindowsCommandCli && !windowsCommandProcessor) {
+    throw new Error("ComSpec is required to run a Windows package-manager command launcher.");
+  }
+  const executable = isJavaScriptCli
+    ? process.execPath
+    : isWindowsCommandCli
+      ? windowsCommandProcessor ?? ""
+      : pnpmCli;
+  const packageManagerArgs = ["--filter", "@raahsathi/web", command];
+  const windowsCommand = `""${pnpmCli}" ${packageManagerArgs.join(" ")}"`;
+  const args = isJavaScriptCli
+    ? [pnpmCli, ...packageManagerArgs]
+    : isWindowsCommandCli
+      ? ["/d", "/s", "/c", windowsCommand]
+      : packageManagerArgs;
   const result = spawnSync(executable, args, {
     cwd: repositoryRoot,
     env: {
@@ -87,6 +105,7 @@ function runDemoCommand(
       RAAHSATHI_DEMO_SEED_DATE: seedDate,
     },
     encoding: "utf8",
+    windowsVerbatimArguments: isWindowsCommandCli,
   });
   if (result.status !== 0) {
     const secrets = [testDatabaseUrl, process.env.DATABASE_URL].filter((value): value is string => Boolean(value));
