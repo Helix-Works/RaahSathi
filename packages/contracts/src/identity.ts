@@ -22,15 +22,17 @@ export const identityContextSchema = z.object({
   documents: z.array(documentRecordSchema),
 }).strict();
 
-export const licenceKindSchema = z.enum(["LEARNER"]);
+export const licenceKindSchema = z.enum(["LEARNER", "PERMANENT"]);
 export const vehicleClassSchema = z.enum(["LMV"]);
 export const licenceRecordSchema = z.object({
   id: z.uuid(),
   kind: licenceKindSchema,
-  syntheticReference: z.string().regex(/^SYN-LL-[A-Z0-9-]{8,40}$/),
+  syntheticReference: z.string().regex(/^SYN-(?:LL|DL)-[A-Z0-9-]{8,40}$/),
   vehicleClass: vehicleClassSchema,
   issuedAt: z.iso.datetime(),
   validUntil: z.iso.datetime(),
+  address: z.object({ district: z.string().min(1).max(80), postalCode: z.string().regex(/^11\d{4}$/) }).strict().nullable(),
+  renewedAt: z.iso.datetime().nullable(),
 }).strict();
 export const licenceListSchema = z.object({ licences: z.array(licenceRecordSchema) }).strict();
 

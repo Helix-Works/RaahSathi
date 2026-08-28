@@ -10,11 +10,14 @@ import { apiErrors } from "@/server/http/api-error";
 
 function toSummary(record: Readonly<{
   id: string;
-  kind: "LEARNER";
+  kind: "LEARNER" | "PERMANENT";
   syntheticReference: string;
   vehicleClass: "LMV";
   issuedAt: Date;
   validUntil: Date;
+  addressDistrict: string | null;
+  addressPostalCode: string | null;
+  renewedAt: Date | null;
 }>): LicenceRecordSummary {
   return licenceRecordSchema.parse({
     id: record.id,
@@ -23,6 +26,10 @@ function toSummary(record: Readonly<{
     vehicleClass: record.vehicleClass,
     issuedAt: record.issuedAt.toISOString(),
     validUntil: record.validUntil.toISOString(),
+    address: record.addressDistrict && record.addressPostalCode
+      ? { district: record.addressDistrict, postalCode: record.addressPostalCode }
+      : null,
+    renewedAt: record.renewedAt?.toISOString() ?? null,
   });
 }
 

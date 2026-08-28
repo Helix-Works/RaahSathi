@@ -17,5 +17,15 @@ export function getServiceCopy(
         name: messages.permanentName,
         description: messages.permanentDescription,
       };
+    case "DRIVING_LICENCE_RENEWAL":
+      return {
+        name: messages.renewalName,
+        description: messages.renewalDescription,
+      };
+    case "DRIVING_LICENCE_ADDRESS_CHANGE":
+      return {
+        name: messages.addressChangeName,
+        description: messages.addressChangeDescription,
+      };
   }
 }

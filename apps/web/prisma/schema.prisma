@@ -31,6 +31,8 @@ enum SyntheticAuthScenario {
 enum ServiceKey {
   LEARNER_LICENCE
   PERMANENT_DRIVING_LICENCE
+  DRIVING_LICENCE_RENEWAL
+  DRIVING_LICENCE_ADDRESS_CHANGE
 }
 
 enum ApplicationStatus {
@@ -42,6 +44,7 @@ enum ApplicationStatus {
   WAITLISTED
   SLOT_OFFERED
   APPOINTMENT_BOOKED
+  COMPLETED
 }
 
 enum ApplicationSectionKey {
@@ -71,6 +74,7 @@ enum ApplicationEventType {
   SLOT_OFFER_ACCEPTED
   SLOT_OFFER_DECLINED
   SLOT_OFFER_EXPIRED
+  SERVICE_COMPLETED
 }
 
 enum RtoOperationalStatus {
@@ -165,6 +169,7 @@ enum DocumentKind {
 
 enum LicenceKind {
   LEARNER
+  PERMANENT
 }
 
 enum VehicleClass {
@@ -251,9 +256,11 @@ model Application {
   status           ApplicationStatus        @default(DRAFT)
   identityScenario IdentityProviderScenario @default(SUCCESS)
   paymentScenario  PaymentProviderScenario  @default(SUCCESS)
+  targetLicenceId  String?                  @db.Uuid
   createdAt        DateTime                 @default(now()) @db.Timestamptz(3)
   updatedAt        DateTime                 @updatedAt @db.Timestamptz(3)
   applicant        Applicant                @relation(fields: [applicantId], references: [id], onDelete: Restrict)
+  targetLicence    LicenceRecord?            @relation("TargetLicenceApplications", fields: [targetLicenceId], references: [id], onDelete: Restrict)
   sections         ApplicationSection[]
   events           ApplicationEvent[]
   documents        DocumentRecord[]
@@ -265,6 +272,7 @@ model Application {
 
   @@unique([applicantId, serviceKey])
   @@index([applicantId, updatedAt])
+  @@index([targetLicenceId])
 }
 
 model FeeSnapshot {
@@ -381,8 +389,12 @@ model LicenceRecord {
   vehicleClass       VehicleClass
   issuedAt           DateTime     @db.Timestamptz(3)
   validUntil         DateTime     @db.Timestamptz(3)
+  addressDistrict    String?
+  addressPostalCode  String?      @db.Char(6)
+  renewedAt          DateTime?    @db.Timestamptz(3)
   createdAt          DateTime     @default(now()) @db.Timestamptz(3)
   applicant          Applicant    @relation(fields: [applicantId], references: [id], onDelete: Restrict)
+  targetedApplications Application[] @relation("TargetLicenceApplications")
 
   @@unique([applicantId, kind])
   @@index([applicantId, validUntil])

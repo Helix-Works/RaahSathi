@@ -26,6 +26,13 @@ describe("durable application workflow", () => {
     expect(deriveApplicationPresentation(["PERSONAL_DETAILS", "ADDRESS", "SERVICE_DETAILS", "DECLARATION"], true, true, true)).toEqual({
       statusCode: "APPOINTMENT_BOOKED", progressPercent: 100, nextActionCode: "REVIEW_APPOINTMENT",
     });
+    expect(deriveApplicationPresentation(
+      ["PERSONAL_DETAILS", "ADDRESS", "SERVICE_DETAILS", "DECLARATION"],
+      true,
+      true,
+      false,
+      "DRIVING_LICENCE_RENEWAL",
+    )).toEqual({ statusCode: "COMPLETED", progressPercent: 100, nextActionCode: "REVIEW_COMPLETION" });
   });
 
   it("rejects cross-applicant ownership", () => {

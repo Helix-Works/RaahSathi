@@ -1,5 +1,4 @@
-import { appointmentDateSchema, daySlotsSchema } from "@raahsathi/contracts/appointments";
-import { serviceKeySchema } from "@raahsathi/contracts/applications";
+import { appointmentDateSchema, appointmentServiceKeySchema, daySlotsSchema } from "@raahsathi/contracts/appointments";
 import { z } from "zod";
 
 import { getDaySlots } from "@/server/appointments/appointment-service";
@@ -13,7 +12,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const id = z.uuid().safeParse((await context.params).id);
     const url = new URL(request.url);
     const date = appointmentDateSchema.safeParse(url.searchParams.get("date"));
-    const service = serviceKeySchema.safeParse(url.searchParams.get("service"));
+    const service = appointmentServiceKeySchema.safeParse(url.searchParams.get("service"));
     const fieldErrors: Record<string, string[]> = {};
     if (!id.success) fieldErrors.id = ["invalid_format"];
     if (!date.success) fieldErrors.date = ["invalid_format"];

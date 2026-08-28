@@ -17,6 +17,7 @@ import { formatAppointmentDate } from "@/features/appointments/appointment-date"
 import { DashboardApplicationSummary } from "@/features/dashboard/components/dashboard-application-summary";
 import { DashboardContextCard } from "@/features/dashboard/components/dashboard-context-card";
 import { resolveNextActionCard } from "@/features/dashboard/dashboard-presentation";
+import { getServiceCopy } from "@/features/services/presentation";
 import type { DashboardSummary } from "@/features/dashboard/types";
 import type { Locale, MessageDictionary } from "@/i18n";
 
@@ -27,9 +28,7 @@ type DashboardViewProps = Readonly<{
 }>;
 
 function serviceName(serviceKey: ServiceKey, messages: MessageDictionary): string {
-  return serviceKey === "LEARNER_LICENCE"
-    ? messages.services.learnerName
-    : messages.services.permanentName;
+  return getServiceCopy(serviceKey, messages.services).name;
 }
 
 function statusPresentation(
@@ -37,6 +36,7 @@ function statusPresentation(
   messages: MessageDictionary["dashboard"],
 ): Readonly<{ label: string; tone: "neutral" | "success" | "warning" }> {
   if (code === "APPOINTMENT_BOOKED") return { label: messages.statusAppointmentBooked, tone: "success" };
+  if (code === "COMPLETED") return { label: messages.statusCompleted, tone: "success" };
   if (code === "WAITLISTED") return { label: messages.statusWaitlisted, tone: "warning" };
   if (code === "SLOT_OFFERED") return { label: messages.statusSlotOffered, tone: "success" };
   if (code === "DRAFT") return { label: messages.statusDraft, tone: "neutral" };
@@ -54,6 +54,7 @@ function nextActionPresentation(
   if (code === "REVIEW_OFFER") return messages.nextActionReviewOffer;
   if (code === "REVIEW_WAITLIST") return messages.nextActionReviewWaitlist;
   if (code === "REVIEW_APPOINTMENT") return messages.nextActionReviewAppointment;
+  if (code === "REVIEW_COMPLETION") return messages.nextActionReviewCompletion;
   if (code === "NONE") return messages.nextActionNone;
   if (code.startsWith("COMPLETE_")) return messages.nextActionResumeApplication;
   if (code === "VERIFY_IDENTITY") return messages.nextActionVerifyIdentity;

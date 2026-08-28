@@ -105,6 +105,8 @@ describe("payment convergence foundation", () => {
       currency: "INR",
     });
     expect(feeForService("PERMANENT_DRIVING_LICENCE").totalAmountMinor).toBe(75_000);
+    expect(feeForService("DRIVING_LICENCE_RENEWAL").totalAmountMinor).toBe(45_000);
+    expect(feeForService("DRIVING_LICENCE_ADDRESS_CHANGE").totalAmountMinor).toBe(25_000);
     expect(() => createPaymentRequestSchema.parse({ idempotencyKey: crypto.randomUUID(), amountMinor: 1 })).toThrow();
   });
 

@@ -121,13 +121,19 @@ export const enMessages = {
     eyebrow: "Driving-licence services",
     title: "Choose the journey you need",
     description:
-      "Start or resume one of the two durable synthetic application journeys.",
+      "Start or resume one of four durable synthetic application journeys.",
     learnerName: "New Learner Licence",
     learnerDescription:
       "Prepare for a first learner-licence application with clear progress and recovery.",
     permanentName: "Permanent Driving Licence",
     permanentDescription:
       "Continue from learner eligibility toward the permanent driving-licence journey.",
+    renewalName: "Driving Licence Renewal",
+    renewalDescription:
+      "Renew an eligible synthetic permanent driving licence through a durable, recoverable journey.",
+    addressChangeName: "Change of Address",
+    addressChangeDescription:
+      "Update the Delhi address on an eligible synthetic permanent driving licence.",
     unavailableAction: "Application journey coming soon",
     emptyTitle: "No services are available yet",
     emptyDescription:
@@ -135,6 +141,7 @@ export const enMessages = {
     loading: "Loading driving-licence services",
     availableStatus: "Available in this prototype",
     startFailed: "Unable to start safely. Please try again.",
+    eligibleLicenceRequired: "This service requires an eligible synthetic permanent driving licence on your account.",
     backToHome: "Back to home",
   },
   applications: {
@@ -204,6 +211,7 @@ export const enMessages = {
     statusWaitlisted: "Waiting for a suitable appointment slot",
     statusSlotOffered: "Temporary appointment offer available",
     statusAppointmentBooked: "Appointment booked",
+    statusCompleted: "Service completed",
     nextPersonalDetails: "Complete personal details",
     nextAddress: "Complete the Delhi address",
     nextServiceDetails: "Complete service details",
@@ -214,6 +222,7 @@ export const enMessages = {
     nextReviewWaitlist: "Review your appointment waitlist",
     nextReviewOffer: "Review your temporary slot offer",
     nextReviewAppointment: "Review your appointment",
+    nextReviewCompletion: "Review completed service",
     nextActionNone: "No action is required right now",
     blockingIdentity: "Identity verification is required. All completed application sections remain saved.",
     blockingPayment: "Identity is verified. Complete the synthetic fee payment to continue.",
@@ -242,6 +251,7 @@ export const enMessages = {
     historyOfferAccepted: "Temporary slot offer accepted",
     historyOfferDeclined: "Temporary slot offer declined",
     historyOfferExpired: "Temporary slot offer expired",
+    historyServiceCompleted: "Driving-licence service completed",
     historyGeneric: "Application activity recorded",
   },
   identity: {
@@ -477,6 +487,7 @@ export const enMessages = {
     updatedLabel: "Last updated",
     statusAppointmentRequired: "Appointment required",
     statusAppointmentBooked: "Appointment booked",
+    statusCompleted: "Service completed",
     statusWaitlisted: "Waiting for a suitable slot",
     statusSlotOffered: "Temporary slot offer available",
     statusDraft: "Draft",
@@ -488,6 +499,7 @@ export const enMessages = {
     nextActionReviewOffer: "Review temporary slot offer",
     nextActionReviewWaitlist: "Review your appointment waitlist",
     nextActionReviewAppointment: "Review your appointment",
+    nextActionReviewCompletion: "Review completed service",
     nextActionNone: "No action needed right now",
     nextActionResumeApplication: "Resume the next application section",
     nextActionVerifyIdentity: "Complete synthetic identity verification",

@@ -3,13 +3,15 @@ import type { DashboardApplicationSummary } from "@/features/dashboard/types";
 export function selectHeroApplication(
   applications: readonly DashboardApplicationSummary[],
 ): DashboardApplicationSummary | undefined {
+  const isActive = ({ statusCode }: DashboardApplicationSummary) =>
+    statusCode !== "APPOINTMENT_BOOKED" && statusCode !== "COMPLETED";
   const latest = [...applications].sort((left, right) =>
     right.updatedAt.localeCompare(left.updatedAt))[0];
   return applications.find(({ statusCode }) => statusCode === "SLOT_OFFERED")
     ?? applications.find(({ statusCode }) => statusCode === "WAITLISTED")
     ?? applications.find(({ serviceKey, statusCode }) =>
-      serviceKey === "PERMANENT_DRIVING_LICENCE" && statusCode !== "APPOINTMENT_BOOKED")
-    ?? applications.find(({ statusCode }) => statusCode !== "APPOINTMENT_BOOKED")
+      serviceKey === "PERMANENT_DRIVING_LICENCE" && statusCode !== "APPOINTMENT_BOOKED" && statusCode !== "COMPLETED")
+    ?? applications.find(isActive)
     ?? latest;
 }
 

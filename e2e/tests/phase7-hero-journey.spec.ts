@@ -75,9 +75,10 @@ function runDemoCommand(
 ): void {
   const pnpmCli = process.env.npm_execpath;
   if (!pnpmCli) throw new Error("npm_execpath is required to run the approved Phase 7 demo commands.");
-  // npm_execpath is a JavaScript CLI entrypoint. Launch it through Node so the
-  // deterministic fixture commands run consistently on Windows and Unix hosts.
-  const result = spawnSync(process.execPath, [pnpmCli, "--filter", "@raahsathi/web", command], {
+  const isJavaScriptCli = /\.[cm]?js$/i.test(pnpmCli);
+  const executable = isJavaScriptCli ? process.execPath : pnpmCli;
+  const args = [...(isJavaScriptCli ? [pnpmCli] : []), "--filter", "@raahsathi/web", command];
+  const result = spawnSync(executable, args, {
     cwd: repositoryRoot,
     env: {
       ...process.env,
@@ -202,7 +203,9 @@ for (const locale of ["en", "hi"] as const) {
     await expect(joinedValue).toHaveText(/\S+/);
     const immutableJoinTime = await joinedValue.textContent();
     await page.getByLabel(copy.afternoon).check();
-    await page.getByRole("button", { name: copy.update }).click();
+    const updateButton = page.getByRole("button", { name: copy.update });
+    await updateButton.click();
+    await expect(updateButton).toBeEnabled({ timeout: 30_000 });
     await expect(joinedValue).toHaveText(immutableJoinTime ?? "");
 
     runDemoCommand("demo:release-slot", seedDate);

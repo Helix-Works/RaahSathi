@@ -33,16 +33,25 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
   const identityAttemptId = randomUUID();
   const projectionApplicantId = randomUUID();
   const projectionApplicationId = randomUUID();
+  const renewalApplicantId = randomUUID();
+  const renewalApplicationId = randomUUID();
+  const renewalLicenceId = randomUUID();
+  const addressApplicantId = randomUUID();
+  const addressApplicationId = randomUUID();
+  const addressLicenceId = randomUUID();
   const contextA = { sessionId: randomUUID(), applicantId: applicantA };
   const contextB = { sessionId: randomUUID(), applicantId: applicantB };
   const projectionContext = { sessionId: randomUUID(), applicantId: projectionApplicantId };
+  const renewalContext = { sessionId: randomUUID(), applicantId: renewalApplicantId };
+  const addressContext = { sessionId: randomUUID(), applicantId: addressApplicantId };
   const secret = "phase-4-database-provider-secret-at-least-32-characters";
 
   afterAll(async () => {
     if (!database) return;
     try {
-      await database.application.deleteMany({ where: { id: { in: [applicationId, secondApplicationId, projectionApplicationId] } } });
-      await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, projectionApplicantId] } } });
+      await database.application.deleteMany({ where: { id: { in: [applicationId, secondApplicationId, projectionApplicationId, renewalApplicationId, addressApplicationId] } } });
+      await database.licenceRecord.deleteMany({ where: { id: { in: [renewalLicenceId, addressLicenceId] } } });
+      await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, projectionApplicantId, renewalApplicantId, addressApplicantId] } } });
     } finally {
       await database.$disconnect();
     }
@@ -201,6 +210,126 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
       correlationId: "phase4-cross-application-key",
     }, database)).rejects.toThrowError(/VALIDATION_FAILED/);
     expect(await database.paymentAttempt.count({ where: { applicationId: secondApplicationId } })).toBe(1);
+  }, 90_000);
+
+  it("projects renewal and address change exactly once after delayed duplicate payment success", async () => {
+    if (!database) return;
+    const occurredAt = "2026-08-28T08:00:00.000Z";
+    await database.applicant.createMany({ data: [
+      { id: renewalApplicantId, mobileLookupHash: `phase8-renewal-${renewalApplicantId}`, mobileLast4: "8001", displayName: "Phase 8 Renewal" },
+      { id: addressApplicantId, mobileLookupHash: `phase8-address-${addressApplicantId}`, mobileLast4: "8002", displayName: "Phase 8 Address" },
+    ] });
+    await database.licenceRecord.createMany({ data: [
+      {
+        id: renewalLicenceId,
+        applicantId: renewalApplicantId,
+        kind: "PERMANENT",
+        syntheticReference: `SYN-DL-${renewalLicenceId.toUpperCase()}`,
+        vehicleClass: "LMV",
+        issuedAt: new Date("2025-01-01T00:00:00.000Z"),
+        validUntil: new Date("2030-01-01T00:00:00.000Z"),
+        addressDistrict: "CENTRAL",
+        addressPostalCode: "110001",
+      },
+      {
+        id: addressLicenceId,
+        applicantId: addressApplicantId,
+        kind: "PERMANENT",
+        syntheticReference: `SYN-DL-${addressLicenceId.toUpperCase()}`,
+        vehicleClass: "LMV",
+        issuedAt: new Date("2025-01-01T00:00:00.000Z"),
+        validUntil: new Date("2030-01-01T00:00:00.000Z"),
+        addressDistrict: "CENTRAL",
+        addressPostalCode: "110001",
+      },
+    ] });
+
+    const createMaintenanceApplication = async (
+      id: string,
+      applicantId: string,
+      targetLicenceId: string,
+      serviceKey: "DRIVING_LICENCE_RENEWAL" | "DRIVING_LICENCE_ADDRESS_CHANGE",
+      district: string,
+      postalCode: string,
+    ) => database.application.create({ data: {
+      id,
+      applicantId,
+      targetLicenceId,
+      serviceKey,
+      status: "READY_FOR_PAYMENT",
+      paymentScenario: "DELAYED_SUCCESS",
+      sections: { create: [
+        { sectionKey: "PERSONAL_DETAILS", data: { fullName: "Synthetic Phase 8", dateOfBirth: "1995-01-15" }, completedAt: new Date(occurredAt) },
+        { sectionKey: "ADDRESS", data: { district, postalCode }, completedAt: new Date(occurredAt) },
+        { sectionKey: "SERVICE_DETAILS", data: { vehicleClass: "LMV" }, completedAt: new Date(occurredAt) },
+        { sectionKey: "DECLARATION", data: { accepted: true }, completedAt: new Date(occurredAt) },
+      ] },
+      identityAttempts: { create: { outcome: "VERIFIED", attemptNumber: 1, correlationId: `phase8-${id}` } },
+    } });
+
+    await createMaintenanceApplication(
+      renewalApplicationId,
+      renewalApplicantId,
+      renewalLicenceId,
+      "DRIVING_LICENCE_RENEWAL",
+      "NORTH_WEST",
+      "110085",
+    );
+    await createMaintenanceApplication(
+      addressApplicationId,
+      addressApplicantId,
+      addressLicenceId,
+      "DRIVING_LICENCE_ADDRESS_CHANGE",
+      "SOUTH",
+      "110017",
+    );
+
+    const converge = async (context: typeof renewalContext, applicationId: string) => {
+      const pending = await startPayment(context, {
+        applicationId,
+        idempotencyKey: randomUUID(),
+        correlationId: `phase8-start-${applicationId}`,
+        now: new Date(occurredAt),
+      }, database);
+      const providerEvent = {
+        eventId: `evt_${randomUUID().replaceAll("-", "")}`,
+        providerReference: pending.attempt?.providerReference ?? "",
+        outcome: "SUCCESS" as const,
+        amountMinor: pending.fee.totalAmountMinor,
+        occurredAt,
+      };
+      const signature = signPaymentProviderEvent(providerEvent, secret);
+      await Promise.all([
+        processSignedPaymentProviderEvent(providerEvent, signature, `phase8-a-${applicationId}`, { secret, database }),
+        processSignedPaymentProviderEvent(providerEvent, signature, `phase8-b-${applicationId}`, { secret, database }),
+      ]);
+    };
+
+    await converge(renewalContext, renewalApplicationId);
+    await converge(addressContext, addressApplicationId);
+
+    const renewal = await database.licenceRecord.findUniqueOrThrow({ where: { id: renewalLicenceId } });
+    expect(renewal).toMatchObject({
+      addressDistrict: "NORTH_WEST",
+      addressPostalCode: "110085",
+      renewedAt: new Date(occurredAt),
+      validUntil: new Date("2035-01-01T00:00:00.000Z"),
+    });
+    const changedAddress = await database.licenceRecord.findUniqueOrThrow({ where: { id: addressLicenceId } });
+    expect(changedAddress).toMatchObject({
+      addressDistrict: "SOUTH",
+      addressPostalCode: "110017",
+      renewedAt: null,
+      validUntil: new Date("2030-01-01T00:00:00.000Z"),
+    });
+
+    for (const completedApplicationId of [renewalApplicationId, addressApplicationId]) {
+      expect((await database.application.findUniqueOrThrow({ where: { id: completedApplicationId } })).status).toBe("COMPLETED");
+      expect(await database.applicationEvent.count({ where: { applicationId: completedApplicationId, eventType: "PAYMENT_SUCCEEDED" } })).toBe(1);
+      expect(await database.applicationEvent.count({ where: { applicationId: completedApplicationId, eventType: "SERVICE_COMPLETED" } })).toBe(1);
+      const audit = await database.auditEvent.findFirstOrThrow({ where: { resourceId: completedApplicationId, eventType: "SERVICE_COMPLETED" } });
+      expect(JSON.stringify(audit.metadata)).not.toMatch(/secret|provider|payment/i);
+    }
   }, 90_000);
 
   it("reconstructs a successful application payment ahead of a newer pending attempt", async () => {

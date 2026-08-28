@@ -18,6 +18,7 @@ async function main() {
   const applicants = [
     { id: "10000000-0000-4000-8000-000000000001", mobile: "9000000000", displayName: "RaahSathi Demo", authScenario: "STANDARD" as const },
     { id: "10000000-0000-4000-8000-000000000002", mobile: "9000000002", displayName: "Provider Failure Demo", authScenario: "PROVIDER_UNAVAILABLE" as const },
+    { id: "10000000-0000-4000-8000-000000000009", mobile: "9000000009", displayName: "Four Services Demo", authScenario: "STANDARD" as const },
   ];
   for (const applicant of applicants) {
     const mobileLookupHash = lookupHash(applicant.mobile, pepper);
@@ -53,7 +54,22 @@ async function main() {
     },
     update: {},
   });
-  console.info("Seeded synthetic applicants, a resumable learner application, Delhi RTOs, and appointment states.");
+  await database.licenceRecord.upsert({
+    where: { applicantId_kind: { applicantId: applicants[2].id, kind: "PERMANENT" } },
+    create: {
+      id: "33000000-0000-4000-8000-000000000009",
+      applicantId: applicants[2].id,
+      kind: "PERMANENT",
+      syntheticReference: "SYN-DL-PHASE8-0009",
+      vehicleClass: "LMV",
+      issuedAt: new Date("2024-01-15T00:00:00.000Z"),
+      validUntil: new Date("2029-01-14T23:59:59.000Z"),
+      addressDistrict: "NORTH_WEST",
+      addressPostalCode: "110085",
+    },
+    update: {},
+  });
+  console.info("Seeded synthetic applicants, licence contexts, a resumable learner application, Delhi RTOs, and appointment states.");
 }
 
 void main()

@@ -29,6 +29,7 @@ import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { prisma } from "@/server/database/prisma";
 import { retryTransientConnectionRead } from "@/server/database/read-retry";
 import { apiErrors } from "@/server/http/api-error";
+import { isLicenceMaintenanceService, serviceRequiresPermanentLicence } from "@/server/applications/service-profile";
 
 type ApplicationSummaryRecord = Pick<Application, "id" | "serviceKey" | "status" | "updatedAt"> & {
   sections: Pick<ApplicationSection, "sectionKey" | "completedAt">[];
@@ -45,14 +46,17 @@ type ApplicationRecord = Application & {
   appointment: Appointment | null;
 };
 
-export function deriveApplicationPresentation(completedSectionKeys: readonly ApplicationSectionKey[], identityVerified = false, paymentSucceeded = false, appointmentBooked = false): Readonly<{
-  statusCode: "DRAFT" | "IN_PROGRESS" | "READY_FOR_IDENTITY" | "READY_FOR_PAYMENT" | "READY_FOR_APPOINTMENT" | "WAITLISTED" | "SLOT_OFFERED" | "APPOINTMENT_BOOKED";
+export function deriveApplicationPresentation(completedSectionKeys: readonly ApplicationSectionKey[], identityVerified = false, paymentSucceeded = false, appointmentBooked = false, serviceKey: ServiceKey = "LEARNER_LICENCE"): Readonly<{
+  statusCode: "DRAFT" | "IN_PROGRESS" | "READY_FOR_IDENTITY" | "READY_FOR_PAYMENT" | "READY_FOR_APPOINTMENT" | "WAITLISTED" | "SLOT_OFFERED" | "APPOINTMENT_BOOKED" | "COMPLETED";
   progressPercent: number;
   nextActionCode: ApplicationSummary["nextActionCode"];
   blockingReasonCode?: "IDENTITY_VERIFICATION_REQUIRED" | "PAYMENT_REQUIRED";
 }> {
   const completed = new Set(completedSectionKeys);
   const nextSection = applicationSectionOrder.find((sectionKey) => !completed.has(sectionKey));
+  if (!nextSection && identityVerified && paymentSucceeded && isLicenceMaintenanceService(serviceKey)) return {
+    statusCode: "COMPLETED", progressPercent: 100, nextActionCode: "REVIEW_COMPLETION",
+  };
   if (!nextSection && identityVerified && paymentSucceeded && appointmentBooked) return {
     statusCode: "APPOINTMENT_BOOKED", progressPercent: 100, nextActionCode: "REVIEW_APPOINTMENT",
   };
@@ -103,6 +107,10 @@ function validateSectionData(sectionKey: ApplicationSectionKey, serviceKey: Serv
 }
 
 function deriveSummary(record: ApplicationSummaryRecord): ApplicationSummary {
+  if (record.status === "COMPLETED") return applicationSummarySchema.parse({
+    id: record.id, serviceKey: record.serviceKey, statusCode: "COMPLETED", progressPercent: 100,
+    nextActionCode: "REVIEW_COMPLETION", updatedAt: record.updatedAt.toISOString(),
+  });
   if (record.status === "WAITLISTED") return applicationSummarySchema.parse({
     id: record.id, serviceKey: record.serviceKey, statusCode: "WAITLISTED", progressPercent: 100,
     nextActionCode: "REVIEW_WAITLIST", blockingReasonCode: "NO_SUITABLE_SLOT", updatedAt: record.updatedAt.toISOString(),
@@ -117,6 +125,7 @@ function deriveSummary(record: ApplicationSummaryRecord): ApplicationSummary {
     record.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED"),
     record.paymentAttempts.some((attempt) => attempt.status === "SUCCEEDED"),
     record.appointment?.status === "CONFIRMED",
+    record.serviceKey,
   );
   return applicationSummarySchema.parse({
     id: record.id,
@@ -129,6 +138,7 @@ function deriveSummary(record: ApplicationSummaryRecord): ApplicationSummary {
 function derive(record: ApplicationRecord): ApplicationDetail {
   return applicationDetailSchema.parse({
     ...deriveSummary(record),
+    targetLicenceId: record.targetLicenceId,
     sections: record.sections.map((section) => ({
       sectionKey: section.sectionKey,
       data: section.data,
@@ -153,18 +163,31 @@ async function ownedRecord(database: Prisma.TransactionClient | PrismaClient, co
   return application;
 }
 
-export async function createApplication(context: AuthenticatedContext, serviceKey: ServiceKey, correlationId: string): Promise<ApplicationDetail> {
+export async function createApplication(
+  context: AuthenticatedContext,
+  serviceKey: ServiceKey,
+  correlationId: string,
+  databaseClient: PrismaClient = prisma,
+): Promise<ApplicationDetail> {
   try {
-    return await prisma.$transaction(async (database) => {
+    return await databaseClient.$transaction(async (database) => {
     const existing = await database.application.findUnique({
       where: { applicantId_serviceKey: { applicantId: context.applicantId, serviceKey } },
       include: { sections: { orderBy: { createdAt: "asc" } }, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true, appointment: true },
     });
     if (existing) return derive(existing);
+    const targetLicence = serviceRequiresPermanentLicence(serviceKey)
+      ? await database.licenceRecord.findFirst({
+          where: { applicantId: context.applicantId, kind: "PERMANENT" },
+          orderBy: [{ validUntil: "desc" }, { id: "asc" }],
+        })
+      : null;
+    if (serviceRequiresPermanentLicence(serviceKey) && !targetLicence) throw apiErrors.eligibleLicenceRequired();
     const created = await database.application.create({
       data: {
         applicantId: context.applicantId,
         serviceKey,
+        targetLicenceId: targetLicence?.id,
         events: { create: { actorApplicantId: context.applicantId, eventType: "APPLICATION_CREATED", correlationId } },
       },
       include: { sections: true, events: true, identityAttempts: true, paymentAttempts: true, appointment: true },
@@ -173,7 +196,7 @@ export async function createApplication(context: AuthenticatedContext, serviceKe
     }, { isolationLevel: "Serializable" });
   } catch (reason) {
     if (reason instanceof Prisma.PrismaClientKnownRequestError && reason.code === "P2002") {
-      const existing = await prisma.application.findUnique({
+      const existing = await databaseClient.application.findUnique({
         where: { applicantId_serviceKey: { applicantId: context.applicantId, serviceKey } },
         include: { sections: true, events: { orderBy: [{ createdAt: "asc" }, { id: "asc" }] }, identityAttempts: true, paymentAttempts: true, appointment: true },
       });
@@ -217,11 +240,23 @@ export async function getApplication(
 export async function saveApplicationSection(
   context: AuthenticatedContext,
   input: Readonly<{ applicationId: string; sectionKey: ApplicationSectionKey; expectedRevision: number; data: unknown; correlationId: string }>,
+  databaseClient: PrismaClient = prisma,
 ): Promise<ApplicationDetail> {
-  return prisma.$transaction(async (database) => {
+  return databaseClient.$transaction(async (database) => {
     await database.$queryRaw(Prisma.sql`SELECT "id" FROM "Application" WHERE "id" = ${input.applicationId}::uuid AND "applicantId" = ${context.applicantId}::uuid FOR UPDATE`);
     const application = await ownedRecord(database, context, input.applicationId);
     const data = validateSectionData(input.sectionKey, application.serviceKey, input.data);
+    if (application.serviceKey === "DRIVING_LICENCE_ADDRESS_CHANGE" && input.sectionKey === "ADDRESS") {
+      if (!application.targetLicenceId) throw apiErrors.eligibleLicenceRequired();
+      const licence = await database.licenceRecord.findFirst({
+        where: { id: application.targetLicenceId, applicantId: context.applicantId, kind: "PERMANENT" },
+      });
+      if (!licence) throw apiErrors.eligibleLicenceRequired();
+      const address = addressDataSchema.parse(input.data);
+      if (licence.addressDistrict === address.district && licence.addressPostalCode === address.postalCode) {
+        throw apiErrors.addressUnchanged();
+      }
+    }
     const current = application.sections.find((section) => section.sectionKey === input.sectionKey);
     if (current?.completedAt) throw apiErrors.invalidTransition();
     assertExpectedRevision(input.expectedRevision, current?.revision ?? 0);

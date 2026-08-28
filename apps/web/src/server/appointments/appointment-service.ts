@@ -7,11 +7,11 @@ import {
   monthAvailabilitySchema,
   rtoListSchema,
   type Appointment,
+  type AppointmentServiceKey,
   type AvailabilityReasonCode,
   type DaySlots,
   type MonthAvailability,
 } from "@raahsathi/contracts/appointments";
-import type { ServiceKey } from "@raahsathi/contracts/applications";
 import {
   Prisma,
   type AppointmentRateLimitAction,
@@ -26,6 +26,7 @@ import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { prisma } from "@/server/database/prisma";
 import { isRetryableTransactionConflict } from "@/server/database/prisma-errors";
 import { apiErrors } from "@/server/http/api-error";
+import { serviceRequiresAppointment } from "@/server/applications/service-profile";
 import { expireOffersInTransaction } from "@/server/waitlist/offer-expiry";
 
 const appointmentMutationLimitPerMinute = 20;
@@ -140,7 +141,7 @@ function dayStatus(slots: readonly SlotRecord[], rto: Rto, now: Date): Readonly<
 }
 
 export async function getMonthAvailability(
-  input: Readonly<{ rtoId: string; month: string; serviceKey: ServiceKey; now?: Date }>,
+  input: Readonly<{ rtoId: string; month: string; serviceKey: AppointmentServiceKey; now?: Date }>,
   databaseClient: PrismaClient = prisma,
 ): Promise<MonthAvailability> {
   const now = input.now ?? new Date();
@@ -166,7 +167,7 @@ export async function getMonthAvailability(
 }
 
 export async function getDaySlots(
-  input: Readonly<{ rtoId: string; date: string; serviceKey: ServiceKey; now?: Date }>,
+  input: Readonly<{ rtoId: string; date: string; serviceKey: AppointmentServiceKey; now?: Date }>,
   databaseClient: PrismaClient = prisma,
 ): Promise<DaySlots> {
   const now = input.now ?? new Date();
@@ -255,6 +256,7 @@ export async function bookAppointment(
         include: { paymentAttempts: true, appointment: { include: appointmentInclude } },
       });
       if (!application) throw apiErrors.notFound();
+      if (!serviceRequiresAppointment(application.serviceKey)) throw apiErrors.serviceAppointmentNotApplicable();
       const activeOffer = await database.slotOffer.findFirst({
         where: {
           status: "ACTIVE",
