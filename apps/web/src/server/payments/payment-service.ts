@@ -371,8 +371,6 @@ export async function startPayment(
         },
       });
       if (!application) throw apiErrors.notFound();
-      if (application.status !== "READY_FOR_PAYMENT") throw apiErrors.invalidTransition();
-      if (!application.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED")) throw apiErrors.invalidTransition();
 
       if (application.paymentAttempts.some((attempt) => attempt.status === "SUCCEEDED")) {
         return { context: toPaymentContext(application) };
@@ -387,6 +385,9 @@ export async function startPayment(
         context: toPaymentContext(application, pending.id),
         scenario: paymentDecisionForScenario(application.paymentScenario, pending.attemptNumber).scenario,
       };
+
+      if (application.status !== "READY_FOR_PAYMENT") throw apiErrors.invalidTransition();
+      if (!application.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED")) throw apiErrors.invalidTransition();
 
       const feeRule = feeForService(application.serviceKey);
       const feeSnapshot = application.feeSnapshot ?? await database.feeSnapshot.create({ data: {

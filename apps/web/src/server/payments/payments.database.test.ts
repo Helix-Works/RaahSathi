@@ -39,19 +39,23 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
   const addressApplicantId = randomUUID();
   const addressApplicationId = randomUUID();
   const addressLicenceId = randomUUID();
+  const retryApplicantId = randomUUID();
+  const retryApplicationId = randomUUID();
+  const retryLicenceId = randomUUID();
   const contextA = { sessionId: randomUUID(), applicantId: applicantA };
   const contextB = { sessionId: randomUUID(), applicantId: applicantB };
   const projectionContext = { sessionId: randomUUID(), applicantId: projectionApplicantId };
   const renewalContext = { sessionId: randomUUID(), applicantId: renewalApplicantId };
   const addressContext = { sessionId: randomUUID(), applicantId: addressApplicantId };
+  const retryContext = { sessionId: randomUUID(), applicantId: retryApplicantId };
   const secret = "phase-4-database-provider-secret-at-least-32-characters";
 
   afterAll(async () => {
     if (!database) return;
     try {
-      await database.application.deleteMany({ where: { id: { in: [applicationId, secondApplicationId, projectionApplicationId, renewalApplicationId, addressApplicationId] } } });
-      await database.licenceRecord.deleteMany({ where: { id: { in: [renewalLicenceId, addressLicenceId] } } });
-      await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, projectionApplicantId, renewalApplicantId, addressApplicantId] } } });
+      await database.application.deleteMany({ where: { id: { in: [applicationId, secondApplicationId, projectionApplicationId, renewalApplicationId, addressApplicationId, retryApplicationId] } } });
+      await database.licenceRecord.deleteMany({ where: { id: { in: [renewalLicenceId, addressLicenceId, retryLicenceId] } } });
+      await database.applicant.deleteMany({ where: { id: { in: [applicantA, applicantB, projectionApplicantId, renewalApplicantId, addressApplicantId, retryApplicantId] } } });
     } finally {
       await database.$disconnect();
     }
@@ -330,6 +334,72 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
       const audit = await database.auditEvent.findFirstOrThrow({ where: { resourceId: completedApplicationId, eventType: "SERVICE_COMPLETED" } });
       expect(JSON.stringify(audit.metadata)).not.toMatch(/secret|provider|payment/i);
     }
+  }, 90_000);
+
+  it("returns the existing payment context when retrying a completed maintenance application with the same idempotency key", async () => {
+    if (!database) return;
+    const occurredAt = "2026-08-28T09:00:00.000Z";
+    const idempotencyKey = randomUUID();
+    await database.applicant.create({ data: {
+      id: retryApplicantId,
+      mobileLookupHash: `phase8-retry-${retryApplicantId}`,
+      mobileLast4: "8003",
+      displayName: "Phase 8 Retry",
+    } });
+    await database.licenceRecord.create({ data: {
+      id: retryLicenceId,
+      applicantId: retryApplicantId,
+      kind: "PERMANENT",
+      syntheticReference: `SYN-DL-${retryLicenceId.toUpperCase()}`,
+      vehicleClass: "LMV",
+      issuedAt: new Date("2025-01-01T00:00:00.000Z"),
+      validUntil: new Date("2030-01-01T00:00:00.000Z"),
+      addressDistrict: "CENTRAL",
+      addressPostalCode: "110001",
+    } });
+    await database.application.create({ data: {
+      id: retryApplicationId,
+      applicantId: retryApplicantId,
+      targetLicenceId: retryLicenceId,
+      serviceKey: "DRIVING_LICENCE_RENEWAL",
+      status: "READY_FOR_PAYMENT",
+      paymentScenario: "SUCCESS",
+      sections: { create: [
+        { sectionKey: "PERSONAL_DETAILS", data: { fullName: "Synthetic Phase 8", dateOfBirth: "1995-01-15" }, completedAt: new Date(occurredAt) },
+        { sectionKey: "ADDRESS", data: { district: "NORTH_WEST", postalCode: "110085" }, completedAt: new Date(occurredAt) },
+        { sectionKey: "SERVICE_DETAILS", data: { vehicleClass: "LMV" }, completedAt: new Date(occurredAt) },
+        { sectionKey: "DECLARATION", data: { accepted: true }, completedAt: new Date(occurredAt) },
+      ] },
+      identityAttempts: { create: { outcome: "VERIFIED", attemptNumber: 1, correlationId: `phase8-${retryApplicationId}` } },
+    } });
+
+    const started = await startPayment(retryContext, {
+      applicationId: retryApplicationId,
+      idempotencyKey,
+      correlationId: `phase8-retry-start-${retryApplicationId}`,
+      now: new Date(occurredAt),
+    }, database);
+    expect(started.attempt).not.toBeNull();
+    const providerEvent = {
+      eventId: `evt_${randomUUID().replaceAll("-", "")}`,
+      providerReference: started.attempt?.providerReference ?? "",
+      outcome: "SUCCESS" as const,
+      amountMinor: started.fee.totalAmountMinor,
+      occurredAt,
+    };
+    const signature = signPaymentProviderEvent(providerEvent, secret);
+    await processSignedPaymentProviderEvent(providerEvent, signature, `phase8-retry-callback-${retryApplicationId}`, { secret, database });
+
+    expect((await database.application.findUniqueOrThrow({ where: { id: retryApplicationId } })).status).toBe("COMPLETED");
+
+    const retried = await startPayment(retryContext, {
+      applicationId: retryApplicationId,
+      idempotencyKey,
+      correlationId: `phase8-retry-retry-${retryApplicationId}`,
+      now: new Date(occurredAt),
+    }, database);
+    expect(retried.attempt?.status).toBe("SUCCEEDED");
+    expect(retried.attempt?.providerReference).toBe(providerEvent.providerReference);
   }, 90_000);
 
   it("reconstructs a successful application payment ahead of a newer pending attempt", async () => {
