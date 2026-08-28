@@ -1,7 +1,6 @@
 import { z } from "zod";
 
-import { appointmentDateSchema, appointmentTimeSchema, rtoSchema } from "@raahsathi/contracts/appointments";
-import { serviceKeySchema } from "@raahsathi/contracts/applications";
+import { appointmentDateSchema, appointmentServiceKeySchema, appointmentTimeSchema, rtoSchema } from "@raahsathi/contracts/appointments";
 
 export const waitlistTimeBucketSchema = z.enum(["MORNING", "AFTERNOON"]);
 export const waitlistStatusSchema = z.enum(["ACTIVE", "OFFERED", "LEFT", "FULFILLED"]);
@@ -31,7 +30,7 @@ export const slotOfferSchema = z.object({
     endTime: appointmentTimeSchema, vehicleClass: vehicleClassSchema }).strict(),
 }).strict();
 export const waitlistEntrySchema = z.object({
-  id: z.uuid(), applicationId: z.uuid(), serviceKey: serviceKeySchema, status: waitlistStatusSchema,
+  id: z.uuid(), applicationId: z.uuid(), serviceKey: appointmentServiceKeySchema, status: waitlistStatusSchema,
   vehicleClass: vehicleClassSchema, acceptableDateFrom: appointmentDateSchema, acceptableDateTo: appointmentDateSchema,
   timeBuckets: z.array(waitlistTimeBucketSchema).min(1), joinedAt: z.iso.datetime(),
   rto: rtoSchema, offer: slotOfferSchema.nullable(),

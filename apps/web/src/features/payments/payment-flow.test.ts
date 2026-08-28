@@ -41,12 +41,13 @@ describe("payment initiation lifecycle", () => {
     expect(beginPaymentOperation(lock)).toBe(true);
   });
 
-  it("shows payment only at the backend-approved payment and appointment handoff states", () => {
+  it("shows payment only at backend-approved payment, handoff, and completed receipt states", () => {
     expect(isPaymentRelevantApplicationStatus("DRAFT")).toBe(false);
     expect(isPaymentRelevantApplicationStatus("IN_PROGRESS")).toBe(false);
     expect(isPaymentRelevantApplicationStatus("READY_FOR_IDENTITY")).toBe(false);
     expect(isPaymentRelevantApplicationStatus("READY_FOR_PAYMENT")).toBe(true);
     expect(isPaymentRelevantApplicationStatus("READY_FOR_APPOINTMENT")).toBe(true);
+    expect(isPaymentRelevantApplicationStatus("COMPLETED")).toBe(true);
   });
 
   it("refetches application authority as pending payment converges to success", async () => {

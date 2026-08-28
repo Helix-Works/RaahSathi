@@ -31,7 +31,7 @@ export function endPaymentOperation(lock: PaymentOperationLock): void {
 export function isPaymentRelevantApplicationStatus(
   status: ApplicationDetail["statusCode"],
 ): boolean {
-  return status === "READY_FOR_PAYMENT" || status === "READY_FOR_APPOINTMENT";
+  return status === "READY_FOR_PAYMENT" || status === "READY_FOR_APPOINTMENT" || status === "COMPLETED";
 }
 
 export async function synchronizePaymentResponse(

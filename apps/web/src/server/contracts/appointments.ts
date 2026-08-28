@@ -1,5 +1,6 @@
 import {
   appointmentDateSchema,
+  appointmentServiceKeySchema,
   appointmentListSchema,
   appointmentSchema,
   createAppointmentRequestSchema,
@@ -8,7 +9,6 @@ import {
   monthParameterSchema,
   rtoListSchema,
 } from "@raahsathi/contracts/appointments";
-import { serviceKeySchema } from "@raahsathi/contracts/applications";
 import { z } from "zod";
 
 import type { EndpointContract } from "./endpoint";
@@ -17,7 +17,7 @@ import { requestIdHeaderContract } from "./health";
 const headers = { "x-request-id": requestIdHeaderContract };
 const rtoId = { name: "id", description: "Synthetic Delhi RTO UUID.", schema: z.uuid() } as const;
 const appointmentId = { name: "id", description: "Appointment UUID.", schema: z.uuid() } as const;
-const serviceQuery = { name: "service", description: "Licence service key.", required: true, schema: serviceKeySchema } as const;
+const serviceQuery = { name: "service", description: "Appointment-capable licence service key.", required: true, schema: appointmentServiceKeySchema } as const;
 const monthQuery = { name: "month", description: "Calendar month in YYYY-MM format.", required: true, schema: monthParameterSchema } as const;
 const dateQuery = { name: "date", description: "Appointment date in YYYY-MM-DD format.", required: true, schema: appointmentDateSchema } as const;
 const readErrors = [

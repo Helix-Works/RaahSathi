@@ -5,6 +5,7 @@ import { resolveNextActionCard, selectHeroApplication } from "./dashboard-presen
 
 const copy = {
   defaultDescription: "default",
+  completionDescription: "completed",
   readyForAppointmentDescription: "payment complete",
   appointmentBookedDescription: "appointment booked",
   waitlistedDescription: "waitlisted",
@@ -46,6 +47,12 @@ describe("dashboard next-action presentation", () => {
     const draft = application("draft", "LEARNER_LICENCE", "DRAFT", "2026-08-24T09:00:00.000Z");
     expect(selectHeroApplication([olderBooked, latestBooked, draft])?.id).toBe("draft");
     expect(selectHeroApplication([olderBooked, latestBooked])?.id).toBe("latest");
+  });
+
+  it("does not prioritize a completed maintenance service over active work", () => {
+    const completed = application("completed", "DRIVING_LICENCE_RENEWAL", "COMPLETED", "2026-08-27T12:00:00.000Z");
+    const draft = application("draft", "DRIVING_LICENCE_ADDRESS_CHANGE", "DRAFT", "2026-08-27T09:00:00.000Z");
+    expect(selectHeroApplication([completed, draft])?.id).toBe("draft");
   });
   it("keeps a paid application non-actionable with payment-complete copy", () => {
     expect(resolveNextActionCard({

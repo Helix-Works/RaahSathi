@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { serviceKeySchema } from "@raahsathi/contracts/applications";
+export const appointmentServiceKeySchema = z.enum(["LEARNER_LICENCE", "PERMANENT_DRIVING_LICENCE"]);
 
 export const availabilityReasonCodeSchema = z.enum([
   "AVAILABLE",
@@ -34,7 +34,7 @@ export const availabilityDaySchema = z.object({
 
 export const monthAvailabilitySchema = z.object({
   rtoId: z.uuid(),
-  serviceKey: serviceKeySchema,
+  serviceKey: appointmentServiceKeySchema,
   month: monthParameterSchema,
   days: z.array(availabilityDaySchema),
 }).strict();
@@ -50,7 +50,7 @@ export const appointmentSlotSchema = z.object({
 
 export const daySlotsSchema = z.object({
   rtoId: z.uuid(),
-  serviceKey: serviceKeySchema,
+  serviceKey: appointmentServiceKeySchema,
   date: appointmentDateSchema,
   status: availabilityReasonCodeSchema,
   slots: z.array(appointmentSlotSchema),
@@ -65,7 +65,7 @@ export const appointmentSchema = z.object({
   id: z.uuid(),
   applicationId: z.uuid(),
   slotId: z.uuid(),
-  serviceKey: serviceKeySchema,
+  serviceKey: appointmentServiceKeySchema,
   status: z.enum(["CONFIRMED", "CANCELLED"]),
   rto: rtoSchema,
   date: appointmentDateSchema,
@@ -80,6 +80,7 @@ export const appointmentListSchema = z.object({
 }).strict();
 
 export type AvailabilityReasonCode = z.infer<typeof availabilityReasonCodeSchema>;
+export type AppointmentServiceKey = z.infer<typeof appointmentServiceKeySchema>;
 export type Rto = z.infer<typeof rtoSchema>;
 export type MonthAvailability = z.infer<typeof monthAvailabilitySchema>;
 export type DaySlots = z.infer<typeof daySlotsSchema>;

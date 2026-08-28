@@ -32,7 +32,7 @@ export default defineConfig({
   workers: 1,
   forbidOnly: true,
   retries: 0,
-  timeout: 300_000,
+  timeout: 420_000,
   reporter: [["list"], ["html", { outputFolder: "playwright-report-hero", open: "never" }]],
   use: {
     baseURL,

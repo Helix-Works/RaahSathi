@@ -14,6 +14,7 @@ import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { prisma } from "@/server/database/prisma";
 import { retryTransactionConflict } from "@/server/database/transaction-retry";
 import { apiErrors } from "@/server/http/api-error";
+import { serviceRequiresAppointment } from "@/server/applications/service-profile";
 
 import { expireOfferInTransaction, expireOffersInTransaction } from "./offer-expiry";
 
@@ -237,6 +238,7 @@ export async function joinWaitlist(
         include: { paymentAttempts: true, appointment: true },
       });
       if (!application) throw apiErrors.notFound();
+      if (!serviceRequiresAppointment(application.serviceKey)) throw apiErrors.serviceAppointmentNotApplicable();
       if (application.appointment?.status === "CONFIRMED" || application.status === "APPOINTMENT_BOOKED") {
         throw apiErrors.waitlistNotEligible();
       }

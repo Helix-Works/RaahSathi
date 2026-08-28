@@ -1,5 +1,4 @@
-import { monthAvailabilitySchema, monthParameterSchema } from "@raahsathi/contracts/appointments";
-import { serviceKeySchema } from "@raahsathi/contracts/applications";
+import { appointmentServiceKeySchema, monthAvailabilitySchema, monthParameterSchema } from "@raahsathi/contracts/appointments";
 import { z } from "zod";
 
 import { getMonthAvailability } from "@/server/appointments/appointment-service";
@@ -13,7 +12,7 @@ export async function GET(request: Request, context: { params: Promise<{ id: str
     const id = z.uuid().safeParse((await context.params).id);
     const url = new URL(request.url);
     const month = monthParameterSchema.safeParse(url.searchParams.get("month"));
-    const service = serviceKeySchema.safeParse(url.searchParams.get("service"));
+    const service = appointmentServiceKeySchema.safeParse(url.searchParams.get("service"));
     const fieldErrors: Record<string, string[]> = {};
     if (!id.success) fieldErrors.id = ["invalid_format"];
     if (!month.success) fieldErrors.month = ["invalid_format"];

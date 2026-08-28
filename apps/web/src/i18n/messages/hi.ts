@@ -66,7 +66,7 @@ export const hiMessages = {
     primaryActionsLabel: "लाइसेंस सेवा के विकल्प",
     applyTitle: "लाइसेंस आवेदन शुरू करें",
     applyDescription:
-      "उपलब्ध लर्नर या स्थायी ड्राइविंग-लाइसेंस यात्रा चुनें।",
+      "उपलब्ध ड्राइविंग-लाइसेंस यात्रा चुनें।",
     applyAction: "उपलब्ध सेवाएँ देखें",
     resumeTitle: "सहेजा हुआ काम जारी रखें",
     resumeDescription:
@@ -93,7 +93,7 @@ export const hiMessages = {
       "मौजूदा पेज या संदर्भ छोड़े बिना भाषा बदलें।",
     nextTitle: "अपनी ज़रूरत के अनुसार सेवा चुनें",
     nextDescription:
-      "आवेदन प्रक्रिया जुड़ने से पहले इस प्रोटोटाइप के लिए तैयार की गई दो मुख्य लाइसेंस यात्राएँ देखें।",
+      "इस प्रोटोटाइप में उपलब्ध चार लाइसेंस यात्राएँ देखें।",
     servicesTitle: "अपनी यात्रा के अनुकूल सेवा से शुरुआत करें",
     servicesDescription:
       "इस प्रोटोटाइप में वास्तव में उपलब्ध सेवाओं में से चुनें। हर यात्रा आपकी सहेजी प्रगति रखती है और सर्वर से स्वीकृत अगले कदम पर लौटाती है।",
@@ -117,13 +117,19 @@ export const hiMessages = {
     eyebrow: "ड्राइविंग-लाइसेंस सेवाएँ",
     title: "अपनी ज़रूरत की यात्रा चुनें",
     description:
-      "दो स्थायी कृत्रिम आवेदन यात्राओं में से एक शुरू करें या जारी रखें।",
+      "चार स्थायी कृत्रिम आवेदन यात्राओं में से एक शुरू करें या जारी रखें।",
     learnerName: "नया लर्नर लाइसेंस",
     learnerDescription:
       "स्पष्ट प्रगति और सुरक्षित वापसी के साथ पहला लर्नर-लाइसेंस आवेदन तैयार करें।",
     permanentName: "स्थायी ड्राइविंग लाइसेंस",
     permanentDescription:
       "लर्नर पात्रता से स्थायी ड्राइविंग-लाइसेंस यात्रा की ओर आगे बढ़ें।",
+    renewalName: "ड्राइविंग लाइसेंस नवीनीकरण",
+    renewalDescription:
+      "पात्र कृत्रिम स्थायी ड्राइविंग लाइसेंस को स्थायी और पुनर्प्राप्ति योग्य यात्रा से नवीनीकृत करें।",
+    addressChangeName: "पता बदलें",
+    addressChangeDescription:
+      "पात्र कृत्रिम स्थायी ड्राइविंग लाइसेंस पर दिल्ली का पता बदलें।",
     unavailableAction: "आवेदन यात्रा जल्द उपलब्ध होगी",
     emptyTitle: "अभी कोई सेवा उपलब्ध नहीं है",
     emptyDescription:
@@ -131,6 +137,7 @@ export const hiMessages = {
     loading: "ड्राइविंग-लाइसेंस सेवाएँ लोड हो रही हैं",
     availableStatus: "इस प्रोटोटाइप में उपलब्ध",
     startFailed: "आवेदन सुरक्षित रूप से शुरू नहीं हो सका। कृपया फिर कोशिश करें।",
+    eligibleLicenceRequired: "इस सेवा के लिए आपके खाते में पात्र कृत्रिम स्थायी ड्राइविंग लाइसेंस होना आवश्यक है।",
     backToHome: "होम पर वापस जाएँ",
   },
   applications: {
@@ -200,6 +207,7 @@ export const hiMessages = {
     statusWaitlisted: "उपयुक्त अपॉइंटमेंट स्लॉट की प्रतीक्षा में",
     statusSlotOffered: "अस्थायी अपॉइंटमेंट ऑफ़र उपलब्ध",
     statusAppointmentBooked: "अपॉइंटमेंट बुक है",
+    statusCompleted: "सेवा पूरी हुई",
     nextPersonalDetails: "व्यक्तिगत विवरण पूरा करें",
     nextAddress: "दिल्ली का पता पूरा करें",
     nextServiceDetails: "सेवा विवरण पूरा करें",
@@ -210,6 +218,7 @@ export const hiMessages = {
     nextReviewWaitlist: "अपनी अपॉइंटमेंट वेटलिस्ट देखें",
     nextReviewOffer: "अपना अस्थायी स्लॉट ऑफ़र देखें",
     nextReviewAppointment: "अपना अपॉइंटमेंट देखें",
+    nextReviewCompletion: "पूरी हुई सेवा देखें",
     nextActionNone: "अभी कोई कार्रवाई आवश्यक नहीं है",
     blockingIdentity: "पहचान सत्यापन आवश्यक है। आवेदन के सभी पूरे भाग सुरक्षित हैं।",
     blockingPayment: "पहचान सत्यापित है। आगे बढ़ने के लिए कृत्रिम शुल्क भुगतान पूरा करें।",
@@ -238,7 +247,11 @@ export const hiMessages = {
     historyOfferAccepted: "अस्थायी स्लॉट ऑफ़र स्वीकार किया",
     historyOfferDeclined: "अस्थायी स्लॉट ऑफ़र अस्वीकार किया",
     historyOfferExpired: "अस्थायी स्लॉट ऑफ़र की समय सीमा समाप्त",
+    historyServiceCompleted: "ड्राइविंग-लाइसेंस सेवा पूरी हुई",
     historyGeneric: "आवेदन गतिविधि दर्ज हुई",
+    errors: {
+      addressUnchanged: "नया पता आपके वर्तमान पते के समान है।",
+    },
   },
   identity: {
     title: "कृत्रिम पहचान सत्यापन",
@@ -418,6 +431,7 @@ export const hiMessages = {
     reconstruct: "पुष्ट अपॉइंटमेंट विवरण लोड नहीं हो सका।",
     errors: {
       notEligible: "यह आवेदन अभी अपॉइंटमेंट बुकिंग के लिए तैयार नहीं है।",
+      serviceNotApplicable: "इस सेवा में अपॉइंटमेंट शामिल नहीं है।",
       alreadyBooked: "इस आवेदन के लिए पहले से एक अपॉइंटमेंट पक्का है।",
       rateLimited: "अपॉइंटमेंट में बहुत अधिक बदलाव माँगे गए हैं। थोड़ी देर प्रतीक्षा करके फिर कोशिश करें।",
     },
@@ -473,6 +487,7 @@ export const hiMessages = {
     updatedLabel: "अंतिम अपडेट",
     statusAppointmentRequired: "अपॉइंटमेंट आवश्यक है",
     statusAppointmentBooked: "अपॉइंटमेंट बुक है",
+    statusCompleted: "सेवा पूरी हुई",
     statusWaitlisted: "उपयुक्त स्लॉट की प्रतीक्षा",
     statusSlotOffered: "अस्थायी स्लॉट ऑफ़र उपलब्ध",
     statusDraft: "ड्राफ्ट",
@@ -484,6 +499,7 @@ export const hiMessages = {
     nextActionReviewOffer: "अस्थायी स्लॉट ऑफ़र देखें",
     nextActionReviewWaitlist: "अपनी अपॉइंटमेंट वेटलिस्ट देखें",
     nextActionReviewAppointment: "अपना अपॉइंटमेंट देखें",
+    nextActionReviewCompletion: "पूरी हुई सेवा देखें",
     nextActionNone: "अभी कोई कार्रवाई आवश्यक नहीं है",
     nextActionResumeApplication: "आवेदन का अगला भाग जारी रखें",
     nextActionVerifyIdentity: "कृत्रिम पहचान सत्यापन पूरा करें",
@@ -492,6 +508,8 @@ export const hiMessages = {
     nextActionUnknown: "अगले कदम के लिए फिर जाँचें",
     nextActionDescription:
       "यह अगला कदम सीधे डैशबोर्ड सारांश से मिला है; राहसाथी ब्राउज़र में इसका अनुमान नहीं लगाता। इसे चुनने पर आवेदन और पहचान पुनर्प्राप्ति प्रक्रिया खुलती है।",
+    nextActionCompletionDescription:
+      "यह सेवा पूरी हो गई है। अंतिम स्थिति और दर्ज इतिहास देखने के लिए आवेदन खोलें।",
     nextActionUnavailableDescription:
       "भुगतान पूरा हो गया है और आपकी प्रगति सुरक्षित है। दिल्ली आरटीओ, तारीख और उपलब्ध समय चुनें।",
     nextActionBookedDescription:

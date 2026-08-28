@@ -2,6 +2,7 @@ import "server-only";
 
 import { createHmac, randomUUID } from "node:crypto";
 
+import { addressDataSchema } from "@raahsathi/contracts/applications";
 import {
   paymentContextSchema,
   type PaymentContext,
@@ -20,6 +21,7 @@ import {
 } from "@prisma/client";
 
 import type { AuthenticatedContext } from "@/server/auth/auth-types";
+import { isLicenceMaintenanceService } from "@/server/applications/service-profile";
 import { safeEqual } from "@/server/auth/crypto";
 import { getServerEnvironment } from "@/server/config/environment";
 import { isRetryableTransactionConflict } from "@/server/database/prisma-errors";
@@ -40,9 +42,75 @@ type FeeRule = Readonly<{
 }>;
 
 export function feeForService(serviceKey: ServiceKey): FeeRule {
-  const baseFeeMinor = serviceKey === "LEARNER_LICENCE" ? 50_000 : 70_000;
+  const baseFees: Readonly<Record<ServiceKey, number>> = {
+    LEARNER_LICENCE: 50_000,
+    PERMANENT_DRIVING_LICENCE: 70_000,
+    DRIVING_LICENCE_RENEWAL: 40_000,
+    DRIVING_LICENCE_ADDRESS_CHANGE: 20_000,
+  };
+  const baseFeeMinor = baseFees[serviceKey];
   const serviceChargeMinor = 5_000;
   return { baseFeeMinor, serviceChargeMinor, totalAmountMinor: baseFeeMinor + serviceChargeMinor, currency: "INR" };
+}
+
+function addFiveSyntheticYears(value: Date): Date {
+  const extended = new Date(value);
+  extended.setUTCFullYear(extended.getUTCFullYear() + 5);
+  return extended;
+}
+
+async function projectMaintenanceService(
+  database: Prisma.TransactionClient,
+  application: Application,
+  occurredAt: Date,
+  correlationId: string,
+): Promise<void> {
+  if (!isLicenceMaintenanceService(application.serviceKey) || !application.targetLicenceId) {
+    throw new Error("Maintenance service completion invariant failed.");
+  }
+  await database.$queryRaw(Prisma.sql`SELECT "id" FROM "LicenceRecord" WHERE "id" = ${application.targetLicenceId}::uuid FOR UPDATE`);
+  const licence = await database.licenceRecord.findFirst({
+    where: { id: application.targetLicenceId, applicantId: application.applicantId, kind: "PERMANENT" },
+  });
+  if (!licence) throw new Error("Target licence completion invariant failed.");
+  const addressSection = await database.applicationSection.findUnique({
+    where: { applicationId_sectionKey: { applicationId: application.id, sectionKey: "ADDRESS" } },
+  });
+  if (!addressSection?.completedAt) throw new Error("Completed address section invariant failed.");
+  const address = addressDataSchema.parse(addressSection.data);
+  if (application.serviceKey === "DRIVING_LICENCE_RENEWAL") {
+    const extensionBase = licence.validUntil > occurredAt ? licence.validUntil : occurredAt;
+    await database.licenceRecord.update({
+      where: { id: licence.id },
+      data: {
+        validUntil: addFiveSyntheticYears(extensionBase),
+        renewedAt: occurredAt,
+        addressDistrict: address.district,
+        addressPostalCode: address.postalCode,
+      },
+    });
+  } else {
+    await database.licenceRecord.update({
+      where: { id: licence.id },
+      data: { addressDistrict: address.district, addressPostalCode: address.postalCode },
+    });
+  }
+  await database.applicationEvent.create({ data: {
+    applicationId: application.id,
+    actorApplicantId: application.applicantId,
+    eventType: "SERVICE_COMPLETED",
+    correlationId,
+    createdAt: occurredAt,
+  } });
+  await database.auditEvent.create({ data: {
+    actorApplicantId: application.applicantId,
+    eventType: "SERVICE_COMPLETED",
+    resourceType: "Application",
+    resourceId: application.id,
+    correlationId,
+    metadata: { serviceKey: application.serviceKey, targetLicenceId: licence.id },
+    createdAt: occurredAt,
+  } });
 }
 
 export function providerEventCanonicalValue(event: PaymentProviderEventRequest): string {
@@ -229,17 +297,21 @@ export async function applyPaymentProviderEvent(
       if (transition.advanceApplication) {
         const occurredAt = new Date(event.occurredAt);
         await database.paymentAttempt.update({ where: { id: payment.id }, data: { status: "SUCCEEDED", succeededAt: occurredAt } });
+        const maintenanceService = isLicenceMaintenanceService(payment.application.serviceKey);
         const advancement = await database.application.updateMany({
           where: { id: payment.applicationId, status: "READY_FOR_PAYMENT" },
-          data: { status: "READY_FOR_APPOINTMENT" },
+          data: { status: maintenanceService ? "COMPLETED" : "READY_FOR_APPOINTMENT" },
         });
-        if (advancement.count === 1) {
-          await database.applicationEvent.create({ data: {
+        if (advancement.count !== 1) throw apiErrors.invalidTransition();
+        await database.applicationEvent.create({ data: {
             applicationId: payment.applicationId,
             actorApplicantId: payment.application.applicantId,
             eventType: "PAYMENT_SUCCEEDED",
             correlationId,
-          } });
+            createdAt: occurredAt,
+        } });
+        if (maintenanceService) {
+          await projectMaintenanceService(database, payment.application, occurredAt, correlationId);
         }
       }
 
@@ -302,7 +374,6 @@ export async function startPayment(
         },
       });
       if (!application) throw apiErrors.notFound();
-      if (!application.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED")) throw apiErrors.invalidTransition();
 
       if (application.paymentAttempts.some((attempt) => attempt.status === "SUCCEEDED")) {
         return { context: toPaymentContext(application) };
@@ -317,6 +388,9 @@ export async function startPayment(
         context: toPaymentContext(application, pending.id),
         scenario: paymentDecisionForScenario(application.paymentScenario, pending.attemptNumber).scenario,
       };
+
+      if (application.status !== "READY_FOR_PAYMENT") throw apiErrors.invalidTransition();
+      if (!application.identityAttempts.some((attempt) => attempt.outcome === "VERIFIED")) throw apiErrors.invalidTransition();
 
       const feeRule = feeForService(application.serviceKey);
       const feeSnapshot = application.feeSnapshot ?? await database.feeSnapshot.create({ data: {

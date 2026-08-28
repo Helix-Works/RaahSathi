@@ -3,9 +3,18 @@ import type { PrismaClient } from "@prisma/client";
 export const syntheticApplicationId = "30000000-0000-4000-8000-000000000001";
 
 export async function seedSyntheticApplication(database: PrismaClient, applicantId: string) {
-  return database.application.upsert({
-    where: { applicantId_serviceKey: { applicantId, serviceKey: "LEARNER_LICENCE" } },
-    create: {
+  const existing = await database.application.findFirst({
+    where: { applicantId, serviceKey: "LEARNER_LICENCE" },
+    orderBy: { updatedAt: "desc" },
+  });
+  if (existing) {
+    return database.application.update({
+      where: { id: existing.id },
+      data: { identityScenario: "PROVIDER_UNAVAILABLE", paymentScenario: "DUPLICATE_CALLBACK" },
+    });
+  }
+  return database.application.create({
+    data: {
       id: syntheticApplicationId,
       applicantId,
       serviceKey: "LEARNER_LICENCE",
@@ -40,7 +49,5 @@ export async function seedSyntheticApplication(database: PrismaClient, applicant
         ],
       },
     },
-    // The scenario is demo configuration. Durable workflow progress and history remain untouched.
-    update: { identityScenario: "PROVIDER_UNAVAILABLE", paymentScenario: "DUPLICATE_CALLBACK" },
   });
 }
