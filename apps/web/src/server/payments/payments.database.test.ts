@@ -462,9 +462,33 @@ describe.skipIf(!database)("Phase 4 disposable PostgreSQL payment convergence", 
       id: attemptB.id,
       status: "PENDING",
     });
+
+    const secondSuccess = {
+      eventId: `evt_${randomUUID().replaceAll("-", "")}`,
+      providerReference: attemptB.providerReference,
+      outcome: "SUCCESS" as const,
+      amountMinor: feeSnapshot.totalAmountMinor,
+      occurredAt: "2026-08-23T14:01:00.000Z",
+    };
+    await processSignedPaymentProviderEvent(
+      secondSuccess,
+      signPaymentProviderEvent(secondSuccess, secret),
+      "phase4-projection-second-success",
+      { secret, database },
+    );
+
+    expect((await getPaymentContextForApplication(projectionContext, projectionApplicationId, database)).attempt).toMatchObject({
+      id: attemptB.id,
+      status: "SUCCEEDED",
+    });
+    expect((await getPayment(projectionContext, attemptB.id, database)).attempt).toMatchObject({
+      id: attemptB.id,
+      status: "SUCCEEDED",
+    });
     expect(await database.applicationEvent.count({
       where: { applicationId: projectionApplicationId, eventType: "PAYMENT_SUCCEEDED" },
     })).toBe(1);
     expect(await database.paymentProviderEvent.count({ where: { paymentAttemptId: attemptA.id } })).toBe(1);
+    expect(await database.paymentProviderEvent.count({ where: { paymentAttemptId: attemptB.id } })).toBe(1);
   }, 20_000);
 });

@@ -66,18 +66,23 @@ async function projectMaintenanceService(
   correlationId: string,
 ): Promise<void> {
   if (!isLicenceMaintenanceService(application.serviceKey) || !application.targetLicenceId) {
-    throw new Error("Maintenance service completion invariant failed.");
+    throw apiErrors.invalidTransition();
   }
   await database.$queryRaw(Prisma.sql`SELECT "id" FROM "LicenceRecord" WHERE "id" = ${application.targetLicenceId}::uuid FOR UPDATE`);
   const licence = await database.licenceRecord.findFirst({
     where: { id: application.targetLicenceId, applicantId: application.applicantId, kind: "PERMANENT" },
   });
-  if (!licence) throw new Error("Target licence completion invariant failed.");
+  if (!licence) throw apiErrors.invalidTransition();
   const addressSection = await database.applicationSection.findUnique({
     where: { applicationId_sectionKey: { applicationId: application.id, sectionKey: "ADDRESS" } },
   });
-  if (!addressSection?.completedAt) throw new Error("Completed address section invariant failed.");
-  const address = addressDataSchema.parse(addressSection.data);
+  if (!addressSection?.completedAt) throw apiErrors.invalidTransition();
+  let address: ReturnType<typeof addressDataSchema.parse>;
+  try {
+    address = addressDataSchema.parse(addressSection.data);
+  } catch {
+    throw apiErrors.invalidTransition();
+  }
   if (application.serviceKey === "DRIVING_LICENCE_RENEWAL") {
     const extensionBase = licence.validUntil > occurredAt ? licence.validUntil : occurredAt;
     await database.licenceRecord.update({
@@ -302,16 +307,39 @@ export async function applyPaymentProviderEvent(
           where: { id: payment.applicationId, status: "READY_FOR_PAYMENT" },
           data: { status: maintenanceService ? "COMPLETED" : "READY_FOR_APPOINTMENT" },
         });
-        if (advancement.count !== 1) throw apiErrors.invalidTransition();
-        await database.applicationEvent.create({ data: {
+        if (advancement.count === 0) {
+          const [application, priorSuccess] = await Promise.all([
+            database.application.findUnique({
+              where: { id: payment.applicationId },
+              select: { status: true },
+            }),
+            database.paymentAttempt.findFirst({
+              where: {
+                applicationId: payment.applicationId,
+                id: { not: payment.id },
+                status: "SUCCEEDED",
+              },
+              select: { id: true },
+            }),
+          ]);
+          const convergedStatus = maintenanceService
+            ? application?.status === "COMPLETED"
+            : application !== null
+              && ["READY_FOR_APPOINTMENT", "WAITLISTED", "SLOT_OFFERED", "APPOINTMENT_BOOKED", "COMPLETED"].includes(application.status);
+          if (!priorSuccess || !convergedStatus) throw apiErrors.invalidTransition();
+        } else if (advancement.count === 1) {
+          await database.applicationEvent.create({ data: {
             applicationId: payment.applicationId,
             actorApplicantId: payment.application.applicantId,
             eventType: "PAYMENT_SUCCEEDED",
             correlationId,
             createdAt: occurredAt,
-        } });
-        if (maintenanceService) {
-          await projectMaintenanceService(database, payment.application, occurredAt, correlationId);
+          } });
+          if (maintenanceService) {
+            await projectMaintenanceService(database, payment.application, occurredAt, correlationId);
+          }
+        } else {
+          throw apiErrors.invalidTransition();
         }
       }
 
