@@ -9,7 +9,12 @@ import { Button } from "@/components/ui/button";
 import { startApplication } from "@/features/applications/api";
 import { ApiClientError } from "@/lib/api";
 
-export function StartApplicationButton({ serviceKey, label, errorLabel, eligibleLicenceRequiredLabel, loginPath }: Readonly<{ serviceKey: ServiceKey; label: string; errorLabel: string; eligibleLicenceRequiredLabel: string; loginPath: string }>) {
+export function getServiceLoginPath(serviceKey: ServiceKey): string {
+  const query = new URLSearchParams({ returnTo: "/services", serviceKey });
+  return `/login?${query.toString()}`;
+}
+
+export function StartApplicationButton({ serviceKey, label, errorLabel, eligibleLicenceRequiredLabel }: Readonly<{ serviceKey: ServiceKey; label: string; errorLabel: string; eligibleLicenceRequiredLabel: string }>) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [failure, setFailure] = useState<string>();
@@ -23,7 +28,7 @@ export function StartApplicationButton({ serviceKey, label, errorLabel, eligible
       router.refresh();
     } catch (error: unknown) {
       if (error && typeof error === "object" && "status" in error && error.status === 401) {
-        router.push(loginPath);
+        router.push(getServiceLoginPath(serviceKey));
         return;
       }
       setFailure(error instanceof ApiClientError && error.code === "ELIGIBLE_LICENCE_REQUIRED"

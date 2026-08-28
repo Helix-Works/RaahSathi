@@ -8,6 +8,7 @@ import {
 } from "@/components/shared/app-navigation";
 import { LanguageSwitcher } from "@/components/shared/language-switcher";
 import { PageContainer } from "@/components/shared/page-container";
+import { ThemeToggle } from "@/components/shared/theme-toggle";
 import {
   LogoutButton,
   type AccountPresentation,
@@ -44,6 +45,8 @@ export function AppHeader({ locale, messages, navigation, account }: AppHeaderPr
             primaryLabel={messages.navigation.primaryLabel}
           />
         </div>
+
+        <ThemeToggle />
 
         <LanguageSwitcher
           locale={locale}

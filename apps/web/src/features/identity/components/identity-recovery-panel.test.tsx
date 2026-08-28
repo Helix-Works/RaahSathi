@@ -48,11 +48,11 @@ describe("identity recovery panel presentation", () => {
   it("shows the synthetic metadata and a safe start action before an attempt", () => {
     const html = render();
 
-    expect(html).toContain("Synthetic document metadata");
+    expect(html).toContain("Document metadata");
     expect(html).toContain("Identity proof metadata");
     expect(html).toContain("Address proof metadata");
     expect(html).toContain("SYN-ID-00000001");
-    expect(html).toContain("Start synthetic verification");
+    expect(html).toContain("Start verification");
   });
 
   it.each([
@@ -74,7 +74,7 @@ describe("identity recovery panel presentation", () => {
   it("keeps Hindi recovery and metadata labels readable", () => {
     const html = render("PROVIDER_UNAVAILABLE", "hi");
 
-    expect(html).toContain("कृत्रिम दस्तावेज़ मेटाडेटा");
+    expect(html).toContain("दस्तावेज़ मेटाडेटा");
     expect(html).toContain("प्रदाता अनुपलब्ध");
     expect(html).toContain("सुरक्षित रूप से फिर प्रयास करें");
   });

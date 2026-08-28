@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/shared/app-shell";
 import type { NavigationItem } from "@/components/shared/app-navigation";
+import { ThemeProvider } from "@/components/shared/theme-provider";
 import type { AccountPresentation } from "@/features/auth/components/logout-button";
 import { getShellSession } from "@/features/auth/session";
 import { getDictionary } from "@/i18n";
@@ -55,17 +56,32 @@ export default async function RootLayout({
         } satisfies AccountPresentation)
       : undefined;
 
+  const themeScript = `
+    (function() {
+      try {
+        var t = localStorage.getItem('raahsathi_theme');
+        var d = t === 'dark';
+        document.documentElement.classList.add(d ? 'dark' : 'light');
+      } catch(e) {}
+    })()
+  `;
+
   return (
-    <html lang={locale}>
+    <html lang={locale} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+      </head>
       <body className={notoSans.variable}>
-        <AppShell
-          locale={locale}
-          messages={messages}
-          navigation={navigation}
-          account={account}
-        >
-          {children}
-        </AppShell>
+        <ThemeProvider>
+          <AppShell
+            locale={locale}
+            messages={messages}
+            navigation={navigation}
+            account={account}
+          >
+            {children}
+          </AppShell>
+        </ThemeProvider>
       </body>
     </html>
   );

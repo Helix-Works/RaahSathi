@@ -51,7 +51,7 @@ describe("payment panel presentation", () => {
     expect(html).toContain("₹500.00");
     expect(html).toContain("₹50.00");
     expect(html).toContain("₹550.00");
-    expect(html).toContain("Pay synthetic fee");
+    expect(html).toContain("Pay fee");
     expect(html).not.toContain("receipt");
   });
 
@@ -73,6 +73,6 @@ describe("payment panel presentation", () => {
 
     expect(html).toContain("प्रदाता अनुपलब्ध");
     expect(html).toContain("भुगतान का नया प्रयास शुरू करें");
-    expect(html).toContain("कृत्रिम भुगतान संदर्भ");
+    expect(html).toContain("भुगतान संदर्भ");
   });
 });

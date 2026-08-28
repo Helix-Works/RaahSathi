@@ -1,11 +1,6 @@
 import { z } from "zod";
+import { serviceSummarySchema } from "@raahsathi/contracts/applications";
 
 export const serviceSummariesSchema = z
-  .array(
-    z
-      .object({
-        serviceKey: z.enum(["LEARNER_LICENCE", "PERMANENT_DRIVING_LICENCE"]),
-      })
-      .strict(),
-  )
+  .array(serviceSummarySchema)
   .readonly();

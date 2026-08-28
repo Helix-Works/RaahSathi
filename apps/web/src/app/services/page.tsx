@@ -44,7 +44,7 @@ export default async function ServicesPage() {
         <div className="grid gap-5 md:grid-cols-2">
           {services.map((service) => {
             const copy = getServiceCopy(service.serviceKey, messages.services);
-            return <ServiceCard key={service.serviceKey} serviceKey={service.serviceKey} name={copy.name} description={copy.description} availabilityLabel={messages.services.availableStatus} action={<StartApplicationButton serviceKey={service.serviceKey} label={messages.common.continue} errorLabel={messages.services.startFailed} eligibleLicenceRequiredLabel={messages.services.eligibleLicenceRequired} loginPath="/login?returnTo=/services" />} />;
+            return <ServiceCard key={service.serviceKey} serviceKey={service.serviceKey} name={copy.name} description={copy.description} availabilityLabel={messages.services.availableStatus} action={<StartApplicationButton serviceKey={service.serviceKey} label={messages.common.continue} errorLabel={messages.services.startFailed} eligibleLicenceRequiredLabel={messages.services.eligibleLicenceRequired} />} />;
           })}
         </div>
       )}

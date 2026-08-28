@@ -19,9 +19,9 @@ export const phase6DemoApplications = [
 export const phase6DemoRto = {
   id: "50000000-0000-4000-8000-000000000004",
   code: "SYNTHETIC_WAITLIST_DEMO",
-  nameEn: "Synthetic Rohini Demo RTO",
-  nameHi: "कृत्रिम रोहिणी डेमो आरटीओ",
-  district: "Synthetic Delhi",
+  nameEn: "Rohini Demo RTO",
+  nameHi: "रोहिणी डेमो आरटीओ",
+  district: "Delhi",
 } as const;
 
 export const phase6DemoFullSlot = {

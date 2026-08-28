@@ -299,16 +299,38 @@ export async function applyPaymentProviderEvent(
           where: { id: payment.applicationId, status: "READY_FOR_PAYMENT" },
           data: { status: maintenanceService ? "COMPLETED" : "READY_FOR_APPOINTMENT" },
         });
-        if (advancement.count !== 1) throw apiErrors.invalidTransition();
-        await database.applicationEvent.create({ data: {
+        if (advancement.count === 0) {
+          const [application, priorSuccess] = await Promise.all([
+            database.application.findUnique({
+              where: { id: payment.applicationId },
+              select: { status: true },
+            }),
+            database.paymentAttempt.findFirst({
+              where: {
+                applicationId: payment.applicationId,
+                id: { not: payment.id },
+                status: "SUCCEEDED",
+              },
+              select: { id: true },
+            }),
+          ]);
+          const convergedStatus = maintenanceService
+            ? application?.status === "COMPLETED"
+            : application !== null && ["READY_FOR_APPOINTMENT", "WAITLISTED", "SLOT_OFFERED", "APPOINTMENT_BOOKED", "COMPLETED"].includes(application.status);
+          if (!priorSuccess || !convergedStatus) throw apiErrors.invalidTransition();
+        } else if (advancement.count === 1) {
+          await database.applicationEvent.create({ data: {
             applicationId: payment.applicationId,
             actorApplicantId: payment.application.applicantId,
             eventType: "PAYMENT_SUCCEEDED",
             correlationId,
             createdAt: occurredAt,
-        } });
-        if (maintenanceService) {
-          await projectMaintenanceService(database, payment.application, occurredAt, correlationId);
+          } });
+          if (maintenanceService) {
+            await projectMaintenanceService(database, payment.application, occurredAt, correlationId);
+          }
+        } else {
+          throw apiErrors.invalidTransition();
         }
       }
 

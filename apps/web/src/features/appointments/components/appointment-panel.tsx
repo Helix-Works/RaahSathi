@@ -34,7 +34,7 @@ function localizedDistrict(district: string, locale: Locale): string {
   if (locale !== "hi") return district;
 
   const hindiDistricts: Readonly<Record<string, string>> = {
-    "Synthetic Delhi": "कृत्रिम दिल्ली",
+    "Delhi": "दिल्ली",
     "North Delhi": "उत्तरी दिल्ली",
     "North West Delhi": "उत्तर-पश्चिम दिल्ली",
     "South Delhi": "दक्षिण दिल्ली",
