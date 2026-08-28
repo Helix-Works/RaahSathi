@@ -2,17 +2,15 @@ import { expect, test, type Page } from "@playwright/test";
 
 async function selectHindi(page: Page) {
   await page.goto("/");
-  await page
-    .getByRole("group", { name: "Choose language" })
-    .getByRole("button", { name: "हिंदी" })
-    .click();
+  await page.context().addCookies([{ name: "raahsathi_locale", value: "hi", url: page.url() }]);
+  await page.reload();
   await expect(page.locator("html")).toHaveAttribute("lang", "hi");
 }
 
 async function completeMockLogin(page: Page, otp: string) {
   await page.goto("/login");
-  await page.getByLabel("Synthetic mobile number").fill("9000000000");
-  await page.getByRole("button", { name: "Send synthetic OTP" }).click();
+  await page.getByLabel("Mobile number").fill("9000000000");
+  await page.getByRole("button", { name: "Send OTP" }).click();
   await page.getByLabel("One-time password").fill(otp);
   await page.getByRole("button", { name: "Verify and continue" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);

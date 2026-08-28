@@ -24,7 +24,7 @@ export function DashboardContextCard({
           {icon}
           {status}
         </div>
-        <div className="space-y-2">
+        <div className="min-w-0 space-y-2">
           <h3 className="text-lg font-bold leading-snug">{title}</h3>
           <p className="text-sm leading-6 text-muted-foreground">{description}</p>
         </div>

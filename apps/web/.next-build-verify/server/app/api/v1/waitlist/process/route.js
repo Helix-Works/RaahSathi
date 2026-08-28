@@ -1,0 +1,10 @@
+var R=require("../../../../../chunks/[turbopack]_runtime.js")("server/app/api/v1/waitlist/process/route.js")
+R.c("server/chunks/apps_web_src_server_1gmd44g._.js")
+R.c("server/chunks/apps_web_src_server_waitlist_waitlist-service_ts_1tcdafz._.js")
+R.c("server/chunks/_0q8kis0._.js")
+R.c("server/chunks/_1o4xhj6._.js")
+R.c("server/chunks/[root-of-the-server]__090-3we._.js")
+R.c("server/chunks/[root-of-the-server]__0gsfyuo._.js")
+R.c("server/chunks/apps_web__next-internal_server_app_api_v1_waitlist_process_route_actions_04hst8r.js")
+R.m(98438)
+module.exports=R.m(98438).exports

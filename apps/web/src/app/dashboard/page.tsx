@@ -55,5 +55,5 @@ export default async function DashboardPage() {
     );
   }
 
-  return <DashboardView locale={locale} messages={messages} summary={summary} />;
+  return <DashboardView displayName={session.user.displayName} locale={locale} messages={messages} summary={summary} />;
 }

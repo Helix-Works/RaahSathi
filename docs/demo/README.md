@@ -5,6 +5,7 @@ This runbook rehearses RaahSathi's deterministic learner-to-Permanent Driving Li
 ## Account and fixed scenario
 
 - Citizen mobile: `9000000007`
+- Fresh citizen mobile: `9000000009` (`Aarav Mehta`, no saved work)
 - Capacity-holder mobile: `9000000008` (fixture only; do not log in during the demo)
 - OTP: the value of `AUTH_DEMO_OTP` (`123456` in the example environment)
 - RTO: Synthetic Rohini Hero RTO
@@ -30,7 +31,7 @@ pnpm build
 pnpm --filter @raahsathi/web start
 ```
 
-`pnpm demo:reset` deletes and rebuilds only the enumerated Phase 7 fixture records. It fails closed if those stable identifiers collide with records outside the fixture. After reset, `9000000007` has a partial Learner Licence application: Personal Details is complete, Address contains postal code `110085` but is not complete, and there is no learner licence, Permanent DL application, appointment, waitlist, or offer. Authentication sessions, OTP attempts, and rate-limit state for the two fixture accounts are cleared.
+`pnpm demo:reset` deletes and rebuilds only the enumerated Phase 7 fixture records. It fails closed if those stable identifiers collide with records outside the fixture. After reset, `9000000007` has a partial Learner Licence application: Personal Details is complete, Address contains postal code `110085` but is not complete, and there is no learner licence, Permanent DL application, appointment, waitlist, or offer. The fresh account `9000000009` has no applications, licences, payments, appointments, waitlist entries, or offers. Authentication sessions, OTP attempts, and rate-limit state for all fixture accounts are cleared.
 
 Open `http://localhost:3000`, log in with the hero account, and choose English or Hindi. Edit the Address postal code, save it, complete the section, log out, and log in again to demonstrate database-backed reconstruction. Synthetic OTP requests have an intentional one-minute resend cooldown; either wait for it or issue the first OTP at least one minute before recording the renewed-login step.
 

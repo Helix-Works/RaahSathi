@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
 import { retryIdentity, startIdentity } from "@/features/identity/api";
-import { IdentityOutcomeView, SyntheticDocumentMetadata } from "@/features/identity/components/identity-stage-views";
+import { DocumentMetadata, IdentityOutcomeView } from "@/features/identity/components/identity-stage-views";
 import type { MessageDictionary } from "@/i18n";
 
 export function IdentityRecoveryPanel({ applicationId, initialContext, messages: dictionary, onApplicationChanged }: Readonly<{
@@ -76,7 +76,7 @@ export function IdentityRecoveryPanel({ applicationId, initialContext, messages:
       <CardContent className="space-y-5 pt-5 sm:pt-6">
         {context.attempt ? <IdentityOutcomeView outcome={context.attempt.outcome} label={outcomeLabels[context.attempt.outcome]} description={outcomes[context.attempt.outcome]} /> : null}
         {failure ? <Alert variant="error" role="alert"><AlertDescription>{failure === "refresh" ? messages.refreshError : messages.genericError}</AlertDescription></Alert> : null}
-        <SyntheticDocumentMetadata
+        <DocumentMetadata
           documents={context.documents}
           title={messages.documents}
           identityProofLabel={messages.identityProof}

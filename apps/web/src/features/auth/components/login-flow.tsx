@@ -1,7 +1,7 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, LoaderCircle, MessageSquareText, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, LoaderCircle, MessageSquareText, ShieldCheck } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -175,8 +175,8 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
   };
 
   return (
-    <Card className="overflow-hidden border-0 bg-transparent shadow-none">
-      <CardHeader className="px-0 pt-0">
+    <Card className="overflow-hidden border-primary/15 bg-card/90 shadow-elevated">
+      <CardHeader className="items-center px-7 pb-4 pt-8 text-center sm:px-10 sm:pt-10">
         <IconTile size="lg">
           {challenge ? (
             <MessageSquareText className="size-6" aria-hidden="true" />
@@ -187,21 +187,14 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
         <CardTitle>
           {challenge ? authMessages.sentTitle : authMessages.requestTitle}
         </CardTitle>
-        {challenge ? (
-          <CardDescription>
-            {authMessages.sentDescription.replace(
-              "{destination}",
-              challenge.maskedDestination,
-            )}
-          </CardDescription>
-        ) : null}
+        <CardDescription className="max-w-sm text-center text-base leading-7">
+          {challenge
+            ? authMessages.sentDescription.replace("{destination}", challenge.maskedDestination)
+            : authMessages.requestDescription}
+        </CardDescription>
       </CardHeader>
 
-      <CardContent className="space-y-5 px-0 pb-0">
-        <Alert variant="info">
-          <AlertDescription>{authMessages.syntheticNotice}</AlertDescription>
-        </Alert>
-
+      <CardContent className="space-y-6 px-7 pb-8 sm:px-10 sm:pb-10">
         {apiError ? (
           <ApiErrorSummary
             error={apiError}
@@ -212,26 +205,29 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
 
         {!challenge ? (
           <form className="space-y-5" onSubmit={requestOtp} noValidate>
-            <div className="space-y-2">
-              <Label htmlFor="synthetic-mobile">{authMessages.mobileLabel}</Label>
-              <Input
-                id="synthetic-mobile"
-                type="tel"
-                inputMode="numeric"
-                autoComplete="off"
-                maxLength={10}
-                placeholder={authMessages.mobilePlaceholder}
-                aria-invalid={Boolean(mobileError)}
-                aria-describedby={
-                  mobileError ? "synthetic-mobile-help synthetic-mobile-error" : "synthetic-mobile-help"
-                }
-                {...requestForm.register("mobileNumber")}
-              />
-              <p id="synthetic-mobile-help" className="text-sm leading-6 text-muted-foreground">
-                {authMessages.mobileHelp}
-              </p>
+            <div className="space-y-2.5">
+              <Label htmlFor="mobile-number">{authMessages.mobileLabel}</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute inset-y-0 left-0 flex items-center gap-1 border-r border-input px-3 text-sm font-semibold text-secondary-foreground" aria-hidden="true">
+                  <span>🇮🇳</span><span>+91</span>
+                </span>
+                <Input
+                  id="mobile-number"
+                  type="tel"
+                  inputMode="numeric"
+                  autoComplete="off"
+                  maxLength={10}
+                  className="pl-[5.8rem]"
+                  placeholder={authMessages.mobilePlaceholder}
+                  aria-invalid={Boolean(mobileError)}
+                  aria-describedby={
+                    mobileError ? "mobile-number-error" : undefined
+                  }
+                  {...requestForm.register("mobileNumber")}
+                />
+              </div>
               {mobileError ? (
-                <p id="synthetic-mobile-error" className="text-sm font-bold text-error">
+                <p id="mobile-number-error" className="text-sm font-bold text-error">
                   {mobileError}
                 </p>
               ) : null}
@@ -244,14 +240,16 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
               {requestForm.formState.isSubmitting
                 ? authMessages.requestingOtp
                 : authMessages.requestOtp}
+              {requestForm.formState.isSubmitting ? null : <ArrowRight className="size-4" aria-hidden="true" />}
             </Button>
+            <p className="text-center text-sm leading-6 text-muted-foreground">{authMessages.sessionNote}</p>
           </form>
         ) : (
           <form className="space-y-5" onSubmit={verifyOtp} noValidate>
             <div className="space-y-2">
-              <Label htmlFor="synthetic-otp">{authMessages.otpLabel}</Label>
+              <Label htmlFor="one-time-password">{authMessages.otpLabel}</Label>
               <Input
-                id="synthetic-otp"
+                id="one-time-password"
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
@@ -259,15 +257,12 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
                 placeholder={authMessages.otpPlaceholder}
                 aria-invalid={Boolean(otpError)}
                 aria-describedby={
-                  otpError ? "synthetic-otp-help synthetic-otp-error" : "synthetic-otp-help"
+                  otpError ? "one-time-password-error" : undefined
                 }
                 {...otpForm.register("otp")}
               />
-              <p id="synthetic-otp-help" className="text-sm leading-6 text-muted-foreground">
-                {authMessages.otpHelp}
-              </p>
               {otpError ? (
-                <p id="synthetic-otp-error" className="text-sm font-bold text-error">
+                <p id="one-time-password-error" className="text-sm font-bold text-error">
                   {otpError}
                 </p>
               ) : null}

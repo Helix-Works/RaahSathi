@@ -4,32 +4,35 @@ import type {
   ApplicationStatusCode,
   ServiceKey,
 } from "@raahsathi/contracts/applications";
-import { CalendarClock, Clock3, IdCard, TicketCheck } from "lucide-react";
+import { ArrowRight, CalendarClock, Clock3, IdCard, TicketCheck } from "lucide-react";
 import Link from "next/link";
 
 import { BlockingReasonAlert } from "@/components/shared/blocking-reason-alert";
+import { HeroSurface } from "@/components/shared/hero-surface";
 import { IconTile } from "@/components/shared/icon-tile";
 import { PageContainer } from "@/components/shared/page-container";
-import { PageHeader } from "@/components/shared/page-header";
-import { NextActionCard, EmptyState, StatusBadge } from "@/components/shared/state-presentations";
+import { SectionHeader } from "@/components/shared/section-header";
+import { ServiceCard } from "@/components/shared/service-card";
+import { EmptyState, NextActionCard, StatusBadge } from "@/components/shared/state-presentations";
 import { buttonVariants } from "@/components/ui/button";
+import { ApplicationListItem } from "@/features/applications/components/application-list-item";
+import { StartApplicationButton } from "@/features/applications/components/start-application-button";
 import { formatAppointmentDate } from "@/features/appointments/appointment-date";
-import { DashboardApplicationSummary } from "@/features/dashboard/components/dashboard-application-summary";
 import { DashboardContextCard } from "@/features/dashboard/components/dashboard-context-card";
-import { resolveNextActionCard } from "@/features/dashboard/dashboard-presentation";
+import { resolveNextActionCard, selectHeroApplication } from "@/features/dashboard/dashboard-presentation";
 import type { DashboardSummary } from "@/features/dashboard/types";
+import { getServiceCopy } from "@/features/services/presentation";
 import type { Locale, MessageDictionary } from "@/i18n";
 
 type DashboardViewProps = Readonly<{
+  displayName: string;
   locale: Locale;
   messages: MessageDictionary;
   summary: DashboardSummary;
 }>;
 
 function serviceName(serviceKey: ServiceKey, messages: MessageDictionary): string {
-  return serviceKey === "LEARNER_LICENCE"
-    ? messages.services.learnerName
-    : messages.services.permanentName;
+  return serviceKey === "LEARNER_LICENCE" ? messages.services.learnerName : messages.services.permanentName;
 }
 
 function statusPresentation(
@@ -47,10 +50,7 @@ function statusPresentation(
   return { label: messages.statusUnknown, tone: "neutral" };
 }
 
-function nextActionPresentation(
-  code: ApplicationNextActionCode,
-  messages: MessageDictionary["dashboard"],
-): string {
+function nextActionPresentation(code: ApplicationNextActionCode, messages: MessageDictionary["dashboard"]): string {
   if (code === "REVIEW_OFFER") return messages.nextActionReviewOffer;
   if (code === "REVIEW_WAITLIST") return messages.nextActionReviewWaitlist;
   if (code === "REVIEW_APPOINTMENT") return messages.nextActionReviewAppointment;
@@ -62,10 +62,7 @@ function nextActionPresentation(
   return messages.nextActionUnknown;
 }
 
-function blockingReasonPresentation(
-  code: ApplicationBlockingReasonCode,
-  messages: MessageDictionary["dashboard"],
-): string {
+function blockingReasonPresentation(code: ApplicationBlockingReasonCode, messages: MessageDictionary["dashboard"]): string {
   if (code === "NO_SUITABLE_SLOT") return messages.blockingNoSuitableSlot;
   if (code === "WAITLIST_OFFER_PENDING") return messages.blockingWaitlistOfferPending;
   if (code === "IDENTITY_VERIFICATION_REQUIRED") return messages.blockingIdentityRequired;
@@ -83,24 +80,23 @@ function formatDateTime(value: string, locale: Locale, fallback: string): string
   }).format(date);
 }
 
-function replaceDashboardTokens(template: string, values: Readonly<Record<string, string>>): string {
-  return Object.entries(values).reduce(
-    (message, [key, value]) => message.replace(`{${key}}`, value),
-    template,
-  );
+function replaceTokens(template: string, values: Readonly<Record<string, string>>): string {
+  return Object.entries(values).reduce((message, [key, value]) => message.replace(`{${key}}`, value), template);
 }
 
-function localizedCodeLabel(labels: Readonly<Record<string, string>>, code: string, fallback: string): string {
-  return labels[code] ?? fallback;
-}
-
-export function DashboardView({ locale, messages, summary }: DashboardViewProps) {
+export function DashboardView({ displayName, locale, messages, summary }: DashboardViewProps) {
   const dashboard = messages.dashboard;
-  const application = summary.application;
-  const applicationStatus = statusPresentation(application?.statusCode ?? "", dashboard);
-  const applicationProgress = application ? Math.min(100, Math.max(0, application.progressPercent)) : 0;
-  const nextActionCard = application
-    ? resolveNextActionCard(application, {
+  const heroApplication = selectHeroApplication(summary.applications);
+  const orderedApplications = heroApplication
+    ? [
+        heroApplication,
+        ...summary.applications
+          .filter(({ id }) => id !== heroApplication.id)
+          .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt)),
+      ]
+    : [];
+  const nextActionCard = heroApplication
+    ? resolveNextActionCard(heroApplication, {
         defaultDescription: dashboard.nextActionDescription,
         readyForAppointmentDescription: dashboard.nextActionUnavailableDescription,
         appointmentBookedDescription: dashboard.nextActionBookedDescription,
@@ -110,139 +106,171 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
         continueLabel: messages.common.continue,
       })
     : undefined;
-  const hasContext = Boolean(summary.waitlist || summary.offer || summary.appointment || summary.licence);
+  const hasContext = summary.offers.length + summary.waitlistEntries.length + summary.appointments.length + summary.licences.length > 0;
+  const hasPriorityItems = Boolean(heroApplication && nextActionCard) || hasContext;
 
   return (
-    <PageContainer className="space-y-8 py-10 sm:py-12 lg:space-y-10 lg:py-16">
-      <header className="grid gap-6 border-b border-border pb-8 lg:grid-cols-[1fr_auto] lg:items-end">
-        <PageHeader eyebrow={dashboard.eyebrow} title={dashboard.title} description={dashboard.description} />
-        <div className="flex flex-col gap-3 sm:flex-row lg:flex-col lg:items-stretch">
-          <div className="rounded-item border border-border bg-surface-muted px-4 py-3">
-            <p className="text-sm text-muted-foreground">{dashboard.greeting}</p>
-            <p className="font-semibold text-secondary-foreground">{dashboard.syntheticCitizen}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link className={buttonVariants({ variant: "outline" })} href="/applications">{dashboard.applicationsAction}</Link>
-            {application ? (
-              <Link className={buttonVariants({ variant: "ghost" })} href="/services">{messages.common.exploreServices}</Link>
-            ) : null}
-          </div>
-        </div>
-      </header>
+    <div className="pb-14 sm:pb-16">
+      <PageContainer className="pt-6 sm:pt-8 lg:pt-10">
+        <HeroSurface
+          titleId="dashboard-title"
+          title={dashboard.welcomeTitle.replace("{name}", displayName)}
+          description={dashboard.description}
+          variant="featured"
+          actions={nextActionCard?.actionLabel && nextActionCard.actionHref ? (
+            <Link className={`${buttonVariants({ variant: "secondary", size: "lg" })} border-white/70 bg-white text-primary! hover:border-white hover:bg-white/90`} href={nextActionCard.actionHref}>
+              {nextActionCard.actionLabel}<ArrowRight className="size-4" aria-hidden="true" />
+            </Link>
+          ) : undefined}
+        />
+      </PageContainer>
 
-      {!application ? (
-        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr] lg:items-start">
-          <EmptyState title={dashboard.noApplicationTitle} description={dashboard.noApplicationDescription} />
-          <NextActionCard
-            eyebrow={dashboard.nextActionLabel}
-            headingId="dashboard-next-action-title"
-            title={messages.common.exploreServices}
-            description={dashboard.noApplicationDescription}
-            actionLabel={messages.common.exploreServices}
-            actionHref="/services"
-          />
-        </div>
-      ) : (
-        <>
-          <section aria-labelledby="dashboard-next-action-title">
-            <NextActionCard
-              eyebrow={dashboard.nextActionLabel}
-              headingId="dashboard-next-action-title"
-              title={nextActionPresentation(application.nextActionCode, dashboard)}
-              description={nextActionCard?.description ?? dashboard.nextActionDescription}
-              actionLabel={nextActionCard?.actionLabel}
-              actionHref={nextActionCard?.actionHref}
+      <PageContainer className="py-8 sm:py-10 lg:py-12">
+        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)] lg:gap-10">
+          <section className="space-y-6" aria-labelledby="continue-work-title">
+            <SectionHeader
+              id="continue-work-title"
+              title={dashboard.continueWorkTitle}
+              description={dashboard.continueWorkDescription}
             />
+            {orderedApplications.length > 0 ? (
+              <div className="space-y-4">
+                {orderedApplications.map((application) => {
+                  const status = statusPresentation(application.statusCode, dashboard);
+                  return (
+                    <ApplicationListItem
+                      key={application.id}
+                      serviceName={serviceName(application.serviceKey, messages)}
+                      status={status.label}
+                      nextAction={nextActionPresentation(application.nextActionCode, dashboard)}
+                      updatedLabel={dashboard.updatedLabel}
+                      updatedValue={formatDateTime(application.updatedAt, locale, messages.status.unavailable)}
+                      progressLabel={dashboard.progressLabel}
+                      progress={application.progressPercent}
+                      progressText={`${new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(application.progressPercent)}%`}
+                      resumeLabel={messages.applications.resume}
+                      href={`/applications/${application.id}`}
+                      compact
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              <EmptyState title={dashboard.noApplicationTitle} description={dashboard.noApplicationDescription} />
+            )}
           </section>
 
-          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-start">
-            <DashboardApplicationSummary
-              title={dashboard.activeApplicationTitle}
-              serviceName={serviceName(application.serviceKey, messages)}
-              description={dashboard.currentWorkDescription}
-              status={applicationStatus.label}
-              statusTone={applicationStatus.tone}
-              progressLabel={dashboard.progressLabel}
-              progressValue={applicationProgress}
-              progressText={`${new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(applicationProgress)}%`}
-              updatedLabel={dashboard.updatedLabel}
-              updatedValue={formatDateTime(application.updatedAt, locale, messages.status.unavailable)}
-            />
-            {application.blockingReasonCode ? (
-              <aside aria-labelledby="dashboard-blocking-title">
-                <BlockingReasonAlert
-                  title={dashboard.blockingTitle}
-                  description={blockingReasonPresentation(application.blockingReasonCode, dashboard)}
-                  headingId="dashboard-blocking-title"
-                />
-              </aside>
+          <div className="space-y-8 lg:space-y-10">
+            {hasPriorityItems ? (
+              <section className="space-y-5" aria-labelledby="support-summary-title">
+                <SectionHeader id="support-summary-title" title={dashboard.supportTitle} description={dashboard.supportDescription} />
+                {heroApplication && nextActionCard ? (
+                  <div className="space-y-4">
+                    <NextActionCard
+                      eyebrow={dashboard.nextActionLabel}
+                      headingId="dashboard-next-action-title"
+                      title={nextActionPresentation(heroApplication.nextActionCode, dashboard)}
+                      description={nextActionCard.description}
+                      variant="subtle"
+                    />
+                    {heroApplication.blockingReasonCode ? (
+                      <BlockingReasonAlert
+                        title={dashboard.blockingTitle}
+                        description={blockingReasonPresentation(heroApplication.blockingReasonCode, dashboard)}
+                        headingId="dashboard-blocking-title"
+                      />
+                    ) : null}
+                  </div>
+                ) : null}
+                {hasContext ? (
+                  <div className="grid gap-4">
+                    {summary.offers.map((offer) => (
+                      <DashboardContextCard
+                        key={offer.id}
+                        tone="urgent"
+                        icon={<IconTile tone="warning"><TicketCheck aria-hidden="true" /></IconTile>}
+                        status={<StatusBadge tone="warning">{dashboard.offerStatus}</StatusBadge>}
+                        title={dashboard.offerTitle}
+                        description={replaceTokens(dashboard.offerDescription, {
+                          rto: locale === "hi" ? offer.rto.nameHi : offer.rto.nameEn,
+                          time: formatDateTime(offer.expiresAt, locale, messages.status.unavailable),
+                        })}
+                      />
+                    ))}
+                    {summary.waitlistEntries.map((entry) => (
+                      <DashboardContextCard
+                        key={entry.id}
+                        tone="urgent"
+                        icon={<IconTile tone="warning"><Clock3 aria-hidden="true" /></IconTile>}
+                        status={<StatusBadge tone="warning">{dashboard.waitlistStatus}</StatusBadge>}
+                        title={dashboard.waitlistTitle}
+                        description={replaceTokens(dashboard.waitlistDescription, {
+                          rto: locale === "hi" ? entry.rto.nameHi : entry.rto.nameEn,
+                          time: formatDateTime(entry.joinedAt, locale, messages.status.unavailable),
+                        })}
+                      />
+                    ))}
+                    {summary.appointments.map((appointment) => (
+                      <DashboardContextCard
+                        key={appointment.id}
+                        icon={<IconTile tone="success"><CalendarClock aria-hidden="true" /></IconTile>}
+                        status={<StatusBadge tone="success">{dashboard.appointmentStatus}</StatusBadge>}
+                        title={dashboard.appointmentTitle}
+                        description={replaceTokens(dashboard.appointmentDescription, {
+                          rto: locale === "hi" ? appointment.rto.nameHi : appointment.rto.nameEn,
+                          time: `${formatAppointmentDate(appointment.date, locale)}, ${appointment.startTime}–${appointment.endTime}`,
+                        })}
+                      />
+                    ))}
+                    {summary.licences.map((licence, index) => (
+                      <DashboardContextCard
+                        key={`${licence.kind}-${licence.vehicleClass}-${index}`}
+                        tone="muted"
+                        icon={<IconTile tone="neutral"><IdCard aria-hidden="true" /></IconTile>}
+                        title={dashboard.licenceTitle}
+                        description={dashboard.licenceDescription.replace(
+                          "{vehicleClass}",
+                          dashboard.vehicleClassNames[licence.vehicleClass] ?? messages.status.unavailable,
+                        )}
+                      />
+                    ))}
+                  </div>
+                ) : null}
+              </section>
             ) : null}
-          </div>
-        </>
-      )}
 
-      {hasContext ? (
-        <section className="space-y-5" aria-labelledby="support-summary-title">
-          <div className="flex items-end justify-between gap-4">
-            <div className="space-y-1">
-              <p className="eyebrow">{dashboard.contextEyebrow}</p>
-              <h2 id="support-summary-title" className="text-2xl font-bold tracking-[-0.025em]">{dashboard.supportTitle}</h2>
-            </div>
+            <section className="space-y-6" aria-labelledby="dashboard-services-title">
+              <SectionHeader
+                id="dashboard-services-title"
+                title={dashboard.servicesTitle}
+                description={dashboard.servicesDescription}
+              />
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                {summary.services.map((service) => {
+                  const copy = getServiceCopy(service.serviceKey, messages.services);
+                  return (
+                    <ServiceCard
+                      key={service.serviceKey}
+                      serviceKey={service.serviceKey}
+                      name={copy.name}
+                      description={copy.description}
+                      availabilityLabel={messages.services.availableStatus}
+                      action={
+                        <StartApplicationButton
+                          serviceKey={service.serviceKey}
+                          label={messages.common.continue}
+                          errorLabel={messages.services.startFailed}
+                          loginPath="/login?returnTo=/dashboard"
+                        />
+                      }
+                    />
+                  );
+                })}
+              </div>
+            </section>
           </div>
-          <div className="grid gap-4 md:grid-cols-2">
-            {summary.offer ? (
-              <DashboardContextCard
-                tone="urgent"
-                icon={<IconTile tone="warning"><TicketCheck aria-hidden="true" /></IconTile>}
-                status={<StatusBadge tone="warning">{dashboard.offerStatus}</StatusBadge>}
-                title={dashboard.offerTitle}
-                description={replaceDashboardTokens(dashboard.offerDescription, {
-                  rto: locale === "hi" ? summary.offer.rto.nameHi : summary.offer.rto.nameEn,
-                  time: formatDateTime(summary.offer.expiresAt, locale, messages.status.unavailable),
-                })}
-              />
-            ) : null}
-            {summary.waitlist ? (
-              <DashboardContextCard
-                tone="urgent"
-                icon={<IconTile tone="warning"><Clock3 aria-hidden="true" /></IconTile>}
-                status={<StatusBadge tone="warning">{dashboard.waitlistStatus}</StatusBadge>}
-                title={dashboard.waitlistTitle}
-                description={replaceDashboardTokens(dashboard.waitlistDescription, {
-                  rto: locale === "hi" ? summary.waitlist.rto.nameHi : summary.waitlist.rto.nameEn,
-                  time: formatDateTime(summary.waitlist.joinedAt, locale, messages.status.unavailable),
-                })}
-              />
-            ) : null}
-            {summary.appointment ? (
-              <DashboardContextCard
-                icon={<IconTile tone="success"><CalendarClock aria-hidden="true" /></IconTile>}
-                status={<StatusBadge tone="success">{dashboard.appointmentStatus}</StatusBadge>}
-                title={dashboard.appointmentTitle}
-                description={replaceDashboardTokens(dashboard.appointmentDescription, {
-                  rto: locale === "hi" ? summary.appointment.rto.nameHi : summary.appointment.rto.nameEn,
-                  time: `${formatAppointmentDate(summary.appointment.date, locale)}, ${summary.appointment.startTime}–${summary.appointment.endTime}`,
-                })}
-              />
-            ) : null}
-            {summary.licence ? (
-              <DashboardContextCard
-                tone="muted"
-                icon={<IconTile tone="neutral"><IdCard aria-hidden="true" /></IconTile>}
-                title={dashboard.licenceTitle}
-                description={dashboard.licenceDescription.replace(
-                  "{vehicleClass}",
-                  localizedCodeLabel(
-                    dashboard.vehicleClassNames,
-                    summary.licence.vehicleClass,
-                    messages.status.unavailable,
-                  ),
-                )}
-              />
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-    </PageContainer>
+        </div>
+      </PageContainer>
+    </div>
   );
 }

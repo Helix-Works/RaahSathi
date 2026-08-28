@@ -4,6 +4,7 @@ import { CheckCircle2, Clock3, Landmark, TriangleAlert } from "lucide-react";
 import { DefinitionGrid, DefinitionItem } from "@/components/shared/journey-stage";
 import { IconTile } from "@/components/shared/icon-tile";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { displayReference } from "@/lib/display-reference";
 
 type PaymentMessages = Readonly<{
   baseFee: string;
@@ -83,7 +84,7 @@ export function PaymentAttemptMetadata({
   return (
     <DefinitionGrid>
       <DefinitionItem label={referenceLabel}>
-        <span className="break-all font-mono text-sm font-medium">{context.attempt.providerReference}</span>
+        <span className="break-all font-mono text-sm font-medium">{displayReference(context.attempt.providerReference)}</span>
       </DefinitionItem>
       <DefinitionItem label={attemptLabel}>{formattedAttempt}</DefinitionItem>
     </DefinitionGrid>

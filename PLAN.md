@@ -264,7 +264,7 @@ Strict Zod schemas in the endpoint registry are authoritative. Generate OpenAPI 
 - scaffold Next.js;
 - Tailwind/shadcn;
 - bilingual dictionary foundation;
-- independent-prototype disclosure;
+- independent RaahSathi branding without official government emblems or affiliation claims;
 - mobile shell;
 - API fetch wrapper with credentials;
 - login/dashboard route shells;
@@ -293,7 +293,7 @@ Strict Zod schemas in the endpoint registry are authoritative. Generate OpenAPI 
 
 ### Person A
 - bilingual login + OTP;
-- clear synthetic-demo labeling;
+- service-oriented sign-in copy with fictional test identities kept out of public credential hints;
 - credentialed API flow;
 - CSRF handling;
 - protected routing;
@@ -722,7 +722,7 @@ Hindi is mandatory.
 
 ## 25. Submission definition of done
 
-- RaahSathi branding and independent-prototype disclosure;
+- RaahSathi branding without official government emblems or affiliation claims;
 - English + Hindi complete for implemented citizen flows;
 - mobile usable;
 - secure synthetic login/session;

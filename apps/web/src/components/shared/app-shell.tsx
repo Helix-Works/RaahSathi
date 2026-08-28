@@ -22,7 +22,7 @@ export function AppShell({
   account,
 }: AppShellProps) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-screen flex-col pt-14">
       <a className="skip-link" href="#main-content">
         {messages.navigation.skipToContent}
       </a>

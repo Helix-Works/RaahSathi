@@ -5,9 +5,9 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 export const phase6DemoSeedLockKey = "raahsathi:seed:phase6-demo";
 
 export const phase6DemoApplicants = [
-  { id: "10000000-0000-4000-8000-000000000004", mobile: "9000000004", name: "Waitlist Journey Demo" },
-  { id: "10000000-0000-4000-8000-000000000005", mobile: "9000000005", name: "Direct Booking Demo" },
-  { id: "10000000-0000-4000-8000-000000000006", mobile: "9000000006", name: "Capacity Holder Demo" },
+  { id: "10000000-0000-4000-8000-000000000004", mobile: "9000000004", name: "Meera Sethi" },
+  { id: "10000000-0000-4000-8000-000000000005", mobile: "9000000005", name: "Kunal Verma" },
+  { id: "10000000-0000-4000-8000-000000000006", mobile: "9000000006", name: "Naina Khanna" },
 ] as const;
 
 export const phase6DemoApplications = [
@@ -19,8 +19,8 @@ export const phase6DemoApplications = [
 export const phase6DemoRto = {
   id: "50000000-0000-4000-8000-000000000004",
   code: "SYNTHETIC_WAITLIST_DEMO",
-  nameEn: "Synthetic Rohini Demo RTO",
-  nameHi: "कृत्रिम रोहिणी डेमो आरटीओ",
+  nameEn: "Rohini Mobility Centre",
+  nameHi: "रोहिणी मोबिलिटी केंद्र",
   district: "Synthetic Delhi",
 } as const;
 

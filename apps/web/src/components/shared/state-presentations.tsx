@@ -134,6 +134,7 @@ export function NextActionCard({
   description,
   actionLabel,
   actionHref,
+  variant = "strong",
 }: Readonly<{
   eyebrow?: string;
   headingId?: string;
@@ -141,16 +142,21 @@ export function NextActionCard({
   description: string;
   actionLabel?: string;
   actionHref?: string;
+  variant?: "strong" | "subtle";
 }>) {
   return (
-    <Card className="overflow-hidden border-primary bg-primary text-primary-foreground">
-      <CardContent className="grid gap-5 py-5 sm:grid-cols-[1fr_auto] sm:items-center sm:py-6">
+    <Card
+      className={variant === "strong"
+        ? "overflow-hidden border-primary bg-primary text-primary-foreground"
+        : "border-primary/15 bg-[rgba(232,244,253,0.58)] shadow-subtle"}
+    >
+      <CardContent className="grid gap-4 py-4 sm:grid-cols-[1fr_auto] sm:items-center sm:py-5">
         <div className="space-y-2">
           {eyebrow ? (
-            <p className="text-sm font-semibold text-primary-foreground/75">{eyebrow}</p>
+            <p className={variant === "strong" ? "text-sm font-semibold text-primary-foreground/75" : "text-sm font-semibold text-primary"}>{eyebrow}</p>
           ) : null}
-          <h2 id={headingId} className="text-xl font-bold leading-snug tracking-tight">{title}</h2>
-          <p className="max-w-2xl text-sm leading-6 text-primary-foreground/80 sm:text-base">
+          <h2 id={headingId} className="text-lg font-bold leading-snug tracking-tight sm:text-xl">{title}</h2>
+          <p className={variant === "strong" ? "max-w-2xl text-sm leading-6 text-primary-foreground/80 sm:text-base" : "max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base"}>
             {description}
           </p>
         </div>

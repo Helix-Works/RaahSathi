@@ -16,8 +16,9 @@ async function main() {
   if (!pepper || pepper.length < 32) throw new Error("AUTH_MOBILE_LOOKUP_PEPPER must contain at least 32 characters.");
 
   const applicants = [
-    { id: "10000000-0000-4000-8000-000000000001", mobile: "9000000000", displayName: "RaahSathi Demo", authScenario: "STANDARD" as const },
-    { id: "10000000-0000-4000-8000-000000000002", mobile: "9000000002", displayName: "Provider Failure Demo", authScenario: "PROVIDER_UNAVAILABLE" as const },
+    { id: "10000000-0000-4000-8000-000000000001", mobile: "9000000000", displayName: "Aditi Sharma", authScenario: "STANDARD" as const },
+    { id: "10000000-0000-4000-8000-000000000002", mobile: "9000000002", displayName: "Rohan Malhotra", authScenario: "PROVIDER_UNAVAILABLE" as const },
+    { id: "10000000-0000-4000-8000-000000000009", mobile: "9000000009", displayName: "Aarav Mehta", authScenario: "STANDARD" as const },
   ];
   for (const applicant of applicants) {
     const mobileLookupHash = lookupHash(applicant.mobile, pepper);
@@ -53,7 +54,7 @@ async function main() {
     },
     update: {},
   });
-  console.info("Seeded synthetic applicants, a resumable learner application, Delhi RTOs, and appointment states.");
+  console.info("Seeded fictional applicants, a resumable learner application, Delhi centres, and appointment states.");
 }
 
 void main()

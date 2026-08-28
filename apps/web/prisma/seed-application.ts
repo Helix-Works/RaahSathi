@@ -16,7 +16,7 @@ export async function seedSyntheticApplication(database: PrismaClient, applicant
         create: {
           id: "31000000-0000-4000-8000-000000000001",
           sectionKey: "PERSONAL_DETAILS",
-          data: { fullName: "RaahSathi Demo", dateOfBirth: "1995-01-15" },
+          data: { fullName: "Aditi Sharma", dateOfBirth: "1995-01-15" },
           completedAt: new Date("2026-08-23T00:00:00.000Z"),
         },
       },

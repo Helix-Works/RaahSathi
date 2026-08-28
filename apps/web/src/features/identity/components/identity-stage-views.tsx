@@ -4,6 +4,7 @@ import { FileCheck2, ShieldCheck } from "lucide-react";
 import { DefinitionGrid, DefinitionItem } from "@/components/shared/journey-stage";
 import { IconTile } from "@/components/shared/icon-tile";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { displayReference } from "@/lib/display-reference";
 
 type OutcomeTone = "success" | "warning" | "neutral";
 
@@ -36,7 +37,7 @@ export function IdentityOutcomeView({
   );
 }
 
-export function SyntheticDocumentMetadata({
+export function DocumentMetadata({
   documents,
   title,
   identityProofLabel,
@@ -52,8 +53,8 @@ export function SyntheticDocumentMetadata({
   if (documents.length === 0) return null;
 
   return (
-    <section className="space-y-3" aria-labelledby="synthetic-documents-title">
-      <h3 id="synthetic-documents-title" className="text-base font-bold">{title}</h3>
+    <section className="space-y-3" aria-labelledby="document-details-title">
+      <h3 id="document-details-title" className="text-base font-bold">{title}</h3>
       <div className="grid gap-3 sm:grid-cols-2">
         {documents.map((document) => (
           <div key={document.id} className="rounded-item border border-border bg-card p-4">
@@ -67,7 +68,7 @@ export function SyntheticDocumentMetadata({
             </div>
             <DefinitionGrid className="mt-3 grid-cols-1 sm:grid-cols-1">
               <DefinitionItem label={referenceLabel}>
-                <span className="break-all font-mono text-sm font-medium">{document.syntheticReference}</span>
+                <span className="break-all font-mono text-sm font-medium">{displayReference(document.syntheticReference)}</span>
               </DefinitionItem>
             </DefinitionGrid>
           </div>

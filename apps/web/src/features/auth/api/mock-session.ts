@@ -61,7 +61,7 @@ export async function readMockSession(): Promise<ShellSession> {
     kind: "authenticated",
     user: {
       id: "synthetic-citizen",
-      displayName: "RaahSathi Demo",
+      displayName: "Aarav Mehta",
       preferredLocale: "en",
     },
   };

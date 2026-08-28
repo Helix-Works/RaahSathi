@@ -42,7 +42,7 @@ RaahSathi is an independent PoC that rethinks the citizen experience for digital
 Round 1 requires a live public browser app, a two-minute video, a short text summary and partner details. The project should therefore demonstrate a small number of **real systemic improvements** across as many useful services as can safely reuse them.
 
 The product must:
-- clearly disclose that it is an independent prototype;
+- use service-oriented citizen copy without implying that RaahSathi is an official government service;
 - use only synthetic people, licences, payments, documents, RTOs and provider events;
 - never use official emblems/branding or imply government affiliation;
 - never claim formal compliance, certification or “government-grade security”;
@@ -113,7 +113,7 @@ Every implemented citizen journey should answer:
 3. Why can I not continue?
 4. When can I continue, if known?
 5. Is my progress safe?
-6. What is simulated?
+6. What information or action is available now?
 
 Build shared primitives instead of disconnected service-specific implementations.
 

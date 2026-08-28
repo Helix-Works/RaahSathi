@@ -31,7 +31,7 @@ export function ServiceCard({
   action,
 }: ServiceCardProps) {
   return (
-    <Card variant="actionable" className="h-full">
+    <Card variant="service" className="h-full">
       <CardContent className="flex h-full flex-col gap-5 pt-5 sm:pt-6">
         <div className="flex items-start justify-between gap-4">
           <IconTile size="lg">
@@ -42,7 +42,7 @@ export function ServiceCard({
             {availabilityLabel}
           </Badge>
         </div>
-        <div className="space-y-2.5">
+        <div className="min-w-0 space-y-2.5">
           <h2 className="text-xl font-bold leading-snug tracking-[-0.025em] sm:text-2xl">
             {name}
           </h2>

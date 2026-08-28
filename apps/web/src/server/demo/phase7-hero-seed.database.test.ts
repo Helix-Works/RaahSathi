@@ -121,6 +121,28 @@ describe.skipIf(!database)("Phase 7 deterministic hero fixture", () => {
     expect(JSON.stringify(audits[0]?.metadata)).not.toMatch(/token|otp|secret/i);
   });
 
+  it("keeps the fresh account free of workflow state after reset", async () => {
+    if (!database) return;
+    const freshApplicantId = phase7HeroApplicants.fresh.id;
+    const [applications, licences, appointments, waitlistEntries, sessions, authAttempts] = await Promise.all([
+      database.application.count({ where: { applicantId: freshApplicantId } }),
+      database.licenceRecord.count({ where: { applicantId: freshApplicantId } }),
+      database.appointment.count({ where: { applicantId: freshApplicantId } }),
+      database.waitlistEntry.count({ where: { applicantId: freshApplicantId } }),
+      database.session.count({ where: { applicantId: freshApplicantId } }),
+      database.authAttempt.count({ where: { applicantId: freshApplicantId } }),
+    ]);
+
+    expect({ applications, licences, appointments, waitlistEntries, sessions, authAttempts }).toEqual({
+      applications: 0,
+      licences: 0,
+      appointments: 0,
+      waitlistEntries: 0,
+      sessions: 0,
+      authAttempts: 0,
+    });
+  });
+
   it("fails closed before deleting a fixture account with an incompatible identity", async () => {
     if (!database) return;
     await database.applicant.update({

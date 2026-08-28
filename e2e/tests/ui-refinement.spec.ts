@@ -52,17 +52,15 @@ async function captureIfRequested(
 
 async function selectHindi(page: Page) {
   await page.goto("/");
-  await page
-    .getByRole("group", { name: "Choose language" })
-    .getByRole("button", { name: "हिंदी" })
-    .click();
+  await page.context().addCookies([{ name: "raahsathi_locale", value: "hi", url: page.url() }]);
+  await page.reload();
   await expect(page.locator("html")).toHaveAttribute("lang", "hi");
 }
 
 async function completeMockLogin(page: Page) {
   await page.goto("/login");
-  await page.getByLabel("Synthetic mobile number").fill("9000000000");
-  await page.getByRole("button", { name: "Send synthetic OTP" }).click();
+  await page.getByLabel("Mobile number").fill("9000000000");
+  await page.getByRole("button", { name: "Send OTP" }).click();
   await page.getByLabel("One-time password").fill("123456");
   await page.getByRole("button", { name: "Verify and continue" }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
@@ -111,10 +109,8 @@ test("dashboard remains fluid in English and Hindi at every required viewport", 
     await captureIfRequested(page, testInfo, "en", "/dashboard", viewport.width);
   }
 
-  await page
-    .getByRole("group", { name: "Choose language" })
-    .getByRole("button", { name: "हिंदी" })
-    .click();
+  await page.context().addCookies([{ name: "raahsathi_locale", value: "hi", url: page.url() }]);
+  await page.reload();
   await expect(page.locator("html")).toHaveAttribute("lang", "hi");
 
   for (const viewport of viewports) {
