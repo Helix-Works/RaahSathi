@@ -86,6 +86,13 @@ function replaceTokens(template: string, values: Readonly<Record<string, string>
   return Object.entries(values).reduce((message, [key, value]) => message.replace(`{${key}}`, value), template);
 }
 
+function applicationReference(id: string): string {
+  if (id.startsWith("app_")) {
+    return `RS-${id.split("_").slice(1).map((part) => part.charAt(0)).join("").toUpperCase()}`;
+  }
+  return `RS-${id.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toUpperCase()}`;
+}
+
 export function DashboardView({ displayName, locale, messages, summary }: DashboardViewProps) {
   const dashboard = messages.dashboard;
   const heroApplication = selectHeroApplication(summary.applications);
@@ -110,7 +117,12 @@ export function DashboardView({ displayName, locale, messages, summary }: Dashbo
       })
     : undefined;
   const hasContext = summary.offers.length + summary.waitlistEntries.length + summary.appointments.length + summary.licences.length > 0;
-  const hasPriorityItems = Boolean(heroApplication && nextActionCard) || hasContext;
+  const shouldShowAttentionAction = Boolean(
+    heroApplication
+      && nextActionCard
+      && !heroApplication.nextActionCode.startsWith("COMPLETE_"),
+  );
+  const hasPriorityItems = shouldShowAttentionAction || hasContext;
 
   return (
     <div className="pb-14 sm:pb-16">
@@ -129,25 +141,29 @@ export function DashboardView({ displayName, locale, messages, summary }: Dashbo
       </PageContainer>
 
       <PageContainer className="py-8 sm:py-10 lg:py-12">
-        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)] lg:gap-10">
-          <section className="space-y-6" aria-labelledby="continue-work-title">
+        <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.95fr)] lg:items-stretch lg:gap-10">
+          <section className="space-y-6 lg:grid lg:self-stretch lg:grid-rows-[auto_1fr] lg:gap-6 lg:space-y-0" aria-labelledby="continue-work-title">
             <SectionHeader
               id="continue-work-title"
               title={dashboard.continueWorkTitle}
               description={dashboard.continueWorkDescription}
             />
             {orderedApplications.length > 0 ? (
-              <div className="space-y-4">
+              <div className="space-y-4 lg:flex lg:flex-1 lg:flex-col lg:justify-between">
                 {orderedApplications.map((application) => {
                   const status = statusPresentation(application.statusCode, dashboard);
                   return (
                     <ApplicationListItem
                       key={application.id}
+                      className="lg:flex-1"
                       serviceName={serviceName(application.serviceKey, messages)}
                       status={status.label}
                       nextAction={nextActionPresentation(application.nextActionCode, dashboard)}
+                      nextActionLabel={messages.applications.nextActionLabel}
                       updatedLabel={dashboard.updatedLabel}
                       updatedValue={formatDateTime(application.updatedAt, locale, messages.status.unavailable)}
+                      referenceLabel={messages.applications.referenceLabel}
+                      referenceValue={applicationReference(application.id)}
                       progressLabel={dashboard.progressLabel}
                       progress={application.progressPercent}
                       progressText={`${new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(application.progressPercent)}%`}
@@ -167,7 +183,7 @@ export function DashboardView({ displayName, locale, messages, summary }: Dashbo
             {hasPriorityItems ? (
               <section className="space-y-5" aria-labelledby="support-summary-title">
                 <SectionHeader id="support-summary-title" title={dashboard.supportTitle} description={dashboard.supportDescription} />
-                {heroApplication && nextActionCard ? (
+                {shouldShowAttentionAction && heroApplication && nextActionCard ? (
                   <div className="space-y-4">
                     <NextActionCard
                       eyebrow={dashboard.nextActionLabel}
@@ -256,8 +272,8 @@ export function DashboardView({ displayName, locale, messages, summary }: Dashbo
                       key={service.serviceKey}
                       serviceKey={service.serviceKey}
                       name={copy.name}
-                      description={copy.description}
                       availabilityLabel={messages.services.availableStatus}
+                      compact
                       action={
                         <StartApplicationButton
                           serviceKey={service.serviceKey}
