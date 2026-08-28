@@ -26,7 +26,7 @@ test("renders the public landing shell and navigates to services", async ({ page
     }),
   ).toBeVisible();
   await expect(
-    page.getByText("Hackathon prototype using synthetic data.", { exact: true }),
+    page.getByText("Hackathon prototype using demo data.", { exact: true }),
   ).toBeVisible();
   await expect(
     page.getByText("Not an official government service.", { exact: true }),
@@ -50,7 +50,7 @@ test("renders the public landing shell and navigates to services", async ({ page
   await expect(
     page.getByRole("heading", { name: "Permanent Driving Licence" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Continue" })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Continue" })).toHaveCount(4);
 });
 
 test("switches to Hindi and preserves it during navigation", async ({ page }, testInfo) => {

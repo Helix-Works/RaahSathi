@@ -28,7 +28,7 @@ export function RaahSathiLogo({
       >
         <RaahSathiMark tone={tone} />
       </span>
-      <span className="min-w-0">
+      <span className={cn("min-w-0", compact && "hidden min-[430px]:block")}>
         <span className={cn(
           "brand-wordmark relative block w-fit font-bold tracking-[-0.025em] sm:text-lg",
           tone === "inverse" ? "text-primary-foreground" : "text-foreground",

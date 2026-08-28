@@ -16,8 +16,8 @@ function fixtureSlotDate(): string {
 
 async function login(page: Page) {
   await page.goto(`/login?returnTo=/applications/${waitlistApplicationId}`);
-  await page.getByLabel("Synthetic mobile number").fill("9000000004");
-  await page.getByRole("button", { name: "Send synthetic OTP" }).click();
+  await page.getByLabel("Mobile number").fill("9000000004");
+  await page.getByRole("button", { name: "Send OTP" }).click();
   await page.getByLabel("One-time password").fill(demoOtp ?? "");
   await page.getByRole("button", { name: "Verify and continue" }).click();
   await expect(page).toHaveURL(new RegExp(`/applications/${waitlistApplicationId}$`));

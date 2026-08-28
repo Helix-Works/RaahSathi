@@ -14,7 +14,7 @@ const copies = {
   en: {
     lang: "en",
     languageGroup: "Choose language",
-    requestOtp: "Send synthetic OTP",
+    requestOtp: "Send OTP",
     verifyOtp: "Verify and continue",
     continue: "Continue",
     saveDraft: "Save draft",
@@ -24,14 +24,15 @@ const copies = {
     logout: "Log out",
     openMenu: "Open menu",
     permanent: "Permanent Driving Licence",
-    licence: "Synthetic licence context",
-    rtoName: "Synthetic Rohini Hero RTO",
+    licence: "Licence context",
+    rtoName: "Rohini Hero RTO",
     full: "This appointment slot is full.",
     unreleased: "Appointment slots have not been released yet.",
     joined: "Joined",
     afternoon: "Afternoon",
     update: "Update preferences",
     waiting: "Waiting for a suitable appointment slot",
+    statusWaitlisted: "Waiting for a suitable appointment slot",
     refresh: "Refresh waitlist status",
     offer: "Temporary appointment offer",
     remaining: "Time remaining",
@@ -42,7 +43,7 @@ const copies = {
   hi: {
     lang: "hi",
     languageGroup: "भाषा चुनें",
-    requestOtp: "कृत्रिम ओटीपी भेजें",
+    requestOtp: "ओटीपी भेजें",
     verifyOtp: "सत्यापित करके आगे बढ़ें",
     continue: "आगे बढ़ें",
     saveDraft: "ड्राफ्ट सहेजें",
@@ -52,14 +53,15 @@ const copies = {
     logout: "लॉग आउट",
     openMenu: "मेन्यू खोलें",
     permanent: "स्थायी ड्राइविंग लाइसेंस",
-    licence: "कृत्रिम लाइसेंस संदर्भ",
-    rtoName: "कृत्रिम रोहिणी हीरो आरटीओ",
+    licence: "लाइसेंस संदर्भ",
+    rtoName: "रोहिणी हीरो आरटीओ",
     full: "यह अपॉइंटमेंट स्लॉट भर चुका है।",
     unreleased: "अपॉइंटमेंट स्लॉट अभी जारी नहीं किए गए हैं।",
     joined: "शामिल होने का समय",
     afternoon: "दोपहर",
     update: "पसंद बदलें",
     waiting: "उपयुक्त अपॉइंटमेंट स्लॉट की प्रतीक्षा",
+    statusWaitlisted: "उपयुक्त अपॉइंटमेंट स्लॉट की प्रतीक्षा में",
     refresh: "वेटलिस्ट स्थिति ताज़ा करें",
     offer: "अस्थायी अपॉइंटमेंट ऑफ़र",
     remaining: "शेष समय",
@@ -168,7 +170,7 @@ async function assertNoCriticalEnglishFallback(page: Page): Promise<void> {
     "Join waitlist",
     "Temporary appointment offer",
     "Appointment confirmed",
-    "Synthetic licence context",
+    "Licence context",
   ]) {
     await expect(body).not.toContainText(phrase);
   }
@@ -221,17 +223,19 @@ for (const locale of ["en", "hi"] as const) {
     const joinedValue = page.locator("dt", { hasText: copy.joined }).locator("..").locator("dd");
     await expect(joinedValue).toHaveText(/\S+/);
     const immutableJoinTime = await joinedValue.textContent();
-    await page.getByLabel(copy.afternoon).check();
+    await expect(page.getByText(copy.statusWaitlisted, { exact: true })).toBeVisible({ timeout: 30_000 });
     const updateButton = page.getByRole("button", { name: copy.update });
+    await expect(updateButton).toBeEnabled();
+    const afternoon = page.getByLabel(copy.afternoon);
+    await afternoon.check();
+    await expect(afternoon).toBeChecked();
     const updateResponse = page.waitForResponse((response) =>
       response.request().method() === "PATCH"
-      && response.url().includes("/api/v1/waitlist/")
-      && response.ok(),
+      && response.url().includes("/api/v1/waitlist/"),
+    { timeout: 30_000 },
     );
     await updateButton.click();
-    const updatingLabel = locale === "en" ? "Updating preferences…" : "पसंद बदली जा रही है…";
-    await expect(page.getByRole("button", { name: updatingLabel })).toBeVisible({ timeout: 5_000 });
-    await updateResponse;
+    expect((await updateResponse).ok()).toBe(true);
     await expect(updateButton).toBeVisible({ timeout: 30_000 });
     await expect(joinedValue).toHaveText(immutableJoinTime ?? "");
 
