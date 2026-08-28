@@ -20,6 +20,9 @@ export function AppFooter({ messages }: Readonly<{ messages: MessageDictionary }
           <p className="max-w-sm text-sm leading-6 text-primary-foreground/70">
             {messages.footer.tagline}
           </p>
+          <p className="max-w-sm text-xs font-semibold leading-5 text-primary-foreground/80">
+            {messages.landing.independenceNotice}
+          </p>
         </div>
         <nav
           className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-primary-foreground/75"

@@ -39,6 +39,19 @@ async function main() {
       },
     });
   }
+  await database.licenceRecord.deleteMany({
+    where: {
+      id: "33000000-0000-4000-8000-000000000009",
+      applicantId: applicants[2].id,
+      kind: "PERMANENT",
+      syntheticReference: "SYN-DL-PHASE8-0009",
+      vehicleClass: "LMV",
+      issuedAt: new Date("2024-01-15T00:00:00.000Z"),
+      validUntil: new Date("2029-01-14T23:59:59.000Z"),
+      addressDistrict: "NORTH_WEST",
+      addressPostalCode: "110085",
+    },
+  });
   await seedSyntheticApplication(database, applicants[0].id);
   await seedSyntheticAppointments(database);
   await database.licenceRecord.upsert({

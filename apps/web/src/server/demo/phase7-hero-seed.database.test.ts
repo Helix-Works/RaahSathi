@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -124,13 +124,18 @@ describe.skipIf(!database)("Phase 7 deterministic hero fixture", () => {
   it("keeps the fresh account free of workflow state after reset", async () => {
     if (!database) return;
     const freshApplicantId = phase7HeroApplicants.fresh.id;
+    const freshMobileLookupHash = createHmac("sha256", pepper)
+      .update(`+91${phase7HeroApplicants.fresh.mobile}`, "utf8")
+      .digest("hex");
     const [applications, licences, appointments, waitlistEntries, sessions, authAttempts] = await Promise.all([
       database.application.count({ where: { applicantId: freshApplicantId } }),
       database.licenceRecord.count({ where: { applicantId: freshApplicantId } }),
       database.appointment.count({ where: { applicantId: freshApplicantId } }),
       database.waitlistEntry.count({ where: { applicantId: freshApplicantId } }),
       database.session.count({ where: { applicantId: freshApplicantId } }),
-      database.authAttempt.count({ where: { applicantId: freshApplicantId } }),
+      database.authAttempt.count({
+        where: { OR: [{ applicantId: freshApplicantId }, { mobileLookupHash: freshMobileLookupHash }] },
+      }),
     ]);
 
     expect({ applications, licences, appointments, waitlistEntries, sessions, authAttempts }).toEqual({

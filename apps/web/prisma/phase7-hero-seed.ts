@@ -49,8 +49,8 @@ export const phase7HeroApplications = {
 export const phase7HeroRto = {
   id: "50000000-0000-4000-8000-000000000007",
   code: "SYNTHETIC_HERO_ROHINI",
-  nameEn: "Rohini Mobility Centre",
-  nameHi: "रोहिणी मोबिलिटी केंद्र",
+  nameEn: "Synthetic Rohini Hero RTO",
+  nameHi: "कृत्रिम रोहिणी हीरो आरटीओ",
   district: "Synthetic Delhi",
 } as const;
 

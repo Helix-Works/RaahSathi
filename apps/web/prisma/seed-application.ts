@@ -8,9 +8,22 @@ export async function seedSyntheticApplication(database: PrismaClient, applicant
     orderBy: { updatedAt: "desc" },
   });
   if (existing) {
-    return database.application.update({
-      where: { id: existing.id },
-      data: { identityScenario: "PROVIDER_UNAVAILABLE", paymentScenario: "DUPLICATE_CALLBACK" },
+    return database.$transaction(async (transaction) => {
+      const application = await transaction.application.update({
+        where: { id: existing.id },
+        data: { identityScenario: "PROVIDER_UNAVAILABLE", paymentScenario: "DUPLICATE_CALLBACK" },
+      });
+      await transaction.applicationSection.upsert({
+        where: { applicationId_sectionKey: { applicationId: existing.id, sectionKey: "PERSONAL_DETAILS" } },
+        create: {
+          applicationId: existing.id,
+          sectionKey: "PERSONAL_DETAILS",
+          data: { fullName: "Aditi Sharma", dateOfBirth: "1995-01-15" },
+          completedAt: new Date("2026-08-23T00:00:00.000Z"),
+        },
+        update: { data: { fullName: "Aditi Sharma", dateOfBirth: "1995-01-15" } },
+      });
+      return application;
     });
   }
   return database.application.create({

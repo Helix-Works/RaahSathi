@@ -7,6 +7,10 @@ function relativeIsoDate(hoursFromNow: number): string {
   return new Date(Date.now() + hoursFromNow * millisecondsPerHour).toISOString();
 }
 
+function relativeIsoDay(daysFromNow: number): string {
+  return relativeIsoDate(daysFromNow * 24).slice(0, 10);
+}
+
 export const activeDashboardFixture = {
   applications: [
     {
@@ -60,7 +64,7 @@ export const appointmentDashboardFixture = {
     id: "appointment_rohini",
     applicationId: "app_permanent_dl",
     rto: { nameEn: "Rohini Mobility Centre", nameHi: "रोहिणी मोबिलिटी केंद्र" },
-    date: "2026-08-28",
+    date: relativeIsoDay(3),
     startTime: "10:00",
     endTime: "10:30",
   }],

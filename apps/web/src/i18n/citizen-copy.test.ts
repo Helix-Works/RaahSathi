@@ -11,10 +11,10 @@ function collectStrings(value: unknown): string[] {
 
 describe("citizen-facing copy", () => {
   it("keeps implementation terminology out of English presentation strings", () => {
-    expect(collectStrings(enMessages).join("\n")).not.toMatch(/\b(?:prototype|synthetic|simulated)\b/i);
+    expect(collectStrings(enMessages).join("\n")).not.toMatch(/\b(?:prototype|synthetic|simulated|demo)\b/i);
   });
 
   it("keeps implementation terminology out of Hindi presentation strings", () => {
-    expect(collectStrings(hiMessages).join("\n")).not.toMatch(/कृत्रिम|नकली|प्रोटोटाइप|सिमुलेट/);
+    expect(collectStrings(hiMessages).join("\n")).not.toMatch(/कृत्रिम|नकली|प्रोटोटाइप|सिमुलेट|डेमो/);
   });
 });
