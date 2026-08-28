@@ -1,3 +1,0 @@
-{
-  "/api/v1/applications/[id]/identity-attempts/[attemptId]/retry/route": "app/api/v1/applications/[id]/identity-attempts/[attemptId]/retry/route.js"
-}
