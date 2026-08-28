@@ -14,7 +14,7 @@ const copies = {
   en: {
     lang: "en",
     languageGroup: "Choose language",
-    requestOtp: "Send synthetic OTP",
+    requestOtp: "Send OTP",
     verifyOtp: "Verify and continue",
     continue: "Continue",
     saveDraft: "Save draft",
@@ -24,7 +24,7 @@ const copies = {
     logout: "Log out",
     openMenu: "Open menu",
     permanent: "Permanent Driving Licence",
-    licence: "Synthetic licence context",
+    licence: "Licence details",
     rtoName: "Synthetic Rohini Hero RTO",
     full: "This appointment slot is full.",
     unreleased: "Appointment slots have not been released yet.",
@@ -38,11 +38,12 @@ const copies = {
     accept: "Accept offer",
     confirmed: "Appointment confirmed",
     dashboardAppointment: "Upcoming appointment",
+    continueWork: "Continue your work",
   },
   hi: {
     lang: "hi",
     languageGroup: "भाषा चुनें",
-    requestOtp: "कृत्रिम ओटीपी भेजें",
+    requestOtp: "ओटीपी भेजें",
     verifyOtp: "सत्यापित करके आगे बढ़ें",
     continue: "आगे बढ़ें",
     saveDraft: "ड्राफ्ट सहेजें",
@@ -52,7 +53,7 @@ const copies = {
     logout: "लॉग आउट",
     openMenu: "मेन्यू खोलें",
     permanent: "स्थायी ड्राइविंग लाइसेंस",
-    licence: "कृत्रिम लाइसेंस संदर्भ",
+    licence: "लाइसेंस विवरण",
     rtoName: "कृत्रिम रोहिणी हीरो आरटीओ",
     full: "यह अपॉइंटमेंट स्लॉट भर चुका है।",
     unreleased: "अपॉइंटमेंट स्लॉट अभी जारी नहीं किए गए हैं।",
@@ -66,6 +67,7 @@ const copies = {
     accept: "ऑफ़र स्वीकार करें",
     confirmed: "अपॉइंटमेंट पक्का है",
     dashboardAppointment: "\u0906\u0917\u093e\u092e\u0940 \u0905\u092a\u0949\u0907\u0902\u091f\u092e\u0947\u0902\u091f",
+    continueWork: "अपना काम जारी रखें",
   },
 } as const;
 
@@ -133,9 +135,10 @@ async function expectNoHorizontalOverflow(page: Page): Promise<void> {
 
 async function selectHindi(page: Page): Promise<void> {
   if ((await page.locator("html").getAttribute("lang")) === "hi") return;
+  await page.getByRole("button", { name: copies.en.languageGroup }).click();
   await page
-    .getByRole("group", { name: copies.en.languageGroup })
-    .getByRole("button", { name: "हिंदी" })
+    .getByRole("menu", { name: copies.en.languageGroup })
+    .getByRole("menuitemradio", { name: "हिंदी" })
     .click();
   await expect(page.locator("html")).toHaveAttribute("lang", "hi");
 }
@@ -144,9 +147,9 @@ async function login(page: Page, locale: keyof typeof copies): Promise<void> {
   const copy = copies[locale];
   await page.goto("/login?returnTo=/dashboard");
   if (locale === "hi") await selectHindi(page);
-  await page.locator("#synthetic-mobile").fill(heroMobile);
+  await page.locator("#mobile-number").fill(heroMobile);
   await page.getByRole("button", { name: copy.requestOtp }).click();
-  await page.locator("#synthetic-otp").fill(demoOtp);
+  await page.locator("#one-time-password").fill(demoOtp);
   await page.getByRole("button", { name: copy.verifyOtp }).click();
   await expect(page).toHaveURL(/\/dashboard$/);
   await expect(page.locator("html")).toHaveAttribute("lang", copy.lang);
@@ -202,11 +205,12 @@ for (const locale of ["en", "hi"] as const) {
 
     runDemoCommand("demo:stage:permanent", seedDate);
     await page.goto("/dashboard");
-    await expect(page.getByRole("heading", { name: copy.permanent })).toBeVisible();
+    const continueWork = page.getByRole("region", { name: copy.continueWork });
+    await expect(continueWork.getByRole("heading", { name: copy.permanent })).toBeVisible();
     await page.getByRole("link", { name: copy.continue, exact: true }).click();
     await expect(page).toHaveURL(new RegExp(`/applications/${permanentApplicationId}$`));
     await expect(page.getByRole("heading", { name: copy.licence })).toBeVisible();
-    await expect(page.getByText("SYN-LL-PHASE7-0007", { exact: true })).toBeVisible();
+    await expect(page.getByText("RS-LL-PHASE7-0007", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: new RegExp(copy.rtoName) }).click();
     await expect(page.getByText(copy.full, { exact: true })).toBeVisible();
@@ -221,17 +225,18 @@ for (const locale of ["en", "hi"] as const) {
     const joinedValue = page.locator("dt", { hasText: copy.joined }).locator("..").locator("dd");
     await expect(joinedValue).toHaveText(/\S+/);
     const immutableJoinTime = await joinedValue.textContent();
-    await page.getByLabel(copy.afternoon).check();
+    const afternoonPreference = page.getByLabel(copy.afternoon);
+    await afternoonPreference.check();
+    await expect(afternoonPreference).toBeChecked();
     const updateButton = page.getByRole("button", { name: copy.update });
-    const updateResponse = page.waitForResponse((response) =>
-      response.request().method() === "PATCH"
-      && response.url().includes("/api/v1/waitlist/")
-      && response.ok(),
-    );
-    await updateButton.click();
-    const updatingLabel = locale === "en" ? "Updating preferences…" : "पसंद बदली जा रही है…";
-    await expect(page.getByRole("button", { name: updatingLabel })).toBeVisible({ timeout: 5_000 });
-    await updateResponse;
+    await expect(updateButton).toBeEnabled();
+    await Promise.all([
+      page.waitForResponse((response) =>
+        response.request().method() === "PATCH"
+        && response.url().includes("/api/v1/waitlist/")
+        && response.ok(), { timeout: 30_000 }),
+      updateButton.click(),
+    ]);
     await expect(updateButton).toBeVisible({ timeout: 30_000 });
     await expect(joinedValue).toHaveText(immutableJoinTime ?? "");
 
@@ -250,8 +255,9 @@ for (const locale of ["en", "hi"] as const) {
     await expect(page.getByText(copy.confirmed, { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await page.goto("/dashboard");
-    await expect(page.getByRole("heading", { name: copy.permanent })).toBeVisible();
-    await expect(page.getByRole("heading", { name: copy.dashboardAppointment, level: 3, exact: true })).toBeVisible();
+    await expect(page.getByRole("region", { name: copy.continueWork })
+      .getByRole("heading", { name: copy.permanent })).toBeVisible();
+    await expect(page.getByRole("heading", { name: copy.dashboardAppointment, level: 3, exact: true }).first()).toBeVisible();
     await expectNoHorizontalOverflow(page);
     if (locale === "hi") await assertNoCriticalEnglishFallback(page);
   });

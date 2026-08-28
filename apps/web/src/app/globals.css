@@ -154,7 +154,7 @@ h2,
 h3,
 p {
   margin: 0;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
 }
 
 html:lang(hi) h1,
@@ -286,19 +286,6 @@ html:lang(hi) [role="button"] {
     background: Highlight;
   }
 
-  .language-toggle {
-    border: 1px solid ButtonText;
-  }
-
-  .language-toggle-indicator {
-    border: 2px solid Highlight;
-    background: Canvas;
-  }
-
-  .language-toggle button[aria-pressed="true"] {
-    color: Highlight;
-    forced-color-adjust: none;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {

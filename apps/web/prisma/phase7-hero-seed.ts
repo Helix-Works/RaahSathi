@@ -9,14 +9,24 @@ export const phase7HeroApplicants = {
   hero: {
     id: "10000000-0000-4000-8000-000000000007",
     mobile: "9000000007",
-    name: "Phase 7 Hero Citizen",
+    name: "Ananya Sharma",
   },
   holder: {
     id: "10000000-0000-4000-8000-000000000008",
     mobile: "9000000008",
-    name: "Phase 7 Capacity Holder",
+    name: "Kabir Mehta",
+  },
+  fresh: {
+    id: "10000000-0000-4000-8000-000000000009",
+    mobile: "9000000009",
+    name: "Aarav Mehta",
   },
 } as const;
+
+const phase7PreviousDisplayNames: Readonly<Record<string, string>> = {
+  [phase7HeroApplicants.hero.id]: "Phase 7 Hero Citizen",
+  [phase7HeroApplicants.holder.id]: "Phase 7 Capacity Holder",
+};
 
 export const phase7HeroApplications = {
   learner: {
@@ -239,7 +249,7 @@ function assertFixture(condition: unknown, message: string): asserts condition {
 
 /**
  * Reset is the only destructive Phase 7 command. Before removing records, prove
- * every connected record belongs to the two deterministic synthetic accounts,
+ * every connected record belongs to the deterministic synthetic accounts,
  * applications, slots, and RTO. Any unexpected relationship leaves the whole
  * transaction untouched instead of broadening fixture cleanup.
  */
@@ -307,7 +317,9 @@ async function assertResettablePhase7Fixture(
 
   for (const applicant of applicants) {
     const expected = expectedApplicants.get(applicant.id);
-    assertFixture(expected !== undefined && applicant.mobileLast4 === expected.mobile.slice(-4) && applicant.displayName === expected.name
+    const expectedDisplayName = expected !== undefined
+      && (applicant.displayName === expected.name || applicant.displayName === phase7PreviousDisplayNames[applicant.id]);
+    assertFixture(expected !== undefined && applicant.mobileLast4 === expected.mobile.slice(-4) && expectedDisplayName
       && applicant.authScenario === "STANDARD", "an applicant identity is not the expected synthetic account");
   }
   for (const application of applications) {

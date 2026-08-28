@@ -54,14 +54,13 @@ export default async function ApplicationsPage() {
 
   return (
     <PageContainer className="space-y-8 py-10 sm:py-12 lg:space-y-10 lg:py-16">
-      <div className="flex flex-col gap-5 border-b border-border pb-8 sm:flex-row sm:items-end sm:justify-between">
-        <PageHeader
-          eyebrow={messages.applications.eyebrow}
-          title={messages.applications.listTitle}
-          description={messages.applications.listDescription}
-        />
-        <Link className={buttonVariants({ variant: "outline" })} href="/services">{messages.common.exploreServices}</Link>
-      </div>
+      <PageHeader
+        className="border-b border-border pb-8 sm:pb-10"
+        eyebrow={messages.applications.eyebrow}
+        title={messages.applications.listTitle}
+        description={messages.applications.listDescription}
+        action={<Link className={buttonVariants({ variant: "outline" })} href="/services">{messages.common.exploreServices}</Link>}
+      />
       {applications.length === 0 ? (
         <EmptyState title={messages.applications.emptyTitle} description={messages.applications.emptyDescription} />
       ) : (

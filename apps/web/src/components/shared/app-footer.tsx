@@ -2,13 +2,12 @@ import Link from "next/link";
 
 import { RaahSathiLogo } from "@/components/brand/raahsathi-logo";
 import { PageContainer } from "@/components/shared/page-container";
-import { PrototypeDisclosure } from "@/components/shared/prototype-disclosure";
 import type { MessageDictionary } from "@/i18n";
 
 export function AppFooter({ messages }: Readonly<{ messages: MessageDictionary }>) {
   return (
     <footer className="border-t border-surface-strong bg-surface-strong text-primary-foreground">
-      <PageContainer className="grid gap-6 py-8 md:grid-cols-[0.8fr_auto_1.2fr] md:items-center">
+      <PageContainer className="grid gap-6 py-8 md:grid-cols-[1fr_auto] md:items-center">
         <div className="space-y-3">
           <Link
             href="/"
@@ -20,6 +19,9 @@ export function AppFooter({ messages }: Readonly<{ messages: MessageDictionary }
           </Link>
           <p className="max-w-sm text-sm leading-6 text-primary-foreground/70">
             {messages.footer.tagline}
+          </p>
+          <p className="max-w-sm text-xs font-semibold leading-5 text-primary-foreground/80">
+            {messages.landing.independenceNotice}
           </p>
         </div>
         <nav
@@ -33,11 +35,6 @@ export function AppFooter({ messages }: Readonly<{ messages: MessageDictionary }
             {messages.navigation.services}
           </Link>
         </nav>
-        <PrototypeDisclosure
-          title={messages.disclosure.title}
-          description={messages.disclosure.description}
-          tone="inverse"
-        />
       </PageContainer>
     </footer>
   );

@@ -28,11 +28,11 @@ export function ApplicationStepper({ title, steps }: ApplicationStepperProps) {
     <section aria-labelledby="application-sections-title">
       <Card>
         <CardHeader><CardTitle id="application-sections-title">{title}</CardTitle></CardHeader>
-        <CardContent>
+        <CardContent className="pt-5 sm:pt-6">
           <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step, index) => (
-              <li key={step.key} className="relative">
-                <div className="h-full rounded-item border border-border bg-card p-4">
+              <li key={step.key} className="relative h-full min-w-0">
+                <div className="flex h-full min-w-0 rounded-item border border-border bg-card p-4">
                   <div className="flex items-start gap-3">
                     <IconTile
                       tone={step.state === "completed" ? "success" : step.state === "current" ? "default" : "neutral"}

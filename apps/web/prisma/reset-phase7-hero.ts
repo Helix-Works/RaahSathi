@@ -15,7 +15,7 @@ async function main(): Promise<void> {
     process.env.RAAHSATHI_DEMO_RESET_CONFIRMATION,
     phase7HeroSeedNow(process.env.RAAHSATHI_DEMO_SEED_DATE),
   );
-  console.info("Reset only the enumerated Phase 7 synthetic records. Hero mobile: 9000000007.");
+  console.info("Reset the enumerated Phase 7 records. Hero mobile: 9000000007. Fresh mobile: 9000000009.");
 }
 
 void main()

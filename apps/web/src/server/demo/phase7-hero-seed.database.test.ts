@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
@@ -119,6 +119,33 @@ describe.skipIf(!database)("Phase 7 deterministic hero fixture", () => {
     const audits = await database.auditEvent.findMany({ where: { resourceId: phase7HeroAppointments.holder } });
     expect(audits).toHaveLength(1);
     expect(JSON.stringify(audits[0]?.metadata)).not.toMatch(/token|otp|secret/i);
+  });
+
+  it("keeps the fresh account free of workflow state after reset", async () => {
+    if (!database) return;
+    const freshApplicantId = phase7HeroApplicants.fresh.id;
+    const freshMobileLookupHash = createHmac("sha256", pepper)
+      .update(`+91${phase7HeroApplicants.fresh.mobile}`, "utf8")
+      .digest("hex");
+    const [applications, licences, appointments, waitlistEntries, sessions, authAttempts] = await Promise.all([
+      database.application.count({ where: { applicantId: freshApplicantId } }),
+      database.licenceRecord.count({ where: { applicantId: freshApplicantId } }),
+      database.appointment.count({ where: { applicantId: freshApplicantId } }),
+      database.waitlistEntry.count({ where: { applicantId: freshApplicantId } }),
+      database.session.count({ where: { applicantId: freshApplicantId } }),
+      database.authAttempt.count({
+        where: { OR: [{ applicantId: freshApplicantId }, { mobileLookupHash: freshMobileLookupHash }] },
+      }),
+    ]);
+
+    expect({ applications, licences, appointments, waitlistEntries, sessions, authAttempts }).toEqual({
+      applications: 0,
+      licences: 0,
+      appointments: 0,
+      waitlistEntries: 0,
+      sessions: 0,
+      authAttempts: 0,
+    });
   });
 
   it("fails closed before deleting a fixture account with an incompatible identity", async () => {

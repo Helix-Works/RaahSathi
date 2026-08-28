@@ -75,8 +75,34 @@ describe.skipIf(!database)("Phase 6 deterministic payment seed", () => {
         data: { providerReference: fixture.legacyProviderReference },
       });
     }
+    const previousNames = ["Waitlist Journey Demo", "Direct Booking Demo", "Capacity Holder Demo"] as const;
+    for (let index = 0; index < phase6DemoApplications.length; index += 1) {
+      const applicant = phase6DemoApplicants[index];
+      const application = phase6DemoApplications[index];
+      const previousName = previousNames[index];
+      if (!applicant || !application || !previousName) throw new Error("Incomplete Phase 6 test fixture.");
+      await database.applicant.update({
+        where: { id: applicant.id },
+        data: { displayName: previousName },
+      });
+      await database.applicationSection.update({
+        where: { applicationId_sectionKey: { applicationId: application.id, sectionKey: "PERSONAL_DETAILS" } },
+        data: { data: { fullName: previousName, dateOfBirth: "1995-01-15" } },
+      });
+    }
     expect(await seedPhase6Demo(database, pepper, fixtureNow)).toBe("reconciled");
     expect(await seedPhase6Demo(database, pepper, fixtureNow)).toBe("unchanged");
+    for (let index = 0; index < phase6DemoApplications.length; index += 1) {
+      const applicant = phase6DemoApplicants[index];
+      const application = phase6DemoApplications[index];
+      if (!applicant || !application) throw new Error("Incomplete Phase 6 test fixture.");
+      expect(await database.applicant.findUniqueOrThrow({ where: { id: applicant.id } })).toMatchObject({
+        displayName: applicant.name,
+      });
+      expect((await database.applicationSection.findUniqueOrThrow({
+        where: { applicationId_sectionKey: { applicationId: application.id, sectionKey: "PERSONAL_DETAILS" } },
+      })).data).toEqual({ fullName: applicant.name, dateOfBirth: "1995-01-15" });
+    }
     expect(await seedPhase6Demo(database, pepper, new Date("2026-08-27T10:00:00.000Z"))).toBe("requires-fresh-fixtures");
     expect((await database.appointmentSlot.findUniqueOrThrow({
       where: { id: phase6DemoFullSlot.id },

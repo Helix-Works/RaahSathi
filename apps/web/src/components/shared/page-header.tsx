@@ -20,11 +20,11 @@ export function PageHeader({
   return (
     <header
       className={cn(
-        "flex max-w-5xl flex-col gap-5 sm:flex-row sm:items-end sm:justify-between",
+        "flex w-full max-w-5xl flex-col gap-4 sm:flex-row sm:items-end sm:justify-between",
         className,
       )}
     >
-      <div className="max-w-3xl space-y-3">
+      <div className="min-w-0 max-w-3xl space-y-3">
         {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
         <h1 className="text-3xl font-bold leading-[1.12] tracking-[-0.035em] text-balance sm:text-4xl lg:text-5xl">
           {title}

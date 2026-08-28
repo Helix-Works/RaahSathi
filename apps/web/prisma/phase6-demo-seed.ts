@@ -5,10 +5,16 @@ import { Prisma, type PrismaClient } from "@prisma/client";
 export const phase6DemoSeedLockKey = "raahsathi:seed:phase6-demo";
 
 export const phase6DemoApplicants = [
-  { id: "10000000-0000-4000-8000-000000000004", mobile: "9000000004", name: "Waitlist Journey Demo" },
-  { id: "10000000-0000-4000-8000-000000000005", mobile: "9000000005", name: "Direct Booking Demo" },
-  { id: "10000000-0000-4000-8000-000000000006", mobile: "9000000006", name: "Capacity Holder Demo" },
+  { id: "10000000-0000-4000-8000-000000000004", mobile: "9000000004", name: "Meera Sethi" },
+  { id: "10000000-0000-4000-8000-000000000005", mobile: "9000000005", name: "Kunal Verma" },
+  { id: "10000000-0000-4000-8000-000000000006", mobile: "9000000006", name: "Naina Khanna" },
 ] as const;
+
+const phase6PreviousApplicantNames: Readonly<Record<string, string>> = {
+  [phase6DemoApplicants[0].id]: "Waitlist Journey Demo",
+  [phase6DemoApplicants[1].id]: "Direct Booking Demo",
+  [phase6DemoApplicants[2].id]: "Capacity Holder Demo",
+};
 
 export const phase6DemoApplications = [
   { id: "30000000-0000-4000-8000-000000000003", applicantId: phase6DemoApplicants[0].id, label: "waitlist" },
@@ -58,6 +64,13 @@ export function phase6DemoPaymentFixture(applicationIndex: number) {
 
 function lookupHash(mobileNumber: string, pepper: string): string {
   return createHmac("sha256", pepper).update(`+91${mobileNumber}`, "utf8").digest("hex");
+}
+
+function matchesPersonalDetails(data: Prisma.JsonValue, acceptedNames: readonly string[]): boolean {
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return false;
+  const details = data as Prisma.JsonObject;
+  return typeof details.fullName === "string" && acceptedNames.includes(details.fullName)
+    && details.dateOfBirth === "1995-01-15";
 }
 
 function sectionRecords(applicationIndex: number) {
@@ -155,6 +168,7 @@ export async function seedPhase6Demo(
           { applicantId: { in: phase6DemoApplications.map(({ applicantId }) => applicantId) }, serviceKey: "LEARNER_LICENCE" },
         ] },
         include: {
+          sections: { where: { sectionKey: "PERSONAL_DETAILS" } },
           feeSnapshot: true,
           paymentAttempts: { include: { providerEvents: { select: { id: true } } } },
           events: { where: { eventType: "PAYMENT_SUCCEEDED" } },
@@ -168,16 +182,26 @@ export async function seedPhase6Demo(
       const applicantsMatch = foundApplicants.length === phase6DemoApplicants.length
         && expectedApplicants.every((expected) => foundApplicants.some((found) =>
           found.id === expected.id && found.mobileLookupHash === expected.mobileLookupHash
-          && found.mobileLast4 === expected.mobile.slice(-4) && found.authScenario === "STANDARD"));
+          && found.mobileLast4 === expected.mobile.slice(-4) && found.authScenario === "STANDARD"
+          && [expected.name, phase6PreviousApplicantNames[expected.id]].includes(found.displayName)));
       const applicationsMatch = foundApplications.length === phase6DemoApplications.length
         && phase6DemoApplications.every((expected, applicationIndex) => {
           const found = foundApplications.find((candidate) => candidate.id === expected.id);
+          const applicant = phase6DemoApplicants[applicationIndex];
           const payment = phase6DemoPaymentFixture(applicationIndex);
           const attempt = found?.paymentAttempts[0];
+          const personalDetails = found?.sections[0];
           const providerReferenceMatches = attempt?.providerReference === payment.providerReference
             || attempt?.providerReference === payment.legacyProviderReference;
-          return found?.applicantId === expected.applicantId
+          return applicant !== undefined
+            && found?.applicantId === expected.applicantId
             && found.serviceKey === "LEARNER_LICENCE"
+            && found.sections.length === 1
+            && personalDetails?.id === phase6DemoFixtureId("31000000", applicationIndex * 10 + 41)
+            && matchesPersonalDetails(personalDetails.data, [
+              applicant.name,
+              phase6PreviousApplicantNames[applicant.id] ?? applicant.name,
+            ])
             && found.identityScenario === "SUCCESS"
             && found.paymentScenario === "SUCCESS"
             && found.feeSnapshot?.id === payment.feeSnapshotId
@@ -214,6 +238,43 @@ export async function seedPhase6Demo(
       }
 
       let repaired = 0;
+      for (let applicationIndex = 0; applicationIndex < phase6DemoApplications.length; applicationIndex += 1) {
+        const applicant = expectedApplicants[applicationIndex];
+        const application = foundApplications.find((candidate) => candidate.id === phase6DemoApplications[applicationIndex]?.id);
+        if (!applicant || !application) continue;
+
+        const foundApplicant = foundApplicants.find((candidate) => candidate.id === applicant.id);
+        if (foundApplicant?.displayName !== applicant.name) {
+          const update = await transaction.applicant.updateMany({
+            where: {
+              id: applicant.id,
+              mobileLookupHash: applicant.mobileLookupHash,
+              displayName: phase6PreviousApplicantNames[applicant.id],
+            },
+            data: { displayName: applicant.name },
+          });
+          if (update.count !== 1) {
+            throw new Error("Phase 6 demo applicant-name reconciliation lost ownership of an expected record.");
+          }
+          repaired += 1;
+        }
+
+        const personalDetails = application.sections[0];
+        if (personalDetails && !matchesPersonalDetails(personalDetails.data, [applicant.name])) {
+          const update = await transaction.applicationSection.updateMany({
+            where: {
+              id: personalDetails.id,
+              applicationId: application.id,
+              sectionKey: "PERSONAL_DETAILS",
+            },
+            data: { data: { fullName: applicant.name, dateOfBirth: "1995-01-15" } },
+          });
+          if (update.count !== 1) {
+            throw new Error("Phase 6 demo personal-details reconciliation lost ownership of an expected record.");
+          }
+          repaired += 1;
+        }
+      }
       const existingRto = foundRtos.find((found) => found.id === phase6DemoRto.id);
       if (existingRto && (existingRto.nameEn !== phase6DemoRto.nameEn || existingRto.nameHi !== phase6DemoRto.nameHi || existingRto.district !== phase6DemoRto.district)) {
         await transaction.rto.update({

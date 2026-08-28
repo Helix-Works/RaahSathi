@@ -46,7 +46,7 @@ export function ApplicationOverview({
         <CardHeader className="border-b border-border bg-surface-muted">
           <div className="flex items-start gap-3">
             <IconTile size="lg"><FileText aria-hidden="true" /></IconTile>
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2">
               <p className="eyebrow">{eyebrow}</p>
               <CardTitle id="application-overview-title" className="text-3xl sm:text-4xl">{title}</CardTitle>
               <CardDescription className="max-w-2xl">{description}</CardDescription>

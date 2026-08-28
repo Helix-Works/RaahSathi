@@ -77,6 +77,12 @@ describe.skipIf(!database)("Phase 3 disposable PostgreSQL identity recovery", ()
     expect(applicationAfterSeedRerun.identityScenario).toBe("PROVIDER_UNAVAILABLE");
     expect(applicationAfterSeedRerun.status).toBe("READY_FOR_IDENTITY");
     expect(applicationAfterSeedRerun.sections).toHaveLength(4);
+    const personalDetailsAfterSeedRerun = applicationAfterSeedRerun.sections
+      .find(({ sectionKey }) => sectionKey === "PERSONAL_DETAILS");
+    expect(personalDetailsAfterSeedRerun?.data)
+      .toEqual({ fullName: "Aditi Sharma", dateOfBirth: "1995-01-15" });
+    expect(personalDetailsAfterSeedRerun?.completedAt)
+      .toEqual(new Date("2026-08-23T00:00:00.000Z"));
     expect(await database.applicationEvent.count({ where: { applicationId } })).toBe(eventCountBeforeSeedRerun);
 
     const [failed, duplicateStart] = await Promise.all([

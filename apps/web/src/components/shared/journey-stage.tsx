@@ -78,7 +78,7 @@ export function SelectableStageCard({
       data-selected={selected}
       aria-pressed={selected}
       className={cn(
-        "rounded-item border border-border bg-card p-4 text-left shadow-subtle transition-[border-color,box-shadow,background-color] hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70 data-[selected=true]:border-primary data-[selected=true]:bg-accent data-[selected=true]:shadow-elevated",
+        "flex h-full min-w-0 flex-col rounded-item border border-border bg-card p-4 text-left shadow-subtle transition-[border-color,box-shadow,background-color] hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30 disabled:cursor-not-allowed disabled:bg-muted disabled:opacity-70 data-[selected=true]:border-primary data-[selected=true]:bg-accent data-[selected=true]:shadow-elevated",
         className,
       )}
     />

@@ -69,7 +69,7 @@ async function verifyMockOtp(input: VerifyOtpInput): Promise<SessionSummary> {
     return {
       user: {
         id: "synthetic-citizen",
-        displayName: "RaahSathi Demo",
+        displayName: "Aarav Mehta",
         preferredLocale: input.preferredLocale,
       },
     };

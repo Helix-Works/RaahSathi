@@ -22,16 +22,10 @@ test("renders the public landing shell and navigates to services", async ({ page
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "Know where you stand—and what comes next.",
+      name: "Start your driving-licence application.",
     }),
   ).toBeVisible();
-  await expect(
-    page.getByText("Hackathon prototype using synthetic data.", { exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Not an official government service.", { exact: true }),
-  ).toBeVisible();
-  await expect(page.getByRole("contentinfo")).toContainText("Independent prototype");
+  await expect(page.getByRole("contentinfo")).toBeVisible();
 
   await openServices(page, testInfo.project.name, {
     openMenu: "Open menu",
@@ -50,22 +44,23 @@ test("renders the public landing shell and navigates to services", async ({ page
   await expect(
     page.getByRole("heading", { name: "Permanent Driving Licence" }),
   ).toBeVisible();
-  await expect(page.getByRole("button", { name: "Continue" })).toHaveCount(2);
+  await expect(page.getByRole("link", { name: "Continue" })).toHaveCount(2);
 });
 
 test("switches to Hindi and preserves it during navigation", async ({ page }, testInfo) => {
   await page.goto("/");
 
+  await page.getByRole("button", { name: "Choose language" }).click();
   await page
-    .getByRole("group", { name: "Choose language" })
-    .getByRole("button", { name: "हिंदी" })
+    .getByRole("menu", { name: "Choose language" })
+    .getByRole("menuitemradio", { name: "हिंदी" })
     .click();
 
   await expect(page.locator("html")).toHaveAttribute("lang", "hi");
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: "जानें कि आप किस चरण में हैं—और आगे क्या करना है।",
+      name: "अपने ड्राइविंग लाइसेंस के लिए आवेदन शुरू करें।",
     }),
   ).toBeVisible();
 
@@ -85,7 +80,7 @@ test("switches to Hindi and preserves it during navigation", async ({ page }, te
   await expect(
     page.getByRole("banner").getByRole("link", { name: "राहसाथी · होम" }),
   ).toBeVisible();
-  await expect(page.getByRole("contentinfo")).toContainText("स्वतंत्र प्रोटोटाइप");
+  await expect(page.getByRole("contentinfo")).toBeVisible();
 });
 
 test("mobile navigation is keyboard operable at 320px without overflow", async ({
@@ -147,7 +142,6 @@ test("brand and desktop navigation expose active and interactive states", async 
   const servicesLink = page
     .getByRole("navigation", { name: "Primary navigation" })
     .getByRole("link", { name: "Services" });
-  const servicesIcon = servicesLink.getByTestId("nav-icon-services");
 
   await expect(servicesLink).toHaveAttribute("aria-current", "page");
   await expect(servicesLink).toHaveAttribute("data-active", "true");
@@ -158,16 +152,12 @@ test("brand and desktop navigation expose active and interactive states", async 
   await expect(brandWordmark).toHaveCSS("color", "rgb(7, 90, 168)");
 
   await servicesLink.hover();
-  await expect.poll(() => servicesIcon.evaluate((element) => getComputedStyle(element).transform))
-    .not.toBe("none");
   await expect.poll(() => servicesLink.locator(".nav-entry-label").evaluate(
     (element) => getComputedStyle(element, "::after").transform,
   )).not.toBe("matrix(0, 0, 0, 1, 0, 0)");
 
   await servicesLink.focus();
   await expect(servicesLink).toBeFocused();
-  await expect.poll(() => servicesIcon.evaluate((element) => getComputedStyle(element).transform))
-    .not.toBe("none");
 
   await brandLink.click();
   await expect(page).toHaveURL(/\/$/);
@@ -189,7 +179,7 @@ test("header remains collision-free at the acceptance viewports", async ({
     await page.goto("/");
 
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await expect(page.getByRole("group", { name: "Choose language" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Choose language" })).toBeVisible();
     await expect(page.getByRole("link", { name: /RaahSathi/ }).first()).toBeVisible();
 
     if (viewport.width < 1024) {
@@ -198,6 +188,24 @@ test("header remains collision-free at the acceptance viewports", async ({
       expect(box?.width).toBeGreaterThanOrEqual(44);
       expect(box?.height).toBeGreaterThanOrEqual(44);
     }
+  }
+});
+
+test("shared header remains available after scrolling", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium");
+
+  for (const route of ["/", "/services", "/login"]) {
+    await page.goto(route);
+    const header = page.getByRole("banner");
+
+    await expect
+      .poll(() => header.evaluate((element) => getComputedStyle(element).position))
+      .toBe("fixed");
+
+    await page.evaluate(() => window.scrollTo({ top: 900 }));
+    await expect
+      .poll(() => header.evaluate((element) => Math.round(element.getBoundingClientRect().top)))
+      .toBe(0);
   }
 });
 
@@ -229,13 +237,10 @@ test("design foundation exposes the approved type and radius hierarchy", async (
 
   const primaryAction = page.getByRole("link", { name: "Explore services" }).first();
   await expect(primaryAction).toHaveCSS("border-radius", "8px");
-  await expect(page.getByRole("contentinfo").locator("aside")).toHaveCSS(
-    "border-radius",
-    "12px",
-  );
-  await expect(page.getByTestId("language-toggle-indicator")).toHaveCSS(
-    "background-color",
-    "rgb(7, 90, 168)",
+  await expect(page.getByRole("contentinfo")).toHaveCSS("border-top-width", "1px");
+  await expect(page.getByRole("button", { name: "Choose language" })).toHaveAttribute(
+    "aria-haspopup",
+    "menu",
   );
 });
 

@@ -55,11 +55,13 @@ function NavigationEntry({
   pathname,
   onNavigate,
   mobile = false,
+  showIcon = true,
 }: Readonly<{
   item: NavigationItem;
   pathname: string;
   onNavigate?: () => void;
   mobile?: boolean;
+  showIcon?: boolean;
 }>) {
   const Icon = navigationIcons[item.icon];
   const active = Boolean(
@@ -81,16 +83,18 @@ function NavigationEntry({
 
   const content = (
     <span className="inline-flex min-w-0 items-center gap-2.5">
-      <Icon
-        className={cn(
-          "nav-entry-icon size-4 shrink-0",
-          active && "text-primary",
-          login && "text-primary-foreground",
-        )}
-        strokeWidth={2.2}
-        aria-hidden="true"
-        data-testid={`nav-icon-${item.icon}`}
-      />
+      {showIcon ? (
+        <Icon
+          className={cn(
+            "nav-entry-icon size-4 shrink-0",
+            active && "text-primary",
+            login && "text-primary-foreground",
+          )}
+          strokeWidth={2.2}
+          aria-hidden="true"
+          data-testid={`nav-icon-${item.icon}`}
+        />
+      ) : null}
       <span className="nav-entry-label relative">{item.label}</span>
     </span>
   );
@@ -124,13 +128,14 @@ function NavigationEntry({
 export function DesktopNavigation({
   items,
   primaryLabel,
-}: Pick<NavigationProps, "items" | "primaryLabel">) {
+  showIcons = true,
+}: Pick<NavigationProps, "items" | "primaryLabel"> & Readonly<{ showIcons?: boolean }>) {
   const pathname = usePathname();
 
   return (
     <nav className="hidden items-center gap-0.5 lg:flex" aria-label={primaryLabel}>
       {items.map((item) => (
-        <NavigationEntry key={`${item.href ?? "disabled"}-${item.label}`} item={item} pathname={pathname} />
+        <NavigationEntry key={`${item.href ?? "disabled"}-${item.label}`} item={item} pathname={pathname} showIcon={showIcons} />
       ))}
     </nav>
   );

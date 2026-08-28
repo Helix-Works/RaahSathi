@@ -5,13 +5,15 @@ import type { ReactNode } from "react";
 import { IconTile } from "@/components/shared/icon-tile";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type ServiceCardProps = Readonly<{
   serviceKey: ServiceKey;
   name: string;
-  description: string;
+  description?: string;
   availabilityLabel: string;
   action: ReactNode;
+  compact?: boolean;
 }>;
 
 function ServiceIcon({ serviceKey }: Readonly<{ serviceKey: ServiceKey }>) {
@@ -33,12 +35,13 @@ export function ServiceCard({
   description,
   availabilityLabel,
   action,
+  compact = false,
 }: ServiceCardProps) {
   return (
-    <Card variant="actionable" className="h-full">
-      <CardContent className="flex h-full flex-col gap-5 pt-5 sm:pt-6">
+    <Card variant="service" className="h-full">
+      <CardContent className={cn("flex h-full flex-col", compact ? "gap-3 p-4" : "gap-5 pt-5 sm:pt-6")}>
         <div className="flex items-start justify-between gap-4">
-          <IconTile size="lg">
+          <IconTile size={compact ? "sm" : "lg"}>
             <ServiceIcon serviceKey={serviceKey} />
           </IconTile>
           <Badge variant="success">
@@ -46,13 +49,13 @@ export function ServiceCard({
             {availabilityLabel}
           </Badge>
         </div>
-        <div className="space-y-2.5">
-          <h2 className="text-xl font-bold leading-snug tracking-[-0.025em] sm:text-2xl">
+        <div className={cn("min-w-0", description ? "space-y-2.5" : undefined)}>
+          <h2 className={cn("font-bold leading-snug tracking-[-0.025em]", compact ? "text-lg" : "text-xl sm:text-2xl")}>
             {name}
           </h2>
-          <p className="leading-6 text-muted-foreground">{description}</p>
+          {description ? <p className="leading-6 text-muted-foreground">{description}</p> : null}
         </div>
-        <div className="mt-auto pt-1">{action}</div>
+        <div className={cn("mt-auto", compact ? undefined : "pt-1")}>{action}</div>
       </CardContent>
     </Card>
   );

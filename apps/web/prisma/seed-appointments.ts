@@ -4,8 +4,8 @@ const rtos = [
   {
     id: "50000000-0000-4000-8000-000000000001",
     code: "SYNTHETIC_ROHINI",
-    nameEn: "Synthetic Rohini RTO",
-    nameHi: "कृत्रिम रोहिणी आरटीओ",
+    nameEn: "Rohini Mobility Centre",
+    nameHi: "रोहिणी मोबिलिटी केंद्र",
     district: "North West Delhi",
     operationalStatus: "AVAILABLE" as const,
     bookingServiceStatus: "AVAILABLE" as const,
@@ -13,8 +13,8 @@ const rtos = [
   {
     id: "50000000-0000-4000-8000-000000000002",
     code: "SYNTHETIC_SOUTH_DELHI",
-    nameEn: "Synthetic South Delhi RTO",
-    nameHi: "कृत्रिम दक्षिण दिल्ली आरटीओ",
+    nameEn: "Saket Licence Centre",
+    nameHi: "साकेत लाइसेंस केंद्र",
     district: "South Delhi",
     operationalStatus: "AVAILABLE" as const,
     bookingServiceStatus: "BOOKING_SERVICE_UNAVAILABLE" as const,
@@ -22,8 +22,8 @@ const rtos = [
   {
     id: "50000000-0000-4000-8000-000000000003",
     code: "SYNTHETIC_LONI_ROAD",
-    nameEn: "Synthetic Loni Road RTO",
-    nameHi: "कृत्रिम लोनी रोड आरटीओ",
+    nameEn: "Yamuna Mobility Centre",
+    nameHi: "यमुना मोबिलिटी केंद्र",
     district: "North East Delhi",
     operationalStatus: "CENTER_UNAVAILABLE" as const,
     bookingServiceStatus: "AVAILABLE" as const,

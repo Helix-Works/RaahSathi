@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   assertPhase7HeroConfirmation,
+  phase7HeroApplicants,
   phase7HeroApplications,
   phase7HeroConfirmation,
   phase7HeroFixtureId,
@@ -31,6 +32,13 @@ describe("Phase 7 hero fixture definitions", () => {
         succeededAt: "2026-08-27T10:00:00.000Z",
       })).not.toThrow();
     }
+  });
+
+  it("reserves an untouched fictional citizen account", () => {
+    expect(phase7HeroApplicants.fresh).toMatchObject({
+      mobile: "9000000009",
+      name: "Aarav Mehta",
+    });
   });
 
   it("derives the full and unreleased dates deterministically", () => {
