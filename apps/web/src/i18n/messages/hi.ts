@@ -249,6 +249,9 @@ export const hiMessages = {
     historyOfferExpired: "अस्थायी स्लॉट ऑफ़र की समय सीमा समाप्त",
     historyServiceCompleted: "ड्राइविंग-लाइसेंस सेवा पूरी हुई",
     historyGeneric: "आवेदन गतिविधि दर्ज हुई",
+    errors: {
+      addressUnchanged: "नया पता आपके वर्तमान पते के समान है।",
+    },
   },
   identity: {
     title: "कृत्रिम पहचान सत्यापन",
@@ -428,6 +431,7 @@ export const hiMessages = {
     reconstruct: "पुष्ट अपॉइंटमेंट विवरण लोड नहीं हो सका।",
     errors: {
       notEligible: "यह आवेदन अभी अपॉइंटमेंट बुकिंग के लिए तैयार नहीं है।",
+      serviceNotApplicable: "इस सेवा में अपॉइंटमेंट शामिल नहीं है।",
       alreadyBooked: "इस आवेदन के लिए पहले से एक अपॉइंटमेंट पक्का है।",
       rateLimited: "अपॉइंटमेंट में बहुत अधिक बदलाव माँगे गए हैं। थोड़ी देर प्रतीक्षा करके फिर कोशिश करें।",
     },
@@ -504,6 +508,8 @@ export const hiMessages = {
     nextActionUnknown: "अगले कदम के लिए फिर जाँचें",
     nextActionDescription:
       "यह अगला कदम सीधे डैशबोर्ड सारांश से मिला है; राहसाथी ब्राउज़र में इसका अनुमान नहीं लगाता। इसे चुनने पर आवेदन और पहचान पुनर्प्राप्ति प्रक्रिया खुलती है।",
+    nextActionCompletionDescription:
+      "यह सेवा पूरी हो गई है। अंतिम स्थिति और दर्ज इतिहास देखने के लिए आवेदन खोलें।",
     nextActionUnavailableDescription:
       "भुगतान पूरा हो गया है और आपकी प्रगति सुरक्षित है। दिल्ली आरटीओ, तारीख और उपलब्ध समय चुनें।",
     nextActionBookedDescription:

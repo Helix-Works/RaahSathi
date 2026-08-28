@@ -42,10 +42,13 @@ type FeeRule = Readonly<{
 }>;
 
 export function feeForService(serviceKey: ServiceKey): FeeRule {
-  const baseFeeMinor = serviceKey === "LEARNER_LICENCE" ? 50_000
-    : serviceKey === "PERMANENT_DRIVING_LICENCE" ? 70_000
-      : serviceKey === "DRIVING_LICENCE_RENEWAL" ? 40_000
-        : 20_000;
+  const baseFees: Readonly<Record<ServiceKey, number>> = {
+    LEARNER_LICENCE: 50_000,
+    PERMANENT_DRIVING_LICENCE: 70_000,
+    DRIVING_LICENCE_RENEWAL: 40_000,
+    DRIVING_LICENCE_ADDRESS_CHANGE: 20_000,
+  };
+  const baseFeeMinor = baseFees[serviceKey];
   const serviceChargeMinor = 5_000;
   return { baseFeeMinor, serviceChargeMinor, totalAmountMinor: baseFeeMinor + serviceChargeMinor, currency: "INR" };
 }

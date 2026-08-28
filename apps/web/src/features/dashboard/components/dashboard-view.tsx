@@ -103,6 +103,7 @@ export function DashboardView({ locale, messages, summary }: DashboardViewProps)
   const nextActionCard = application
     ? resolveNextActionCard(application, {
         defaultDescription: dashboard.nextActionDescription,
+        completionDescription: dashboard.nextActionCompletionDescription,
         readyForAppointmentDescription: dashboard.nextActionUnavailableDescription,
         appointmentBookedDescription: dashboard.nextActionBookedDescription,
         waitlistedDescription: dashboard.nextActionWaitlistedDescription,

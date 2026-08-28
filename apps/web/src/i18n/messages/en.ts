@@ -253,6 +253,9 @@ export const enMessages = {
     historyOfferExpired: "Temporary slot offer expired",
     historyServiceCompleted: "Driving-licence service completed",
     historyGeneric: "Application activity recorded",
+    errors: {
+      addressUnchanged: "The new address is the same as your current address.",
+    },
   },
   identity: {
     title: "Synthetic identity verification",
@@ -432,6 +435,7 @@ export const enMessages = {
     reconstruct: "Confirmed appointment details could not be loaded.",
     errors: {
       notEligible: "This application is not ready for appointment booking.",
+      serviceNotApplicable: "Appointments are not part of this service.",
       alreadyBooked: "This application already has a confirmed appointment.",
       rateLimited: "Too many appointment changes were requested. Wait briefly and try again.",
     },
@@ -508,6 +512,8 @@ export const enMessages = {
     nextActionUnknown: "Check again for the next action",
     nextActionDescription:
       "This next action is supplied directly by the dashboard summary; RaahSathi does not infer it in the browser. Selecting it opens the application and identity recovery flow.",
+    nextActionCompletionDescription:
+      "This service is complete. Open the application to review its final status and recorded history.",
     nextActionUnavailableDescription:
       "Payment is complete and your progress is safe. Choose a Delhi RTO, date, and available time.",
     nextActionBookedDescription:
