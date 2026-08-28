@@ -10,6 +10,8 @@ describe("personalized dashboard summary", () => {
     expect(activeDashboardFixture.services.map(({ serviceKey }) => serviceKey)).toEqual([
       "LEARNER_LICENCE",
       "PERMANENT_DRIVING_LICENCE",
+      "DRIVING_LICENCE_RENEWAL",
+      "DRIVING_LICENCE_ADDRESS_CHANGE",
     ]);
   });
 
@@ -19,6 +21,6 @@ describe("personalized dashboard summary", () => {
     expect(emptyDashboardFixture.waitlistEntries).toEqual([]);
     expect(emptyDashboardFixture.offers).toEqual([]);
     expect(emptyDashboardFixture.licences).toEqual([]);
-    expect(emptyDashboardFixture.services).toHaveLength(2);
+    expect(emptyDashboardFixture.services).toHaveLength(4);
   });
 });
