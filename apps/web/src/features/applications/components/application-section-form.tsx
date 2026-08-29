@@ -193,19 +193,38 @@ function FormSummary({
 function FormActions<TValues extends FieldValues>({
   form,
   pendingAction,
-  setPendingAction,
-  submit,
+  run,
   messages,
 }: Readonly<{
   form: UseFormReturn<TValues>;
   pendingAction?: SectionSubmitAction;
-  setPendingAction: (action: SectionSubmitAction | undefined) => void;
-  submit: (values: TValues, action: SectionSubmitAction) => Promise<void>;
+  run: (action: SectionSubmitAction) => void;
   messages: FormMessages;
 }>) {
+  const pending = form.formState.isSubmitting || Boolean(pendingAction);
+
+  return (
+    <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:flex-wrap">
+      <Button type="button" variant="secondary" disabled={pending} onClick={() => run("save")}>
+        {pendingAction === "save" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : null}
+        {pendingAction === "save" ? messages.saving : messages.saveDraft}
+      </Button>
+      <Button type="button" disabled={pending} onClick={() => run("complete")}>
+        {pendingAction === "complete" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : null}
+        {pendingAction === "complete" ? messages.saving : messages.saveAndContinue}
+      </Button>
+    </div>
+  );
+}
+
+function useFormSubmissionDispatcher<TValues extends FieldValues>(
+  form: UseFormReturn<TValues>,
+  setPendingAction: (action: SectionSubmitAction | undefined) => void,
+  submit: (values: TValues, action: SectionSubmitAction) => Promise<void>,
+): (action: SectionSubmitAction) => void {
   const operationLock = useRef(false);
 
-  const run = (action: SectionSubmitAction) => {
+  return (action) => {
     if (operationLock.current) return;
     operationLock.current = true;
     setPendingAction(action);
@@ -224,20 +243,6 @@ function FormActions<TValues extends FieldValues>({
       finish,
     )();
   };
-  const pending = form.formState.isSubmitting || Boolean(pendingAction);
-
-  return (
-    <div className="flex flex-col gap-3 border-t border-border pt-5 sm:flex-row sm:flex-wrap">
-      <Button type="button" variant="secondary" disabled={pending} onClick={() => run("save")}>
-        {pendingAction === "save" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : null}
-        {pendingAction === "save" ? messages.saving : messages.saveDraft}
-      </Button>
-      <Button type="button" disabled={pending} onClick={() => run("complete")}>
-        {pendingAction === "complete" ? <LoaderCircle className="size-4 animate-spin" aria-hidden="true" /> : null}
-        {pendingAction === "complete" ? messages.saving : messages.saveAndContinue}
-      </Button>
-    </div>
-  );
 }
 
 function PersonalDetailsForm(props: SectionFormProps) {
@@ -256,11 +261,12 @@ function PersonalDetailsForm(props: SectionFormProps) {
       errors.present(error);
     }
   };
+  const run = useFormSubmissionDispatcher(form, setPendingAction, submit);
   const fullNameError = fieldMessage(form.formState.errors.fullName, props.messages.applications.invalidNameError);
   const dateError = fieldMessage(form.formState.errors.dateOfBirth, props.messages.applications.invalidDateError);
 
   return (
-    <form className="space-y-6" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
+    <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); run("save"); }} noValidate>
       <FormSummary applicationId={props.applicationId} localValidation={form.formState.isSubmitted && !form.formState.isValid} messages={props.messages.applications} summary={errors.summary} />
       <div className="space-y-2">
         <Label htmlFor="fullName">{props.messages.applications.fullName}</Label>
@@ -274,7 +280,7 @@ function PersonalDetailsForm(props: SectionFormProps) {
         <p id="dateOfBirth-help" className="text-sm leading-6 text-muted-foreground">{props.messages.applications.dateOfBirthHelp}</p>
         {dateError ? <p id="dateOfBirth-error" className="text-sm font-bold text-error" role="alert">{dateError}</p> : null}
       </div>
-      <FormActions form={form} pendingAction={pendingAction} setPendingAction={setPendingAction} submit={submit} messages={props.messages.applications} />
+      <FormActions form={form} pendingAction={pendingAction} run={run} messages={props.messages.applications} />
     </form>
   );
 }
@@ -295,11 +301,12 @@ function AddressForm(props: SectionFormProps) {
       errors.present(error);
     }
   };
+  const run = useFormSubmissionDispatcher(form, setPendingAction, submit);
   const districtError = fieldMessage(form.formState.errors.district, props.messages.applications.validationError);
   const postalError = fieldMessage(form.formState.errors.postalCode, props.messages.applications.invalidPostalError);
 
   return (
-    <form className="space-y-6" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
+    <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); run("save"); }} noValidate>
       <FormSummary applicationId={props.applicationId} localValidation={form.formState.isSubmitted && !form.formState.isValid} messages={props.messages.applications} summary={errors.summary} />
       <div className="space-y-2">
         <Label htmlFor="district">{props.messages.applications.district}</Label>
@@ -314,7 +321,7 @@ function AddressForm(props: SectionFormProps) {
         <p id="postalCode-help" className="text-sm leading-6 text-muted-foreground">{props.messages.applications.postalCodeHelp}</p>
         {postalError ? <p id="postalCode-error" className="text-sm font-bold text-error" role="alert">{postalError}</p> : null}
       </div>
-      <FormActions form={form} pendingAction={pendingAction} setPendingAction={setPendingAction} submit={submit} messages={props.messages.applications} />
+      <FormActions form={form} pendingAction={pendingAction} run={run} messages={props.messages.applications} />
     </form>
   );
 }
@@ -338,10 +345,11 @@ function ServiceDetailsForm(props: SectionFormProps) {
       errors.present(error);
     }
   };
+  const run = useFormSubmissionDispatcher(form, setPendingAction, submit);
   const learnerError = fieldMessage(form.formState.errors.learnerLicenceReference, props.messages.applications.invalidLearnerError);
 
   return (
-    <form className="space-y-6" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
+    <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); run("save"); }} noValidate>
       <FormSummary applicationId={props.applicationId} localValidation={form.formState.isSubmitted && !form.formState.isValid} messages={props.messages.applications} summary={errors.summary} />
       <div className="space-y-2">
         <Label htmlFor="vehicleClass">{props.messages.applications.vehicleClass}</Label>
@@ -355,7 +363,7 @@ function ServiceDetailsForm(props: SectionFormProps) {
           {learnerError ? <p id="learnerLicenceReference-error" className="text-sm font-bold text-error" role="alert">{learnerError}</p> : null}
         </div>
       ) : null}
-      <FormActions form={form} pendingAction={pendingAction} setPendingAction={setPendingAction} submit={submit} messages={props.messages.applications} />
+      <FormActions form={form} pendingAction={pendingAction} run={run} messages={props.messages.applications} />
     </form>
   );
 }
@@ -377,10 +385,11 @@ function DeclarationForm(props: SectionFormProps) {
       errors.present(error);
     }
   };
+  const run = useFormSubmissionDispatcher(form, setPendingAction, submit);
   const acceptedError = fieldMessage(form.formState.errors.accepted, props.messages.applications.declarationError);
 
   return (
-    <form className="space-y-6" onSubmit={form.handleSubmit((values) => submit(values, "save"))} noValidate>
+    <form className="space-y-6" onSubmit={(event) => { event.preventDefault(); run("save"); }} noValidate>
       <FormSummary applicationId={props.applicationId} localValidation={form.formState.isSubmitted && !form.formState.isValid} messages={props.messages.applications} summary={errors.summary} />
       <div className="space-y-2">
         <label className="flex min-h-11 items-start gap-3 leading-7" htmlFor="accepted">
@@ -389,7 +398,7 @@ function DeclarationForm(props: SectionFormProps) {
         </label>
         {acceptedError ? <p id="accepted-error" className="text-sm font-bold text-error" role="alert">{acceptedError}</p> : null}
       </div>
-      <FormActions form={form} pendingAction={pendingAction} setPendingAction={setPendingAction} submit={submit} messages={props.messages.applications} />
+      <FormActions form={form} pendingAction={pendingAction} run={run} messages={props.messages.applications} />
     </form>
   );
 }
