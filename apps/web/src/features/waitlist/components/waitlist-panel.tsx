@@ -253,10 +253,9 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
         if (releaseOperation(lease)) setOperation(undefined);
       }
     })();
-    return () => revokeOperation(lease);
   // `loadEntry` is intentionally tied to the current render; the offer boundary is the only trigger.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [application.id, copy, locale, offer, offerExpired, onApplicationChanged]);
+  }, [application.id, copy, locale, offer, offerExpired, onApplicationChanged, operation]);
 
   const run = async (kind: Operation, action: (lease: OperationLease) => Promise<void>, recover = false) => {
     const lease = acquireOperation(`waitlist-${kind}`);
