@@ -21,6 +21,11 @@ import type { Locale, MessageDictionary } from "@/i18n";
 
 type Operation = "join" | "update" | "leave" | "accept" | "decline" | "process";
 type Confirmation = "leave" | "decline" | undefined;
+type OperationLease = Readonly<{
+  applicationId: string;
+  controller: AbortController;
+  owner: symbol;
+}>;
 
 function ConfirmationDialog({
   confirmation,
@@ -131,54 +136,80 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   const [error, setError] = useState<WaitlistErrorPresentation>();
   const [now, setNow] = useState(() => Date.now());
   const expiredReconciledFor = useRef<string | undefined>(undefined);
-  const operationLock = useRef<symbol | undefined>(undefined);
+  const currentApplicationId = useRef(application.id);
+  const operationLock = useRef<OperationLease | undefined>(undefined);
   const confirmationRef = useRef<HTMLDivElement | null>(null);
   const confirmationReturnFocusRef = useRef<HTMLElement | null>(null);
 
   const activeEntry = entry?.status === "ACTIVE" || entry?.status === "OFFERED" ? entry : undefined;
   const offer = activeEntry?.offer?.status === "ACTIVE" ? activeEntry.offer : undefined;
   const busy = operation !== undefined;
+  const offerExpired = offer ? offerTiming(offer.expiresAt, now).acceptanceDisabled : false;
 
-  const loadEntry = async (signal?: AbortSignal, shouldCommit: () => boolean = () => true) => {
-    const entries = await listWaitlist(application.id, signal);
+  const acquireOperation = (label: string): OperationLease | undefined => {
+    if (operationLock.current) return undefined;
+    const lease = { applicationId: application.id, controller: new AbortController(), owner: Symbol(label) };
+    operationLock.current = lease;
+    return lease;
+  };
+  const ownsOperation = (lease: OperationLease): boolean =>
+    operationLock.current === lease
+    && currentApplicationId.current === lease.applicationId
+    && !lease.controller.signal.aborted;
+  const releaseOperation = (lease: OperationLease): boolean => {
+    if (operationLock.current !== lease) return false;
+    operationLock.current = undefined;
+    return true;
+  };
+  const revokeOperation = (lease: OperationLease): void => {
+    lease.controller.abort();
+    releaseOperation(lease);
+  };
+
+  const loadEntry = async (lease: OperationLease) => {
+    const entries = await listWaitlist(lease.applicationId, lease.controller.signal);
     const next = entries.find((item) => item.status === "ACTIVE" || item.status === "OFFERED");
-    if (!shouldCommit()) return next;
+    if (!ownsOperation(lease)) return next;
     setEntry(next);
     if (next) setPreferences(preferencesFrom(next));
     return next;
   };
-  const synchronize = async (shouldProcess: boolean) => {
-    if (shouldProcess) await processWaitlistState(application.id);
-    return loadEntry();
+  const synchronize = async (shouldProcess: boolean, lease: OperationLease) => {
+    if (shouldProcess) await processWaitlistState(lease.applicationId);
+    if (!ownsOperation(lease)) return undefined;
+    return loadEntry(lease);
   };
 
   useEffect(() => {
+    currentApplicationId.current = application.id;
+    return () => {
+      const lease = operationLock.current;
+      if (lease?.applicationId === application.id) revokeOperation(lease);
+    };
+  // Revoke every operation captured by the application being replaced or unmounted.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [application.id]);
+
+  useEffect(() => {
     if (!relevant) return;
-    if (operationLock.current) return;
-    const controller = new AbortController();
-    const owner = Symbol("waitlist-initialization");
-    operationLock.current = owner;
-    const ownsRequest = () => operationLock.current === owner && !controller.signal.aborted;
+    const lease = acquireOperation("waitlist-initialization");
+    if (!lease) return;
     void (async () => {
       try {
         setOperation("process"); setError(undefined);
-        if (application.statusCode === "WAITLISTED" || application.statusCode === "SLOT_OFFERED") await processWaitlistState(application.id);
-        if (!ownsRequest()) return;
-        await loadEntry(controller.signal, ownsRequest);
-        if (!ownsRequest()) return;
+        if (application.statusCode === "WAITLISTED" || application.statusCode === "SLOT_OFFERED") await processWaitlistState(lease.applicationId);
+        if (!ownsOperation(lease)) return;
+        await loadEntry(lease);
+        if (!ownsOperation(lease)) return;
         await onApplicationChanged();
       } catch (reason: unknown) {
-        if (ownsRequest() && !(reason instanceof DOMException && reason.name === "AbortError")) setError(waitlistErrorPresentation(reason, locale, copy));
+        if (ownsOperation(lease) && !(reason instanceof DOMException && reason.name === "AbortError")) setError(waitlistErrorPresentation(reason, locale, copy));
       } finally {
-        if (operationLock.current === owner) {
-          operationLock.current = undefined;
-          setOperation(undefined);
-        }
+        if (releaseOperation(lease)) setOperation(undefined);
       }
     })();
     return () => {
-      controller.abort();
-      if (operationLock.current === owner) operationLock.current = undefined;
+      revokeOperation(lease);
     };
   // The application status/id are the authoritative reconstruction boundary.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -204,50 +235,58 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   }, [confirmation]);
 
   useEffect(() => {
-    if (!offer || !offerTiming(offer.expiresAt, now).acceptanceDisabled || expiredReconciledFor.current === offer.id || operationLock.current) return;
+    if (!offer || !offerExpired || expiredReconciledFor.current === offer.id) return;
+    const lease = acquireOperation("waitlist-expiry");
+    if (!lease) return;
     expiredReconciledFor.current = offer.id;
-    const owner = Symbol("waitlist-expiry");
-    operationLock.current = owner;
     void (async () => {
-      try { setOperation("process"); setError(undefined); await processWaitlistState(application.id); await loadEntry(); await onApplicationChanged(); }
-      catch (reason: unknown) { setError(waitlistErrorPresentation(reason, locale, copy)); }
+      try {
+        setOperation("process"); setError(undefined);
+        await processWaitlistState(lease.applicationId);
+        if (!ownsOperation(lease)) return;
+        await loadEntry(lease);
+        if (!ownsOperation(lease)) return;
+        await onApplicationChanged();
+      }
+      catch (reason: unknown) { if (ownsOperation(lease)) setError(waitlistErrorPresentation(reason, locale, copy)); }
       finally {
-        if (operationLock.current === owner) {
-          operationLock.current = undefined;
-          setOperation(undefined);
-        }
+        if (releaseOperation(lease)) setOperation(undefined);
       }
     })();
+    return () => revokeOperation(lease);
   // `loadEntry` is intentionally tied to the current render; the offer boundary is the only trigger.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [copy, locale, now, offer, onApplicationChanged, application.id]);
+  }, [application.id, copy, locale, offer, offerExpired, onApplicationChanged]);
 
-  const run = async (kind: Operation, action: () => Promise<void>, recover = false) => {
-    if (operationLock.current) return;
-    const owner = Symbol(`waitlist-${kind}`);
-    operationLock.current = owner; setOperation(kind); setError(undefined);
-    try { await action(); }
+  const run = async (kind: Operation, action: (lease: OperationLease) => Promise<void>, recover = false) => {
+    const lease = acquireOperation(`waitlist-${kind}`);
+    if (!lease) return;
+    setOperation(kind); setError(undefined);
+    try { await action(lease); }
     catch (reason: unknown) {
+      if (!ownsOperation(lease)) return;
       const next = waitlistErrorPresentation(reason, locale, copy); setError(next);
       if (recover || next.action === "recover") {
-        try { await synchronize(true); await onApplicationChanged(); }
-        catch (refreshReason: unknown) { setError(waitlistErrorPresentation(refreshReason, locale, copy)); }
+        try {
+          await synchronize(true, lease);
+          if (ownsOperation(lease)) await onApplicationChanged();
+        }
+        catch (refreshReason: unknown) { if (ownsOperation(lease)) setError(waitlistErrorPresentation(refreshReason, locale, copy)); }
       }
     } finally {
-      if (operationLock.current === owner) {
-        operationLock.current = undefined;
-        setOperation(undefined);
-      }
+      if (releaseOperation(lease)) setOperation(undefined);
     }
   };
 
-  const submitJoin = () => void run("join", async () => {
-    await joinWaitlist({ applicationId: application.id, ...preferences });
-    await synchronize(true); await onApplicationChanged();
+  const submitJoin = () => void run("join", async (lease) => {
+    await joinWaitlist({ applicationId: lease.applicationId, ...preferences });
+    if (!ownsOperation(lease)) return;
+    await synchronize(true, lease);
+    if (ownsOperation(lease)) await onApplicationChanged();
   }, true);
-  const submitUpdate = () => { if (!activeEntry) return; void run("update", async () => { await updateWaitlist(activeEntry.id, preferences); await synchronize(true); await onApplicationChanged(); }, true); };
-  const refresh = () => void run("process", async () => { if (!rtos.length) setRtoReloadKey((value) => value + 1); await synchronize(true); await onApplicationChanged(); });
-  const accept = () => { if (!offer || offerTiming(offer.expiresAt, Date.now()).acceptanceDisabled) return; void run("accept", async () => { await acceptOffer(offer.id); await onApplicationChanged(); await loadEntry(); }, true); };
+  const submitUpdate = () => { if (!activeEntry) return; void run("update", async (lease) => { await updateWaitlist(activeEntry.id, preferences); if (!ownsOperation(lease)) return; await synchronize(true, lease); if (ownsOperation(lease)) await onApplicationChanged(); }, true); };
+  const refresh = () => void run("process", async (lease) => { if (!rtos.length && ownsOperation(lease)) setRtoReloadKey((value) => value + 1); await synchronize(true, lease); if (ownsOperation(lease)) await onApplicationChanged(); });
+  const accept = () => { if (!offer || offerTiming(offer.expiresAt, Date.now()).acceptanceDisabled) return; void run("accept", async (lease) => { await acceptOffer(offer.id); if (!ownsOperation(lease)) return; await onApplicationChanged(); if (ownsOperation(lease)) await loadEntry(lease); }, true); };
   const openConfirmation = (type: Exclude<Confirmation, undefined>) => {
     confirmationReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setConfirmation(type);
@@ -260,8 +299,8 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
     if (!activeEntry || !confirmation) return;
     const type = confirmation;
     dismissConfirmation();
-    if (type === "leave") void run("leave", async () => { await leaveWaitlist(activeEntry.id); await onApplicationChanged(); await loadEntry(); }, true);
-    if (type === "decline" && offer) void run("decline", async () => { await declineOffer(offer.id); await synchronize(true); await onApplicationChanged(); }, true);
+    if (type === "leave") void run("leave", async (lease) => { await leaveWaitlist(activeEntry.id); if (!ownsOperation(lease)) return; await onApplicationChanged(); if (ownsOperation(lease)) await loadEntry(lease); }, true);
+    if (type === "decline" && offer) void run("decline", async (lease) => { await declineOffer(offer.id); if (!ownsOperation(lease)) return; await synchronize(true, lease); if (ownsOperation(lease)) await onApplicationChanged(); }, true);
   };
   const toggleBucket = (bucket: WaitlistTimeBucket) => setPreferences((current) => {
     const included = current.timeBuckets.includes(bucket);
