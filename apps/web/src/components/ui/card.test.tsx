@@ -11,6 +11,7 @@ describe("Card", () => {
     expect(markup).toContain("transition-[border-color,box-shadow]");
     expect(markup).not.toContain("backdrop-blur");
     expect(markup).not.toContain("translate-y");
-    expect(markup).not.toContain("transform]");
+    const classTokens = (markup.match(/class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
+    expect(classTokens.some((token) => /^(?:[a-z-]+:)*(?:transform|transform-cpu|transform-gpu)$/.test(token))).toBe(false);
   });
 });

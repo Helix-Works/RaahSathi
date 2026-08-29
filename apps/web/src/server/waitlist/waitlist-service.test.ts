@@ -143,8 +143,8 @@ describe("waitlist compatibility primitives", () => {
     expect(transaction).toHaveBeenCalledTimes(2);
     expect(transaction).toHaveBeenLastCalledWith(expect.any(Function), {
       isolationLevel: "Serializable",
-      maxWait: 30_000,
-      timeout: 30_000,
+      maxWait: 5_000,
+      timeout: 20_000,
     });
   });
 
@@ -167,8 +167,8 @@ describe("waitlist compatibility primitives", () => {
     expect(transaction).toHaveBeenCalledTimes(2);
     expect(transaction).toHaveBeenLastCalledWith(expect.any(Function), {
       isolationLevel: "Serializable",
-      maxWait: 30_000,
-      timeout: 30_000,
+      maxWait: 5_000,
+      timeout: 20_000,
     });
   });
 });

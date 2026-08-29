@@ -22,8 +22,8 @@ const offerLifetimeMs = 30 * 60 * 1000;
 const mutationLimitPerMinute = 20;
 const serializableTransactionOptions = {
   isolationLevel: "Serializable" as const,
-  maxWait: 30_000,
-  timeout: 30_000,
+  maxWait: 5_000,
+  timeout: 20_000,
 };
 
 const entryInclude = {

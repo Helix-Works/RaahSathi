@@ -228,7 +228,10 @@ function useFormSubmissionDispatcher<TValues extends FieldValues>(
     if (operationLock.current) return;
     operationLock.current = true;
     setPendingAction(action);
+    let finished = false;
     const finish = () => {
+      if (finished) return;
+      finished = true;
       operationLock.current = false;
       setPendingAction(undefined);
     };
@@ -241,7 +244,7 @@ function useFormSubmissionDispatcher<TValues extends FieldValues>(
         }
       },
       finish,
-    )();
+    )().catch(finish);
   };
 }
 
