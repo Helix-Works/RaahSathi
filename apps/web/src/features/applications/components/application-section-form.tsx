@@ -40,7 +40,6 @@ export type SectionSubmitAction = "save" | "complete";
 type PersistSection = (
   data: ApplicationSectionData,
   action: SectionSubmitAction,
-  dirty: boolean,
 ) => Promise<void>;
 
 type SectionFormProps = Readonly<{
@@ -204,14 +203,27 @@ function FormActions<TValues extends FieldValues>({
   submit: (values: TValues, action: SectionSubmitAction) => Promise<void>;
   messages: FormMessages;
 }>) {
-  const run = (action: SectionSubmitAction) => form.handleSubmit(async (values) => {
+  const operationLock = useRef(false);
+
+  const run = (action: SectionSubmitAction) => {
+    if (operationLock.current) return;
+    operationLock.current = true;
     setPendingAction(action);
-    try {
-      await submit(values, action);
-    } finally {
+    const finish = () => {
+      operationLock.current = false;
       setPendingAction(undefined);
-    }
-  })();
+    };
+    void form.handleSubmit(
+      async (values) => {
+        try {
+          await submit(values, action);
+        } finally {
+          finish();
+        }
+      },
+      finish,
+    )();
+  };
   const pending = form.formState.isSubmitting || Boolean(pendingAction);
 
   return (
@@ -239,7 +251,7 @@ function PersonalDetailsForm(props: SectionFormProps) {
   const submit = async (values: PersonalDetailsData, action: SectionSubmitAction) => {
     errors.clear();
     try {
-      await props.onPersist(values, action, form.formState.isDirty);
+      await props.onPersist(values, action);
     } catch (error: unknown) {
       errors.present(error);
     }
@@ -278,7 +290,7 @@ function AddressForm(props: SectionFormProps) {
   const submit = async (values: AddressData, action: SectionSubmitAction) => {
     errors.clear();
     try {
-      await props.onPersist(values, action, form.formState.isDirty);
+      await props.onPersist(values, action);
     } catch (error: unknown) {
       errors.present(error);
     }
@@ -321,7 +333,7 @@ function ServiceDetailsForm(props: SectionFormProps) {
   const submit = async (values: ServiceDetailsData, action: SectionSubmitAction) => {
     errors.clear();
     try {
-      await props.onPersist(values, action, form.formState.isDirty);
+      await props.onPersist(values, action);
     } catch (error: unknown) {
       errors.present(error);
     }
@@ -360,7 +372,7 @@ function DeclarationForm(props: SectionFormProps) {
     errors.clear();
     try {
       if (!values.accepted) return;
-      await props.onPersist({ accepted: true }, action, form.formState.isDirty);
+      await props.onPersist({ accepted: true }, action);
     } catch (error: unknown) {
       errors.present(error);
     }

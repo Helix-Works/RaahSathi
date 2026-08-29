@@ -20,6 +20,11 @@ import { expireOfferInTransaction, expireOffersInTransaction } from "./offer-exp
 
 const offerLifetimeMs = 30 * 60 * 1000;
 const mutationLimitPerMinute = 20;
+const serializableTransactionOptions = {
+  isolationLevel: "Serializable" as const,
+  maxWait: 30_000,
+  timeout: 30_000,
+};
 
 const entryInclude = {
   rto: true,
@@ -155,7 +160,7 @@ export async function allocateSlot(
       });
       allocated += 1;
     }
-  }, { isolationLevel: "Serializable" }));
+  }, serializableTransactionOptions));
 }
 
 async function allocateCompatibleSlots(entryId: string, now: Date, correlationId: string, database: PrismaClient): Promise<void> {
@@ -274,7 +279,7 @@ export async function joinWaitlist(
         correlationId: request.correlationId, resourceType: "WaitlistEntry", resourceId: created.id,
         metadata: { rtoId: request.rtoId, vehicleClass: request.vehicleClass } });
       return { entryId: created.id, releasedSlots };
-    }, { isolationLevel: "Serializable" }));
+    }, serializableTransactionOptions));
   } catch (error) {
     if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") throw error;
     const [existing, application] = await Promise.all([
@@ -346,7 +351,7 @@ export async function processWaitlistState(
       select: { id: true },
     });
     return { entryId: entry?.id, releasedSlots };
-  }, { isolationLevel: "Serializable" }));
+  }, serializableTransactionOptions));
   await allocateReleasedSlots(result.releasedSlots, { now, correlationId: input.correlationId }, database);
   if (result.entryId) await allocateCompatibleSlots(result.entryId, now, input.correlationId, database);
 }
@@ -380,7 +385,7 @@ export async function updateWaitlistEntry(
     } });
     await writeEvent(tx, { applicationId: entry.applicationId, applicantId: context.applicantId, eventType: "WAITLIST_UPDATED",
       correlationId: request.correlationId, resourceType: "WaitlistEntry", resourceId: id });
-  }, { isolationLevel: "Serializable" }));
+  }, serializableTransactionOptions));
   await allocateCompatibleSlots(id, now, request.correlationId, database);
   return getWaitlistEntry(context, id, database);
 }
@@ -465,7 +470,7 @@ export async function acceptOffer(
       eventType: "SLOT_OFFER_ACCEPTED", correlationId: input.correlationId, resourceType: "SlotOffer", resourceId: id,
       metadata: { slotId: offer.slotId } });
     return { kind: "appointment" as const, appointment };
-  }, { isolationLevel: "Serializable" }));
+  }, serializableTransactionOptions));
   if (result.kind === "expired") {
     await allocateSlot(result.slotId, { now, correlationId: input.correlationId }, database);
     throw apiErrors.offerExpired();
@@ -506,7 +511,7 @@ export async function declineOffer(
       eventType: "SLOT_OFFER_DECLINED", correlationId: input.correlationId, resourceType: "SlotOffer", resourceId: id,
       metadata: { slotId: offer.slotId } });
     return { entryId: offer.waitlistEntryId, releasedSlots: [offer.slotId] };
-  }, { isolationLevel: "Serializable" }));
+  }, serializableTransactionOptions));
   await allocateReleasedSlots(result.releasedSlots, { now, correlationId: input.correlationId }, database);
   return getWaitlistEntry(context, result.entryId, database);
 }

@@ -2,7 +2,11 @@ import "server-only";
 
 import { isRetryableTransactionConflict } from "./prisma-errors";
 
-const transactionConflictRetryLimit = 1;
+const transactionConflictRetryLimit = 3;
+
+function retryDelay(attempt: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, 25 * 2 ** attempt));
+}
 
 export async function retryTransactionConflict<Result>(
   operation: () => Promise<Result>,
@@ -15,6 +19,7 @@ export async function retryTransactionConflict<Result>(
       throw error;
     }
 
+    await retryDelay(transactionConflictRetryLimit - retriesRemaining);
     return retryTransactionConflict(operation, retriesRemaining - 1);
   }
 }

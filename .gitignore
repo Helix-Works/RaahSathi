@@ -20,6 +20,7 @@ coverage/
 
 # Test output
 playwright-report/
+e2e/playwright-report-hero/
 test-results/
 
 # Logs and local tooling

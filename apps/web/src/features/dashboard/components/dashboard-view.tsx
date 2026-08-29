@@ -21,6 +21,7 @@ import { resolveNextActionCard, selectHeroApplication } from "@/features/dashboa
 import type { DashboardSummary } from "@/features/dashboard/types";
 import { getServiceCopy } from "@/features/services/presentation";
 import type { Locale, MessageDictionary } from "@/i18n";
+import { displayApplicationReference } from "@/lib/display-reference";
 
 type DashboardViewProps = Readonly<{
   displayName: string;
@@ -74,13 +75,6 @@ function formatDateTime(value: string, locale: Locale, fallback: string): string
 
 function replaceTokens(template: string, values: Readonly<Record<string, string>>): string {
   return Object.entries(values).reduce((message, [key, value]) => message.replace(`{${key}}`, value), template);
-}
-
-function applicationReference(id: string): string {
-  if (id.startsWith("app_")) {
-    return `RS-${id.split("_").slice(1).map((part) => part.charAt(0)).join("").toUpperCase()}`;
-  }
-  return `RS-${id.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toUpperCase()}`;
 }
 
 export function DashboardView({ displayName, locale, messages, summary }: DashboardViewProps) {
@@ -147,7 +141,7 @@ export function DashboardView({ displayName, locale, messages, summary }: Dashbo
                       updatedLabel={dashboard.updatedLabel}
                       updatedValue={formatDateTime(application.updatedAt, locale, messages.status.unavailable)}
                       referenceLabel={messages.applications.referenceLabel}
-                      referenceValue={applicationReference(application.id)}
+                      referenceValue={displayApplicationReference(application.id)}
                       progressLabel={dashboard.progressLabel}
                       progress={application.progressPercent}
                       progressText={`${new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(application.progressPercent)}%`}

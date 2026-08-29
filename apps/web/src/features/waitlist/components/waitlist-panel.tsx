@@ -153,16 +153,18 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
 
   useEffect(() => {
     if (!relevant) return;
+    if (operationLock.current) return;
     const controller = new AbortController();
+    operationLock.current = true;
     void (async () => {
       try {
-        setOperation(application.statusCode === "WAITLISTED" || application.statusCode === "SLOT_OFFERED" ? "process" : undefined); setError(undefined);
+        setOperation("process"); setError(undefined);
         if (application.statusCode === "WAITLISTED" || application.statusCode === "SLOT_OFFERED") await processWaitlistState(application.id);
         await loadEntry(controller.signal);
         await onApplicationChanged();
       } catch (reason: unknown) {
         if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(waitlistErrorPresentation(reason, locale, copy));
-      } finally { setOperation(undefined); }
+    } finally { operationLock.current = false; setOperation(undefined); }
     })();
     return () => controller.abort();
   // The application status/id are the authoritative reconstruction boundary.
@@ -189,12 +191,13 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   }, [confirmation]);
 
   useEffect(() => {
-    if (!offer || !offerTiming(offer.expiresAt, now).acceptanceDisabled || expiredReconciledFor.current === offer.id) return;
+    if (!offer || !offerTiming(offer.expiresAt, now).acceptanceDisabled || expiredReconciledFor.current === offer.id || operationLock.current) return;
     expiredReconciledFor.current = offer.id;
+    operationLock.current = true;
     void (async () => {
       try { setOperation("process"); setError(undefined); await processWaitlistState(application.id); await loadEntry(); await onApplicationChanged(); }
       catch (reason: unknown) { setError(waitlistErrorPresentation(reason, locale, copy)); }
-      finally { setOperation(undefined); }
+      finally { operationLock.current = false; setOperation(undefined); }
     })();
   // `loadEntry` is intentionally tied to the current render; the offer boundary is the only trigger.
   // eslint-disable-next-line react-hooks/exhaustive-deps

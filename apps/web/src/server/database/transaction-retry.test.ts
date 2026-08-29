@@ -15,7 +15,7 @@ describe("retryTransactionConflict", () => {
   it.each([
     prismaError("P2034"),
     prismaError("P2010", { code: "40001" }),
-  ])("retries one complete operation for a classified transaction conflict", async (error) => {
+  ])("retries a complete operation for a classified transaction conflict", async (error) => {
     const operation = vi.fn()
       .mockRejectedValueOnce(error)
       .mockResolvedValueOnce("persisted");
@@ -24,11 +24,11 @@ describe("retryTransactionConflict", () => {
     expect(operation).toHaveBeenCalledTimes(2);
   });
 
-  it("does not retry more than once", async () => {
+  it("stops after the bounded retry limit", async () => {
     const operation = vi.fn().mockRejectedValue(prismaError("P2034"));
 
     await expect(retryTransactionConflict(operation)).rejects.toMatchObject({ code: "P2034" });
-    expect(operation).toHaveBeenCalledTimes(2);
+    expect(operation).toHaveBeenCalledTimes(4);
   });
 
   it.each([

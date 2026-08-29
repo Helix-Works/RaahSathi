@@ -141,6 +141,11 @@ describe("waitlist compatibility primitives", () => {
       database,
     )).resolves.toMatchObject({ id: appointmentId, status: "CONFIRMED" });
     expect(transaction).toHaveBeenCalledTimes(2);
+    expect(transaction).toHaveBeenLastCalledWith(expect.any(Function), {
+      isolationLevel: "Serializable",
+      maxWait: 30_000,
+      timeout: 30_000,
+    });
   });
 
   it("retries the complete decline transaction once for raw SQLSTATE 40001", async () => {
@@ -160,5 +165,10 @@ describe("waitlist compatibility primitives", () => {
       database,
     )).resolves.toMatchObject({ id: entryId, status: "ACTIVE" });
     expect(transaction).toHaveBeenCalledTimes(2);
+    expect(transaction).toHaveBeenLastCalledWith(expect.any(Function), {
+      isolationLevel: "Serializable",
+      maxWait: 30_000,
+      timeout: 30_000,
+    });
   });
 });
