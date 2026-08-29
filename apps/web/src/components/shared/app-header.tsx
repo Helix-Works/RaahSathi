@@ -26,7 +26,7 @@ export function AppHeader({ locale, messages, navigation, account }: AppHeaderPr
   const loginNavigation = navigation.filter((item) => item.href === "/login");
 
   return (
-    <header className="fixed inset-x-0 top-0 z-40 border-b border-primary/10 bg-card/98 text-foreground shadow-[0_1px_7px_rgba(11,47,85,0.06)] backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-40 border-b border-primary/10 bg-card text-foreground shadow-[0_1px_7px_rgba(11,47,85,0.06)]">
       <PageContainer className="relative flex min-h-14 items-center gap-2.5 sm:gap-4">
         <Link
           href="/"

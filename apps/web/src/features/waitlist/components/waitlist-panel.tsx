@@ -65,7 +65,7 @@ function ConfirmationDialog({
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/35 p-4 backdrop-blur-[1px]"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/35 p-4"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onDismiss();
       }}

@@ -188,7 +188,7 @@ export function MobileNavigation({
       {isOpen ? (
         <div
           id="mobile-navigation-panel"
-          className="absolute inset-x-0 top-full border-b border-border bg-card/98 px-4 py-4 text-foreground shadow-elevated backdrop-blur-xl"
+          className="absolute inset-x-0 top-full border-b border-border bg-card px-4 py-4 text-foreground shadow-elevated"
         >
           <nav className="mx-auto grid max-w-6xl gap-1" aria-label={mobileLabel}>
             {items.map((item) => (

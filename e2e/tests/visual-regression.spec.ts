@@ -75,7 +75,7 @@ test.describe("curated visual regression baseline", () => {
   test("dashboard active-state presentation", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await completeMockLogin(page, "123456");
-    await expect(page.getByRole("heading", { name: "Review temporary slot offer" })).toBeVisible();
+    await expect(page.getByText("Review temporary slot offer", { exact: true })).toBeVisible();
     await expectStableScreenshot(page, "dashboard-active-en-desktop.png");
   });
 

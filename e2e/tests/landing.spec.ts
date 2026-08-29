@@ -44,7 +44,7 @@ test("renders the public landing shell and navigates to services", async ({ page
   await expect(
     page.getByRole("heading", { name: "Permanent Driving Licence" }),
   ).toBeVisible();
-  await expect(page.getByRole("link", { name: "Continue" })).toHaveCount(2);
+  await expect(page.getByRole("link", { name: "Continue" })).toHaveCount(4);
 });
 
 test("switches to Hindi and preserves it during navigation", async ({ page }, testInfo) => {
@@ -207,6 +207,24 @@ test("shared header remains available after scrolling", async ({ page }, testInf
       .poll(() => header.evaluate((element) => Math.round(element.getBoundingClientRect().top)))
       .toBe(0);
   }
+});
+
+test("shared scrolling surfaces avoid backdrop compositing", async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== "desktop-chromium");
+  await page.goto("/");
+
+  const header = page.getByRole("banner");
+  await expect
+    .poll(() => header.evaluate((element) => getComputedStyle(element).backdropFilter))
+    .toBe("none");
+
+  const serviceCard = page.getByRole("heading", { name: "New Learner Licence" }).locator("xpath=../../..");
+  await expect
+    .poll(() => serviceCard.evaluate((element) => getComputedStyle(element).backdropFilter))
+    .toBe("none");
+  await expect
+    .poll(() => serviceCard.evaluate((element) => getComputedStyle(element).transform))
+    .toBe("none");
 });
 
 test("reduced motion suppresses interactive scaling", async ({ page }, testInfo) => {
