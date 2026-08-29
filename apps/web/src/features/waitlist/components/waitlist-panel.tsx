@@ -131,7 +131,7 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   const [error, setError] = useState<WaitlistErrorPresentation>();
   const [now, setNow] = useState(() => Date.now());
   const expiredReconciledFor = useRef<string | undefined>(undefined);
-  const operationLock = useRef(false);
+  const operationLock = useRef<symbol | undefined>(undefined);
   const confirmationRef = useRef<HTMLDivElement | null>(null);
   const confirmationReturnFocusRef = useRef<HTMLElement | null>(null);
 
@@ -139,9 +139,10 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   const offer = activeEntry?.offer?.status === "ACTIVE" ? activeEntry.offer : undefined;
   const busy = operation !== undefined;
 
-  const loadEntry = async (signal?: AbortSignal) => {
+  const loadEntry = async (signal?: AbortSignal, shouldCommit: () => boolean = () => true) => {
     const entries = await listWaitlist(application.id, signal);
     const next = entries.find((item) => item.status === "ACTIVE" || item.status === "OFFERED");
+    if (!shouldCommit()) return next;
     setEntry(next);
     if (next) setPreferences(preferencesFrom(next));
     return next;
@@ -155,18 +156,30 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
     if (!relevant) return;
     if (operationLock.current) return;
     const controller = new AbortController();
-    operationLock.current = true;
+    const owner = Symbol("waitlist-initialization");
+    operationLock.current = owner;
+    const ownsRequest = () => operationLock.current === owner && !controller.signal.aborted;
     void (async () => {
       try {
         setOperation("process"); setError(undefined);
         if (application.statusCode === "WAITLISTED" || application.statusCode === "SLOT_OFFERED") await processWaitlistState(application.id);
-        await loadEntry(controller.signal);
+        if (!ownsRequest()) return;
+        await loadEntry(controller.signal, ownsRequest);
+        if (!ownsRequest()) return;
         await onApplicationChanged();
       } catch (reason: unknown) {
-        if (!(reason instanceof DOMException && reason.name === "AbortError")) setError(waitlistErrorPresentation(reason, locale, copy));
-    } finally { operationLock.current = false; setOperation(undefined); }
+        if (ownsRequest() && !(reason instanceof DOMException && reason.name === "AbortError")) setError(waitlistErrorPresentation(reason, locale, copy));
+      } finally {
+        if (operationLock.current === owner) {
+          operationLock.current = undefined;
+          setOperation(undefined);
+        }
+      }
     })();
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+      if (operationLock.current === owner) operationLock.current = undefined;
+    };
   // The application status/id are the authoritative reconstruction boundary.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [application.id, application.statusCode, relevant]);
@@ -193,11 +206,17 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   useEffect(() => {
     if (!offer || !offerTiming(offer.expiresAt, now).acceptanceDisabled || expiredReconciledFor.current === offer.id || operationLock.current) return;
     expiredReconciledFor.current = offer.id;
-    operationLock.current = true;
+    const owner = Symbol("waitlist-expiry");
+    operationLock.current = owner;
     void (async () => {
       try { setOperation("process"); setError(undefined); await processWaitlistState(application.id); await loadEntry(); await onApplicationChanged(); }
       catch (reason: unknown) { setError(waitlistErrorPresentation(reason, locale, copy)); }
-      finally { operationLock.current = false; setOperation(undefined); }
+      finally {
+        if (operationLock.current === owner) {
+          operationLock.current = undefined;
+          setOperation(undefined);
+        }
+      }
     })();
   // `loadEntry` is intentionally tied to the current render; the offer boundary is the only trigger.
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -205,7 +224,8 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
 
   const run = async (kind: Operation, action: () => Promise<void>, recover = false) => {
     if (operationLock.current) return;
-    operationLock.current = true; setOperation(kind); setError(undefined);
+    const owner = Symbol(`waitlist-${kind}`);
+    operationLock.current = owner; setOperation(kind); setError(undefined);
     try { await action(); }
     catch (reason: unknown) {
       const next = waitlistErrorPresentation(reason, locale, copy); setError(next);
@@ -213,7 +233,12 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
         try { await synchronize(true); await onApplicationChanged(); }
         catch (refreshReason: unknown) { setError(waitlistErrorPresentation(refreshReason, locale, copy)); }
       }
-    } finally { operationLock.current = false; setOperation(undefined); }
+    } finally {
+      if (operationLock.current === owner) {
+        operationLock.current = undefined;
+        setOperation(undefined);
+      }
+    }
   };
 
   const submitJoin = () => void run("join", async () => {
