@@ -47,7 +47,7 @@ describe("payment convergence foundation", () => {
     expect(isRetryableTransactionConflict(new Error("database failure"))).toBe(false);
   });
 
-  it("retries a raw PostgreSQL serialization conflict once and lets a repeated conflict escape", async () => {
+  it("retries raw PostgreSQL serialization conflicts up to the bounded limit", async () => {
     const serializationConflict = new Prisma.PrismaClientKnownRequestError("Raw query failed", {
       code: "P2010",
       clientVersion: Prisma.prismaVersion.client,
@@ -69,7 +69,7 @@ describe("payment convergence foundation", () => {
       "phase4-serialization-retry",
       database,
     )).rejects.toBe(serializationConflict);
-    expect(transactionAttempts).toBe(2);
+    expect(transactionAttempts).toBe(4);
   });
 
   it("does not retry or swallow an unrelated raw-query failure", async () => {

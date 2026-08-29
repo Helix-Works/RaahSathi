@@ -24,9 +24,9 @@ import type { AuthenticatedContext } from "@/server/auth/auth-types";
 import { isLicenceMaintenanceService } from "@/server/applications/service-profile";
 import { safeEqual } from "@/server/auth/crypto";
 import { getServerEnvironment } from "@/server/config/environment";
-import { isRetryableTransactionConflict } from "@/server/database/prisma-errors";
 import { prisma } from "@/server/database/prisma";
 import { retryTransientConnectionRead } from "@/server/database/read-retry";
+import { retryTransactionConflict } from "@/server/database/transaction-retry";
 import { apiErrors } from "@/server/http/api-error";
 
 type PaymentApplicationRecord = Application & {
@@ -265,10 +265,9 @@ export async function applyPaymentProviderEvent(
   event: PaymentProviderEventRequest,
   correlationId: string,
   databaseClient: PrismaClient = prisma,
-  retryOnSerializationConflict = true,
 ): Promise<PaymentContext> {
   try {
-    return await databaseClient.$transaction(async (database) => {
+    return await retryTransactionConflict(() => databaseClient.$transaction(async (database) => {
       await database.$queryRaw(Prisma.sql`SELECT "id" FROM "PaymentAttempt" WHERE "providerReference" = ${event.providerReference} FOR UPDATE`);
       const payment = await database.paymentAttempt.findUnique({
         where: { providerReference: event.providerReference },
@@ -350,7 +349,7 @@ export async function applyPaymentProviderEvent(
         }),
         payment.id,
       );
-    }, { isolationLevel: "Serializable" });
+    }, { isolationLevel: "Serializable" }));
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const existing = await databaseClient.paymentProviderEvent.findUnique({
@@ -365,9 +364,6 @@ export async function applyPaymentProviderEvent(
         return contextForProviderReference(databaseClient, event.providerReference);
       }
       throw apiErrors.paymentEventInvalid();
-    }
-    if (isRetryableTransactionConflict(error) && retryOnSerializationConflict) {
-      return applyPaymentProviderEvent(event, correlationId, databaseClient, false);
     }
     throw error;
   }
@@ -391,7 +387,7 @@ export async function startPayment(
   const now = input.now ?? new Date();
   let created: Readonly<{ context: PaymentContext; scenario?: PaymentProviderScenario }>;
   try {
-    created = await databaseClient.$transaction(async (database) => {
+    created = await retryTransactionConflict(() => databaseClient.$transaction(async (database) => {
       await database.$queryRaw(Prisma.sql`SELECT "id" FROM "Application" WHERE "id" = ${input.applicationId}::uuid AND "applicantId" = ${context.applicantId}::uuid FOR UPDATE`);
       const application = await database.application.findFirst({
         where: { id: input.applicationId, applicantId: context.applicantId },
@@ -449,7 +445,7 @@ export async function startPayment(
         include: { feeSnapshot: true, paymentAttempts: { orderBy: [{ attemptNumber: "desc" }, { id: "desc" }] } },
       });
       return { context: toPaymentContext(refreshed, payment.id), scenario: decision.scenario };
-    }, { isolationLevel: "Serializable" });
+    }, { isolationLevel: "Serializable" }));
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && ["P2002", "P2034"].includes(error.code)) {
       const existing = await databaseClient.paymentAttempt.findUnique({ where: { idempotencyKey: input.idempotencyKey } });
