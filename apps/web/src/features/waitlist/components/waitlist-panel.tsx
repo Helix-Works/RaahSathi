@@ -4,7 +4,7 @@ import type { ApplicationDetail } from "@raahsathi/contracts/applications";
 import type { Rto } from "@raahsathi/contracts/appointments";
 import type { WaitlistEntry, WaitlistPreferences, WaitlistTimeBucket } from "@raahsathi/contracts/waitlist";
 import { ListOrdered, TicketCheck } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type RefObject } from "react";
 import { useRouter } from "next/navigation";
 
 import { JourneyStageHeader, StageActionPanel } from "@/components/shared/journey-stage";
@@ -21,6 +21,75 @@ import type { Locale, MessageDictionary } from "@/i18n";
 
 type Operation = "join" | "update" | "leave" | "accept" | "decline" | "process";
 type Confirmation = "leave" | "decline" | undefined;
+
+function ConfirmationDialog({
+  confirmation,
+  copy,
+  dialogRef,
+  onConfirm,
+  onDismiss,
+}: Readonly<{
+  confirmation: Exclude<Confirmation, undefined>;
+  copy: MessageDictionary["waitlist"];
+  dialogRef: RefObject<HTMLDivElement | null>;
+  onConfirm: () => void;
+  onDismiss: () => void;
+}>) {
+  const title = confirmation === "leave" ? copy.leaveTitle : copy.declineTitle;
+  const description = confirmation === "leave" ? copy.leaveDescription : copy.declineDescription;
+  const confirmLabel = confirmation === "leave" ? copy.confirmLeave : copy.confirmDecline;
+
+  const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onDismiss();
+      return;
+    }
+    if (event.key !== "Tab") return;
+
+    const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    );
+    if (!focusable?.length) return;
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  return (
+    <div
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-foreground/35 p-4 backdrop-blur-[1px]"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onDismiss();
+      }}
+    >
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="waitlist-confirm-title"
+        aria-describedby="waitlist-confirm-description"
+        tabIndex={-1}
+        className="w-full max-w-md rounded-panel border border-primary/25 bg-card p-5 shadow-elevated outline-none sm:p-6"
+        onKeyDown={handleKeyDown}
+      >
+        <h3 id="waitlist-confirm-title" className="text-lg font-bold leading-snug">{title}</h3>
+        <p id="waitlist-confirm-description" className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
+        <div className="mt-6 flex flex-wrap justify-end gap-2">
+          <Button variant="ghost" onClick={onDismiss}>{copy.keep}</Button>
+          <Button variant="outline" onClick={onConfirm}>{confirmLabel}</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function delhiToday(): string {
   const fields = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(new Date());
@@ -63,7 +132,8 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   const [now, setNow] = useState(() => Date.now());
   const expiredReconciledFor = useRef<string | undefined>(undefined);
   const operationLock = useRef(false);
-  const confirmationRef = useRef<HTMLElement | null>(null);
+  const confirmationRef = useRef<HTMLDivElement | null>(null);
+  const confirmationReturnFocusRef = useRef<HTMLElement | null>(null);
 
   const activeEntry = entry?.status === "ACTIVE" || entry?.status === "OFFERED" ? entry : undefined;
   const offer = activeEntry?.offer?.status === "ACTIVE" ? activeEntry.offer : undefined;
@@ -115,7 +185,7 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   }, [offer]);
 
   useEffect(() => {
-    if (confirmation) confirmationRef.current?.focus();
+    if (confirmation) confirmationRef.current?.querySelector<HTMLElement>("button")?.focus();
   }, [confirmation]);
 
   useEffect(() => {
@@ -150,9 +220,18 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   const submitUpdate = () => { if (!activeEntry) return; void run("update", async () => { await updateWaitlist(activeEntry.id, preferences); await synchronize(true); await onApplicationChanged(); }, true); };
   const refresh = () => void run("process", async () => { if (!rtos.length) setRtoReloadKey((value) => value + 1); await synchronize(true); await onApplicationChanged(); });
   const accept = () => { if (!offer || offerTiming(offer.expiresAt, Date.now()).acceptanceDisabled) return; void run("accept", async () => { await acceptOffer(offer.id); await onApplicationChanged(); await loadEntry(); }, true); };
+  const openConfirmation = (type: Exclude<Confirmation, undefined>) => {
+    confirmationReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setConfirmation(type);
+  };
+  const dismissConfirmation = () => {
+    setConfirmation(undefined);
+    window.requestAnimationFrame(() => confirmationReturnFocusRef.current?.focus());
+  };
   const completeConfirmation = () => {
     if (!activeEntry || !confirmation) return;
-    const type = confirmation; setConfirmation(undefined);
+    const type = confirmation;
+    dismissConfirmation();
     if (type === "leave") void run("leave", async () => { await leaveWaitlist(activeEntry.id); await onApplicationChanged(); await loadEntry(); }, true);
     if (type === "decline" && offer) void run("decline", async () => { await declineOffer(offer.id); await synchronize(true); await onApplicationChanged(); }, true);
   };
@@ -170,7 +249,7 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   return <Card><JourneyStageHeader title={offer ? copy.offerTitle : copy.title} description={offer ? copy.offerDescription : copy.description} icon={offer ? TicketCheck : ListOrdered} tone={offer ? "warning" : "default"} /><CardContent className="space-y-5 pt-5 sm:pt-6">
     {error ? <Alert variant="error" role="alert"><AlertTitle>{copy.title}</AlertTitle><AlertDescription className="space-y-3"><p>{error.message}</p><Button variant="outline" onClick={() => error.action === "signin" ? router.push(`/login?returnTo=/applications/${application.id}`) : error.action === "reload" ? window.location.reload() : refresh()}>{error.action === "signin" ? messages.common.logIn : messages.common.retry}</Button></AlertDescription></Alert> : null}
     {operation === "process" ? <p role="status">{copy.processing}</p> : null}
-    {offer && activeEntry ? <TemporaryOfferView entry={activeEntry} rtoName={locale === "hi" ? activeEntry.rto.nameHi : activeEntry.rto.nameEn} date={formatAppointmentDate(offer.slot.date, locale)} timeLabel={copy.time} expiresAt={formatDateTime(offer.expiresAt, locale)} remaining={formatRemaining(remaining, locale)} expired={timing.acceptanceDisabled} busy={busy} operation={operation} copy={copy} onAccept={accept} onDecline={() => setConfirmation("decline")} onLeave={() => setConfirmation("leave")} /> : activeEntry ? <section className="space-y-4"><ActiveWaitlistSummary rtoName={locale === "hi" ? activeEntry.rto.nameHi : activeEntry.rto.nameEn} joinedAt={formatDateTime(activeEntry.joinedAt, locale)} copy={copy} /><WaitlistPreferencesForm copy={copy} locale={locale} preferences={preferences} rtos={rtos} busy={busy} onChange={setPreferences} onToggleBucket={toggleBucket} /><StageActionPanel><div className="flex flex-wrap gap-2"><Button disabled={busy || !valid} aria-busy={operation === "update"} onClick={submitUpdate}>{operation === "update" ? copy.updating : copy.update}</Button><Button variant="outline" disabled={busy} onClick={refresh}>{copy.refresh}</Button><Button variant="ghost" disabled={busy} onClick={() => setConfirmation("leave")}>{copy.leave}</Button></div></StageActionPanel></section> : <section className="space-y-4"><WaitlistPreferencesForm copy={copy} locale={locale} preferences={preferences} rtos={rtos} busy={busy} onChange={setPreferences} onToggleBucket={toggleBucket} /><StageActionPanel><Button disabled={busy || !valid} aria-busy={operation === "join"} onClick={submitJoin}>{operation === "join" ? copy.joining : copy.join}</Button></StageActionPanel></section>}
-    {confirmation ? <section ref={confirmationRef} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="waitlist-confirm-title" className="rounded-panel border border-primary/30 bg-secondary p-5 outline-none focus-visible:ring-2 focus-visible:ring-ring/30"><h3 id="waitlist-confirm-title" className="font-bold">{confirmation === "leave" ? copy.leaveTitle : copy.declineTitle}</h3><p className="mt-2 text-sm leading-6 text-muted-foreground">{confirmation === "leave" ? copy.leaveDescription : copy.declineDescription}</p><StageActionPanel><div className="flex flex-wrap gap-2"><Button variant="outline" onClick={completeConfirmation}>{confirmation === "leave" ? copy.confirmLeave : copy.confirmDecline}</Button><Button variant="ghost" onClick={() => setConfirmation(undefined)}>{copy.keep}</Button></div></StageActionPanel></section> : null}
+    {offer && activeEntry ? <TemporaryOfferView entry={activeEntry} rtoName={locale === "hi" ? activeEntry.rto.nameHi : activeEntry.rto.nameEn} date={formatAppointmentDate(offer.slot.date, locale)} timeLabel={copy.time} expiresAt={formatDateTime(offer.expiresAt, locale)} remaining={formatRemaining(remaining, locale)} expired={timing.acceptanceDisabled} busy={busy} operation={operation} copy={copy} onAccept={accept} onDecline={() => openConfirmation("decline")} onLeave={() => openConfirmation("leave")} /> : activeEntry ? <section className="space-y-4"><ActiveWaitlistSummary rtoName={locale === "hi" ? activeEntry.rto.nameHi : activeEntry.rto.nameEn} joinedAt={formatDateTime(activeEntry.joinedAt, locale)} copy={copy} /><WaitlistPreferencesForm copy={copy} locale={locale} preferences={preferences} rtos={rtos} busy={busy} onChange={setPreferences} onToggleBucket={toggleBucket} /><StageActionPanel><div className="flex flex-wrap gap-2"><Button disabled={busy || !valid} aria-busy={operation === "update"} onClick={submitUpdate}>{operation === "update" ? copy.updating : copy.update}</Button><Button variant="outline" disabled={busy} onClick={refresh}>{copy.refresh}</Button><Button variant="ghost" disabled={busy} onClick={() => openConfirmation("leave")}>{copy.leave}</Button></div></StageActionPanel></section> : <section className="space-y-4"><WaitlistPreferencesForm copy={copy} locale={locale} preferences={preferences} rtos={rtos} busy={busy} onChange={setPreferences} onToggleBucket={toggleBucket} /><StageActionPanel><Button disabled={busy || !valid} aria-busy={operation === "join"} onClick={submitJoin}>{operation === "join" ? copy.joining : copy.join}</Button></StageActionPanel></section>}
+    {confirmation ? <ConfirmationDialog confirmation={confirmation} copy={copy} dialogRef={confirmationRef} onConfirm={completeConfirmation} onDismiss={dismissConfirmation} /> : null}
   </CardContent></Card>;
 }

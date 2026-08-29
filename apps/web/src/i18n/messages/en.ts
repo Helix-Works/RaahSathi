@@ -298,7 +298,6 @@ export const enMessages = {
     logoutFailed: "We could not log you out. Please try again.",
   },
   auth: {
-    eyebrow: "Secure sign-in",
     title: "Log in securely with a one-time password",
     description:
       "Use your registered mobile number and one-time password to continue to RaahSathi.",

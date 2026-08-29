@@ -39,6 +39,9 @@ const copies = {
     confirmed: "Appointment confirmed",
     dashboardAppointment: "Upcoming appointment",
     continueWork: "Continue your work",
+    leaveTitle: "Leave this waitlist?",
+    keep: "Keep current status",
+    leave: "Leave waitlist",
   },
   hi: {
     lang: "hi",
@@ -68,6 +71,9 @@ const copies = {
     confirmed: "अपॉइंटमेंट पक्का है",
     dashboardAppointment: "\u0906\u0917\u093e\u092e\u0940 \u0905\u092a\u0949\u0907\u0902\u091f\u092e\u0947\u0902\u091f",
     continueWork: "अपना काम जारी रखें",
+    leaveTitle: "क्या वेटलिस्ट छोड़नी है?",
+    keep: "वर्तमान स्थिति रखें",
+    leave: "वेटलिस्ट छोड़ें",
   },
 } as const;
 
@@ -225,6 +231,11 @@ for (const locale of ["en", "hi"] as const) {
     const joinedValue = page.locator("dt", { hasText: copy.joined }).locator("..").locator("dd");
     await expect(joinedValue).toHaveText(/\S+/);
     const immutableJoinTime = await joinedValue.textContent();
+    await page.getByRole("button", { name: copy.leave }).click();
+    const leaveDialog = page.getByRole("dialog", { name: copy.leaveTitle });
+    await expect(leaveDialog).toBeVisible();
+    await page.getByRole("button", { name: copy.keep }).click();
+    await expect(leaveDialog).not.toBeVisible();
     const afternoonPreference = page.getByLabel(copy.afternoon);
     await afternoonPreference.check();
     await expect(afternoonPreference).toBeChecked();
