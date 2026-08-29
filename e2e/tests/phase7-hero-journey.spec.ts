@@ -42,6 +42,7 @@ const copies = {
     leaveTitle: "Leave this waitlist?",
     keep: "Keep current status",
     leave: "Leave waitlist",
+    highestPriority: "Your highest-priority next action",
   },
   hi: {
     lang: "hi",
@@ -74,6 +75,7 @@ const copies = {
     leaveTitle: "क्या वेटलिस्ट छोड़नी है?",
     keep: "वर्तमान स्थिति रखें",
     leave: "वेटलिस्ट छोड़ें",
+    highestPriority: "आपका सबसे महत्वपूर्ण अगला कदम",
   },
 } as const;
 
@@ -266,6 +268,7 @@ for (const locale of ["en", "hi"] as const) {
     await expect(page.getByText(copy.confirmed, { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await page.goto("/dashboard");
+    await expect(page.getByText(copy.highestPriority, { exact: true })).not.toBeVisible();
     await expect(page.getByRole("region", { name: copy.continueWork })
       .getByRole("heading", { name: copy.permanent })).toBeVisible();
     await expect(page.getByRole("heading", { name: copy.dashboardAppointment, level: 3, exact: true }).first()).toBeVisible();
