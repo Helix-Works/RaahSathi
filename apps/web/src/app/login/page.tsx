@@ -29,7 +29,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <PageContainer className="max-w-[78rem] py-8 sm:py-10 lg:py-14">
       <div className="grid overflow-hidden rounded-feature border border-primary/15 bg-secondary shadow-elevated lg:min-h-[38rem] lg:grid-cols-[1.04fr_0.96fr]">
-        <aside className="border-b border-primary/10 p-6 sm:p-9 lg:border-b-0 lg:border-r lg:p-12">
+        <aside className="border-b border-primary/10 p-6 sm:p-9 lg:flex lg:items-center lg:border-b-0 lg:border-r lg:p-12">
           <div className="max-w-lg space-y-7">
             <span className="inline-flex min-h-10 items-center gap-2 rounded-control border border-primary/10 bg-secondary px-3 text-sm font-bold text-primary">
               <ShieldCheck className="size-5" aria-hidden="true" />

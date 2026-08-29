@@ -1,5 +1,4 @@
 import type {
-  ApplicationBlockingReasonCode,
   ApplicationNextActionCode,
   ApplicationStatusCode,
   ServiceKey,
@@ -7,13 +6,12 @@ import type {
 import { ArrowRight, CalendarClock, Clock3, IdCard, TicketCheck } from "lucide-react";
 import Link from "next/link";
 
-import { BlockingReasonAlert } from "@/components/shared/blocking-reason-alert";
 import { HeroSurface } from "@/components/shared/hero-surface";
 import { IconTile } from "@/components/shared/icon-tile";
 import { PageContainer } from "@/components/shared/page-container";
 import { SectionHeader } from "@/components/shared/section-header";
 import { ServiceCard } from "@/components/shared/service-card";
-import { EmptyState, NextActionCard, StatusBadge } from "@/components/shared/state-presentations";
+import { EmptyState, StatusBadge } from "@/components/shared/state-presentations";
 import { buttonVariants } from "@/components/ui/button";
 import { ApplicationListItem } from "@/features/applications/components/application-list-item";
 import { StartApplicationButton } from "@/features/applications/components/start-application-button";
@@ -23,6 +21,7 @@ import { resolveNextActionCard, selectHeroApplication } from "@/features/dashboa
 import type { DashboardSummary } from "@/features/dashboard/types";
 import { getServiceCopy } from "@/features/services/presentation";
 import type { Locale, MessageDictionary } from "@/i18n";
+import { displayApplicationReference } from "@/lib/display-reference";
 
 type DashboardViewProps = Readonly<{
   displayName: string;
@@ -64,14 +63,6 @@ function nextActionPresentation(code: ApplicationNextActionCode, messages: Messa
   return messages.nextActionUnknown;
 }
 
-function blockingReasonPresentation(code: ApplicationBlockingReasonCode, messages: MessageDictionary["dashboard"]): string {
-  if (code === "NO_SUITABLE_SLOT") return messages.blockingNoSuitableSlot;
-  if (code === "WAITLIST_OFFER_PENDING") return messages.blockingWaitlistOfferPending;
-  if (code === "IDENTITY_VERIFICATION_REQUIRED") return messages.blockingIdentityRequired;
-  if (code === "PAYMENT_REQUIRED") return messages.blockingPaymentRequired;
-  return messages.blockingUnknown;
-}
-
 function formatDateTime(value: string, locale: Locale, fallback: string): string {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return fallback;
@@ -84,13 +75,6 @@ function formatDateTime(value: string, locale: Locale, fallback: string): string
 
 function replaceTokens(template: string, values: Readonly<Record<string, string>>): string {
   return Object.entries(values).reduce((message, [key, value]) => message.replace(`{${key}}`, value), template);
-}
-
-function applicationReference(id: string): string {
-  if (id.startsWith("app_")) {
-    return `RS-${id.split("_").slice(1).map((part) => part.charAt(0)).join("").toUpperCase()}`;
-  }
-  return `RS-${id.replace(/[^a-zA-Z0-9]/g, "").slice(-8).toUpperCase()}`;
 }
 
 export function DashboardView({ displayName, locale, messages, summary }: DashboardViewProps) {
@@ -117,12 +101,6 @@ export function DashboardView({ displayName, locale, messages, summary }: Dashbo
       })
     : undefined;
   const hasContext = summary.offers.length + summary.waitlistEntries.length + summary.appointments.length + summary.licences.length > 0;
-  const shouldShowAttentionAction = Boolean(
-    heroApplication
-      && nextActionCard
-      && !heroApplication.nextActionCode.startsWith("COMPLETE_"),
-  );
-  const hasPriorityItems = shouldShowAttentionAction || hasContext;
 
   return (
     <div className="pb-14 sm:pb-16">
@@ -163,7 +141,7 @@ export function DashboardView({ displayName, locale, messages, summary }: Dashbo
                       updatedLabel={dashboard.updatedLabel}
                       updatedValue={formatDateTime(application.updatedAt, locale, messages.status.unavailable)}
                       referenceLabel={messages.applications.referenceLabel}
-                      referenceValue={applicationReference(application.id)}
+                      referenceValue={displayApplicationReference(application.id)}
                       progressLabel={dashboard.progressLabel}
                       progress={application.progressPercent}
                       progressText={`${new Intl.NumberFormat(locale === "hi" ? "hi-IN" : "en-IN").format(application.progressPercent)}%`}
@@ -180,29 +158,10 @@ export function DashboardView({ displayName, locale, messages, summary }: Dashbo
           </section>
 
           <div className="space-y-8 lg:space-y-10">
-            {hasPriorityItems ? (
+            {hasContext ? (
               <section className="space-y-5" aria-labelledby="support-summary-title">
                 <SectionHeader id="support-summary-title" title={dashboard.supportTitle} description={dashboard.supportDescription} />
-                {shouldShowAttentionAction && heroApplication && nextActionCard ? (
-                  <div className="space-y-4">
-                    <NextActionCard
-                      eyebrow={dashboard.nextActionLabel}
-                      headingId="dashboard-next-action-title"
-                      title={nextActionPresentation(heroApplication.nextActionCode, dashboard)}
-                      description={nextActionCard.description}
-                      variant="subtle"
-                    />
-                    {heroApplication.blockingReasonCode ? (
-                      <BlockingReasonAlert
-                        title={dashboard.blockingTitle}
-                        description={blockingReasonPresentation(heroApplication.blockingReasonCode, dashboard)}
-                        headingId="dashboard-blocking-title"
-                      />
-                    ) : null}
-                  </div>
-                ) : null}
-                {hasContext ? (
-                  <div className="grid gap-4">
+                <div className="grid gap-4">
                     {summary.offers.map((offer) => (
                       <DashboardContextCard
                         key={offer.id}
@@ -253,8 +212,7 @@ export function DashboardView({ displayName, locale, messages, summary }: Dashbo
                         )}
                       />
                     ))}
-                  </div>
-                ) : null}
+                </div>
               </section>
             ) : null}
 

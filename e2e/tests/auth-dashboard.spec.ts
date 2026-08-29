@@ -86,9 +86,7 @@ test("successful mock login prioritizes an active offer and its next action", as
   ).toBeVisible();
   await expect(page.getByText("Temporary slot offer available", { exact: true })).toBeVisible();
   await expect(page.getByText("Why you cannot continue yet", { exact: true })).not.toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "Review temporary slot offer" }),
-  ).toBeVisible();
+  await expect(page.getByText("Review temporary slot offer", { exact: true })).toBeVisible();
 });
 
 test("logout clears the mock session and returns to login", async ({ page }, testInfo) => {

@@ -70,7 +70,6 @@ export default async function Home() {
             description={landing.servicesDescription}
             align="center"
             contentClassName="lg:max-w-none"
-            descriptionClassName="lg:whitespace-nowrap"
           />
           {services.length > 0 ? (
             <div className="grid gap-5 md:grid-cols-2">
@@ -115,7 +114,6 @@ export default async function Home() {
             description={landing.howItWorksDescription}
             align="center"
             contentClassName="lg:max-w-none"
-            descriptionClassName="lg:whitespace-nowrap"
           />
           <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {steps.map((step, index) => (

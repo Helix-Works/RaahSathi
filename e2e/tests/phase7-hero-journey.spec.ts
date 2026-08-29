@@ -39,6 +39,10 @@ const copies = {
     confirmed: "Appointment confirmed",
     dashboardAppointment: "Upcoming appointment",
     continueWork: "Continue your work",
+    leaveTitle: "Leave this waitlist?",
+    keep: "Keep current status",
+    leave: "Leave waitlist",
+    highestPriority: "Your highest-priority next action",
   },
   hi: {
     lang: "hi",
@@ -68,6 +72,10 @@ const copies = {
     confirmed: "अपॉइंटमेंट पक्का है",
     dashboardAppointment: "\u0906\u0917\u093e\u092e\u0940 \u0905\u092a\u0949\u0907\u0902\u091f\u092e\u0947\u0902\u091f",
     continueWork: "अपना काम जारी रखें",
+    leaveTitle: "क्या वेटलिस्ट छोड़नी है?",
+    keep: "वर्तमान स्थिति रखें",
+    leave: "वेटलिस्ट छोड़ें",
+    highestPriority: "आपका सबसे महत्वपूर्ण अगला कदम",
   },
 } as const;
 
@@ -189,9 +197,21 @@ for (const locale of ["en", "hi"] as const) {
     await expect(page).toHaveURL(new RegExp(`/applications/${heroApplicationId}$`));
     await expect(page.locator("#postalCode")).toHaveValue("110085");
     await page.locator("#postalCode").fill("110086");
-    await page.getByRole("button", { name: copy.saveDraft }).click();
+    const [saveResponse] = await Promise.all([
+      page.waitForResponse((response) =>
+        response.request().method() === "PATCH"
+        && response.url().includes(`/api/v1/applications/${heroApplicationId}/sections/ADDRESS`), { timeout: 30_000 }),
+      page.getByRole("button", { name: copy.saveDraft }).click(),
+    ]);
+    expect(saveResponse.ok(), `Address save failed with ${saveResponse.status()}`).toBe(true);
     await expect(page.getByText(copy.saved, { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: copy.saveAndContinue }).click();
+    const [completeResponse] = await Promise.all([
+      page.waitForResponse((response) =>
+        response.request().method() === "POST"
+        && response.url().includes(`/api/v1/applications/${heroApplicationId}/steps/ADDRESS/complete`), { timeout: 30_000 }),
+      page.getByRole("button", { name: copy.saveAndContinue }).click(),
+    ]);
+    expect(completeResponse.ok(), `Address completion failed with ${completeResponse.status()}`).toBe(true);
     await expect(page.getByRole("heading", { name: copy.serviceDetails })).toBeVisible({ timeout: 30_000 });
 
     await logout(page, locale);
@@ -225,18 +245,23 @@ for (const locale of ["en", "hi"] as const) {
     const joinedValue = page.locator("dt", { hasText: copy.joined }).locator("..").locator("dd");
     await expect(joinedValue).toHaveText(/\S+/);
     const immutableJoinTime = await joinedValue.textContent();
+    await page.getByRole("button", { name: copy.leave }).click();
+    const leaveDialog = page.getByRole("dialog", { name: copy.leaveTitle });
+    await expect(leaveDialog).toBeVisible();
+    await page.getByRole("button", { name: copy.keep }).click();
+    await expect(leaveDialog).not.toBeVisible();
     const afternoonPreference = page.getByLabel(copy.afternoon);
     await afternoonPreference.check();
     await expect(afternoonPreference).toBeChecked();
     const updateButton = page.getByRole("button", { name: copy.update });
     await expect(updateButton).toBeEnabled();
-    await Promise.all([
+    const [updateResponse] = await Promise.all([
       page.waitForResponse((response) =>
         response.request().method() === "PATCH"
-        && response.url().includes("/api/v1/waitlist/")
-        && response.ok(), { timeout: 30_000 }),
+        && response.url().includes("/api/v1/waitlist/"), { timeout: 30_000 }),
       updateButton.click(),
     ]);
+    expect(updateResponse.ok(), `Waitlist update failed with ${updateResponse.status()}`).toBe(true);
     await expect(updateButton).toBeVisible({ timeout: 30_000 });
     await expect(joinedValue).toHaveText(immutableJoinTime ?? "");
 
@@ -255,6 +280,7 @@ for (const locale of ["en", "hi"] as const) {
     await expect(page.getByText(copy.confirmed, { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await page.goto("/dashboard");
+    await expect(page.getByText(copy.highestPriority, { exact: true })).not.toBeVisible();
     await expect(page.getByRole("region", { name: copy.continueWork })
       .getByRole("heading", { name: copy.permanent })).toBeVisible();
     await expect(page.getByRole("heading", { name: copy.dashboardAppointment, level: 3, exact: true }).first()).toBeVisible();

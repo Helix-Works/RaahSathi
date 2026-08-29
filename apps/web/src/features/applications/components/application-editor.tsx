@@ -142,17 +142,14 @@ export function ApplicationEditor({
     DECLARATION: applicationMessages.declaration,
   };
 
-  const persist = async (data: ApplicationSectionData, action: SectionSubmitAction, dirty: boolean) => {
+  const persist = async (data: ApplicationSectionData, action: SectionSubmitAction) => {
     if (!currentKey) return;
-    let updated = application;
-    if (dirty || !stored) {
-      updated = await saveSection({
-        applicationId: application.id,
-        sectionKey: currentKey,
-        expectedRevision: stored?.revision ?? 0,
-        data,
-      });
-    }
+    let updated = await saveSection({
+      applicationId: application.id,
+      sectionKey: currentKey,
+      expectedRevision: stored?.revision ?? 0,
+      data,
+    });
     if (action === "complete") updated = await completeSection(application.id, currentKey);
     setApplication(updated);
     setNotice(action === "save" ? applicationMessages.saved : applicationMessages.completed);

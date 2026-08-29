@@ -15,7 +15,7 @@ const cardVariants = cva(
           "border-border bg-card shadow-subtle transition-[border-color,box-shadow] hover:border-primary/40 hover:shadow-elevated",
         urgent: "border-warning/35 bg-warning-surface",
         service:
-          "border-primary/15 bg-[rgba(225,242,255,0.72)] shadow-subtle backdrop-blur-sm transition-[border-color,box-shadow,transform] hover:-translate-y-0.5 hover:border-primary/35 hover:shadow-elevated",
+          "border-primary/15 bg-[#e1f2ff] shadow-subtle transition-[border-color,box-shadow] hover:border-primary/35 hover:shadow-elevated",
       },
     },
     defaultVariants: {
