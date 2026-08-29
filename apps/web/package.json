@@ -8,7 +8,7 @@
     "build": "prisma generate --schema prisma/schema.prisma && next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "next typegen && tsc --noEmit",
+    "typecheck": "prisma generate --schema prisma/schema.prisma && next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:db": "node --env-file-if-exists=.env --env-file-if-exists=.env.local --import tsx scripts/run-database-tests.ts",
