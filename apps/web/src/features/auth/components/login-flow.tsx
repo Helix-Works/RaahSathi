@@ -2,8 +2,7 @@
 
 import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, ArrowRight, LoaderCircle, MessageSquareText, ShieldCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -26,14 +25,18 @@ import {
   type MobileFormValues,
   type OtpFormValues,
 } from "@/features/auth/schemas/login";
+import { navigateAfterLogin } from "@/features/auth/post-login-navigation";
 import type { SafeReturnPath } from "@/features/auth/safe-return-path";
-import type { OtpChallenge } from "@/features/auth/types";
+import type { OtpChallenge, ReviewerLoginHint as ReviewerLoginHintValue } from "@/features/auth/types";
 import type { Locale, MessageDictionary } from "@/i18n";
+
+import { ReviewerLoginHint } from "./reviewer-login-hint";
 
 type LoginFlowProps = Readonly<{
   messages: MessageDictionary;
   returnTo: SafeReturnPath;
   locale: Locale;
+  reviewerHint?: ReviewerLoginHintValue;
 }>;
 
 function currentTimestamp(): number {
@@ -68,8 +71,8 @@ function ApiErrorSummary({
   );
 }
 
-export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
-  const router = useRouter();
+export function LoginFlow({ messages, returnTo, locale, reviewerHint }: LoginFlowProps) {
+  const [isNavigating, startNavigation] = useTransition();
   const [challenge, setChallenge] = useState<OtpChallenge>();
   const [requestedMobile, setRequestedMobile] = useState<string>();
   const [clock, setClock] = useState(currentTimestamp);
@@ -143,8 +146,7 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
         otp: values.otp,
         preferredLocale: locale,
       });
-      router.replace(returnTo);
-      router.refresh();
+      navigateAfterLogin((href) => window.location.replace(href), startNavigation, returnTo);
     } catch (error: unknown) {
       presentError(error);
     }
@@ -226,6 +228,7 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
                   {...requestForm.register("mobileNumber")}
                 />
               </div>
+              {reviewerHint ? <ReviewerLoginHint hint={reviewerHint} field="mobile" /> : null}
               {mobileError ? (
                 <p id="mobile-number-error" className="text-sm font-bold text-error">
                   {mobileError}
@@ -261,6 +264,7 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
                 }
                 {...otpForm.register("otp")}
               />
+              {reviewerHint ? <ReviewerLoginHint hint={reviewerHint} field="otp" /> : null}
               {otpError ? (
                 <p id="one-time-password-error" className="text-sm font-bold text-error">
                   {otpError}
@@ -268,11 +272,11 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
               ) : null}
             </div>
 
-            <Button className="w-full" size="lg" type="submit" disabled={otpForm.formState.isSubmitting || isResending}>
-              {otpForm.formState.isSubmitting ? (
+            <Button className="w-full" size="lg" type="submit" disabled={otpForm.formState.isSubmitting || isResending || isNavigating}>
+              {otpForm.formState.isSubmitting || isNavigating ? (
                 <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
               ) : null}
-              {otpForm.formState.isSubmitting
+              {otpForm.formState.isSubmitting || isNavigating
                 ? authMessages.verifyingOtp
                 : authMessages.verifyOtp}
             </Button>
@@ -281,7 +285,7 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
               variant="secondary"
               type="button"
               onClick={resend}
-              disabled={otpForm.formState.isSubmitting || isResending || resendSeconds > 0}
+              disabled={otpForm.formState.isSubmitting || isResending || isNavigating || resendSeconds > 0}
             >
               {resendSeconds > 0
                 ? authMessages.resendAvailableIn.replace("{seconds}", String(resendSeconds))
@@ -292,7 +296,7 @@ export function LoginFlow({ messages, returnTo, locale }: LoginFlowProps) {
               variant="ghost"
               type="button"
               onClick={restart}
-              disabled={otpForm.formState.isSubmitting || isResending}
+              disabled={otpForm.formState.isSubmitting || isResending || isNavigating}
             >
               <ArrowLeft className="size-4" aria-hidden="true" />
               {authMessages.changeMobile}

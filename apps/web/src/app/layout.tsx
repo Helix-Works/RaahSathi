@@ -30,9 +30,8 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const locale = await getRequestLocale();
+  const [locale, session] = await Promise.all([getRequestLocale(), getShellSession()]);
   const messages = getDictionary(locale);
-  const session = await getShellSession();
   const navigation =
     session.kind === "authenticated"
       ? ([

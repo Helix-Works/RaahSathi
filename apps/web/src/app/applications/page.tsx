@@ -1,5 +1,4 @@
 import type { ServiceKey } from "@raahsathi/contracts";
-import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -8,20 +7,19 @@ import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState } from "@/components/shared/state-presentations";
 import { buttonVariants } from "@/components/ui/button";
 import { ApplicationListItem } from "@/features/applications/components/application-list-item";
+import { getRequestSession } from "@/features/auth/session";
 import { getServiceCopy } from "@/features/services/presentation";
 import { getDictionary, type MessageDictionary } from "@/i18n";
 import { getRequestLocale } from "@/i18n/locale";
 import { listApplications } from "@/server/applications/application-service";
-import { resolveSessionFromCookie } from "@/server/auth/session-service";
 
 function serviceName(serviceKey: ServiceKey, messages: MessageDictionary): string {
   return getServiceCopy(serviceKey, messages.services).name;
 }
 
 export default async function ApplicationsPage() {
-  const locale = await getRequestLocale();
+  const [locale, session] = await Promise.all([getRequestLocale(), getRequestSession()]);
   const messages = getDictionary(locale);
-  const session = await resolveSessionFromCookie((await cookies()).toString());
 
   if (session.kind !== "authenticated") redirect("/login?returnTo=/applications");
 

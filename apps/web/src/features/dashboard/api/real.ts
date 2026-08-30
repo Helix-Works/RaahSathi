@@ -1,9 +1,7 @@
-import { cookies } from "next/headers";
-
 import type { DashboardSummary } from "@/features/dashboard/types";
+import { getRequestSession } from "@/features/auth/session";
 import { listApplications } from "@/server/applications/application-service";
 import { listAvailableServices } from "@/server/applications/service-catalogue";
-import { resolveSessionFromCookie } from "@/server/auth/session-service";
 import { listAppointments } from "@/server/appointments/appointment-service";
 import { listLicences } from "@/server/licences/licence-service";
 import { listWaitlistEntries } from "@/server/waitlist/waitlist-service";
@@ -18,7 +16,7 @@ const emptyDashboardSummary: DashboardSummary = {
 };
 
 export async function getRealDashboardSummary(): Promise<DashboardSummary> {
-  const session = await resolveSessionFromCookie((await cookies()).toString());
+  const session = await getRequestSession();
   if (session.kind !== "authenticated") return emptyDashboardSummary;
 
   const [applications, appointments, waitlistEntries, licences] = await Promise.all([

@@ -19,9 +19,8 @@ import { dataSource } from "@/lib/data-source";
 import { listAvailableServices } from "@/server/applications/service-catalogue";
 
 export default async function Home() {
-  const locale = await getRequestLocale();
+  const [locale, session] = await Promise.all([getRequestLocale(), getShellSession()]);
   const messages = getDictionary(locale);
-  const session = await getShellSession();
 
   if (session.kind === "authenticated") redirect("/dashboard");
 

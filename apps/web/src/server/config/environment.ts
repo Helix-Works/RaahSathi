@@ -17,6 +17,10 @@ const environmentSchema = z
     AUTH_MOBILE_LOOKUP_PEPPER: z.string().min(32),
     AUTH_OTP_PEPPER: z.string().min(32),
     AUTH_DEMO_OTP: z.string().regex(/^[0-9]{6}$/),
+    SHOW_REVIEWER_LOGIN_HINTS: z
+      .enum(["true", "false"])
+      .default("false")
+      .transform((value) => value === "true"),
     PAYMENT_PROVIDER_WEBHOOK_SECRET: z.string().min(32),
   })
   .transform((environment, context) => {

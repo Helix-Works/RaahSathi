@@ -197,11 +197,12 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
     void (async () => {
       try {
         setOperation("process"); setError(undefined);
-        if (application.statusCode === "WAITLISTED" || application.statusCode === "SLOT_OFFERED") await processWaitlistState(lease.applicationId);
+        const shouldProcess = application.statusCode === "WAITLISTED" || application.statusCode === "SLOT_OFFERED";
+        if (shouldProcess) await processWaitlistState(lease.applicationId);
         if (!ownsOperation(lease)) return;
         await loadEntry(lease);
         if (!ownsOperation(lease)) return;
-        await onApplicationChanged();
+        if (shouldProcess) await onApplicationChanged();
       } catch (reason: unknown) {
         if (ownsOperation(lease) && !(reason instanceof DOMException && reason.name === "AbortError")) setError(waitlistErrorPresentation(reason, locale, copy));
       } finally {
@@ -278,14 +279,15 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
   };
 
   const submitJoin = () => void run("join", async (lease) => {
-    await joinWaitlist({ applicationId: lease.applicationId, ...preferences });
+    const next = await joinWaitlist({ applicationId: lease.applicationId, ...preferences });
     if (!ownsOperation(lease)) return;
-    await synchronize(true, lease);
-    if (ownsOperation(lease)) await onApplicationChanged();
+    setEntry(next);
+    setPreferences(preferencesFrom(next));
+    await onApplicationChanged();
   }, true);
-  const submitUpdate = () => { if (!activeEntry) return; void run("update", async (lease) => { await updateWaitlist(activeEntry.id, preferences); if (!ownsOperation(lease)) return; await synchronize(true, lease); if (ownsOperation(lease)) await onApplicationChanged(); }, true); };
+  const submitUpdate = () => { if (!activeEntry) return; void run("update", async (lease) => { const next = await updateWaitlist(activeEntry.id, preferences); if (!ownsOperation(lease)) return; setEntry(next); setPreferences(preferencesFrom(next)); await onApplicationChanged(); }, true); };
   const refresh = () => void run("process", async (lease) => { if (!rtos.length && ownsOperation(lease)) setRtoReloadKey((value) => value + 1); await synchronize(true, lease); if (ownsOperation(lease)) await onApplicationChanged(); });
-  const accept = () => { if (!offer || offerTiming(offer.expiresAt, Date.now()).acceptanceDisabled) return; void run("accept", async (lease) => { await acceptOffer(offer.id); if (!ownsOperation(lease)) return; await onApplicationChanged(); if (ownsOperation(lease)) await loadEntry(lease); }, true); };
+  const accept = () => { if (!offer || offerTiming(offer.expiresAt, Date.now()).acceptanceDisabled) return; void run("accept", async (lease) => { await acceptOffer(offer.id); if (!ownsOperation(lease)) return; setEntry(undefined); await onApplicationChanged(); }, true); };
   const openConfirmation = (type: Exclude<Confirmation, undefined>) => {
     confirmationReturnFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setConfirmation(type);
@@ -298,8 +300,8 @@ export function WaitlistPanel({ application, locale, messages, onApplicationChan
     if (!activeEntry || !confirmation) return;
     const type = confirmation;
     dismissConfirmation();
-    if (type === "leave") void run("leave", async (lease) => { await leaveWaitlist(activeEntry.id); if (!ownsOperation(lease)) return; await onApplicationChanged(); if (ownsOperation(lease)) await loadEntry(lease); }, true);
-    if (type === "decline" && offer) void run("decline", async (lease) => { await declineOffer(offer.id); if (!ownsOperation(lease)) return; await synchronize(true, lease); if (ownsOperation(lease)) await onApplicationChanged(); }, true);
+    if (type === "leave") void run("leave", async (lease) => { await leaveWaitlist(activeEntry.id); if (!ownsOperation(lease)) return; setEntry(undefined); await onApplicationChanged(); }, true);
+    if (type === "decline" && offer) void run("decline", async (lease) => { const next = await declineOffer(offer.id); if (!ownsOperation(lease)) return; setEntry(next); setPreferences(preferencesFrom(next)); await onApplicationChanged(); }, true);
   };
   const toggleBucket = (bucket: WaitlistTimeBucket) => setPreferences((current) => {
     const included = current.timeBuckets.includes(bucket);
