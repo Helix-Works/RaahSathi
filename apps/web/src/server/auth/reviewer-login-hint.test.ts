@@ -16,8 +16,8 @@ describe("reviewer login hint", () => {
     const english = buildReviewerLoginHint(environment, "en");
     const hindi = buildReviewerLoginHint(environment, "hi");
 
-    expect(english).toMatchObject({ mobileNumber: "9000000000", otp: "654321" });
-    expect(hindi).toMatchObject({ mobileNumber: "9000000000", otp: "654321" });
+    expect(english).toMatchObject({ mobileNumbers: ["9000000000", "9000000006"], otp: "654321" });
+    expect(hindi).toMatchObject({ mobileNumbers: ["9000000000", "9000000006"], otp: "654321" });
     expect(JSON.stringify({ english, hindi })).not.toContain("pepper");
     expect(english?.notice).toMatch(/fictional reviewer/i);
     expect(hindi?.notice).toContain("काल्पनिक");

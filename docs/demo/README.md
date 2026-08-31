@@ -19,7 +19,7 @@ RAAHSATHI_DEMO_RESET_CONFIRMATION="RESET_PHASE7_HERO_SYNTHETIC_RECORDS"
 
 Keep `NEXT_PUBLIC_DATA_SOURCE="real"`. Configure `DATABASE_URL`, `DIRECT_URL`, authentication peppers, OTP, and payment webhook secret as described in `apps/web/.env.example`. Never use a database containing real citizen data.
 
-For the dedicated reviewer deployment only, set `SHOW_REVIEWER_LOGIN_HINTS="true"` to display the standard synthetic account (`9000000000`) and configured `AUTH_DEMO_OTP` beneath the matching login fields in English and Hindi. The flag defaults to `false`; leave it disabled on normal public deployments.
+For the dedicated reviewer deployment only, set `SHOW_REVIEWER_LOGIN_HINTS="true"` to display the synthetic reviewer accounts (`9000000000` and `9000000006`) and configured `AUTH_DEMO_OTP` beneath the matching login fields in English and Hindi. The flag defaults to `false`; leave it disabled on normal public deployments.
 
 ## Prepare and start
 

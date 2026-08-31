@@ -21,18 +21,18 @@ export function buildReviewerLoginHint(
 
   if (locale === "hi") {
     return {
-      mobileNumber: "9000000000",
+      mobileNumbers: ["9000000000", "9000000006"],
       otp: environment.AUTH_DEMO_OTP,
-      mobileLabel: "समीक्षक परीक्षण मोबाइल",
+      mobileLabel: "समीक्षक परीक्षण मोबाइल नंबर",
       otpLabel: "समीक्षक परीक्षण ओटीपी",
       notice: "यह केवल काल्पनिक परीक्षण खाते के लिए है। वास्तविक व्यक्तिगत जानकारी दर्ज न करें।",
     };
   }
 
   return {
-    mobileNumber: "9000000000",
+    mobileNumbers: ["9000000000", "9000000006"],
     otp: environment.AUTH_DEMO_OTP,
-    mobileLabel: "Reviewer test mobile",
+    mobileLabel: "Reviewer test mobiles",
     otpLabel: "Reviewer test OTP",
     notice: "For the fictional reviewer account only. Do not enter real personal information.",
   };
