@@ -8,6 +8,14 @@ export type { CurrentUser, OtpChallenge, RequestOtpInput, SessionSummary, Verify
 
 export type MockSessionScenario = "active" | "empty" | "appointment" | "expired";
 
+export type ReviewerLoginHint = Readonly<{
+  mobileNumbers: readonly string[];
+  otp: string;
+  mobileLabel: string;
+  otpLabel: string;
+  notice: string;
+}>;
+
 export type ShellSession =
   | Readonly<{ kind: "anonymous" }>
   | Readonly<{ kind: "expired" }>

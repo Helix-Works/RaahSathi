@@ -1,15 +1,14 @@
-import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { z } from "zod";
 import type { ApplicationDetail } from "@raahsathi/contracts/applications";
 
 import { ApplicationEditor } from "@/features/applications/components/application-editor";
+import { getRequestSession } from "@/features/auth/session";
 import { PageContainer } from "@/components/shared/page-container";
 import { LicenceContextCard } from "@/features/identity/components/licence-context-card";
 import { getDictionary } from "@/i18n";
 import { getRequestLocale } from "@/i18n/locale";
 import { getApplication } from "@/server/applications/application-service";
-import { resolveSessionFromCookie } from "@/server/auth/session-service";
 import { ApiError } from "@/server/http/api-error";
 import { getIdentityContext } from "@/server/identity/identity-service";
 import { listLicences } from "@/server/licences/licence-service";
@@ -21,15 +20,15 @@ export default async function ApplicationPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { id } = await params;
+  const [{ id }, locale, session] = await Promise.all([
+    params,
+    getRequestLocale(),
+    getRequestSession(),
+  ]);
 
   if (!z.uuid().safeParse(id).success) {
     notFound();
   }
-
-  const session = await resolveSessionFromCookie(
-    (await cookies()).toString(),
-  );
 
   if (session.kind !== "authenticated") {
     redirect(`/login?returnTo=/applications/${id}`);
@@ -47,7 +46,6 @@ export default async function ApplicationPage({
     throw error;
   }
 
-  const locale = await getRequestLocale();
   const messages = getDictionary(locale);
 
   const [identity, licences, payment, appointments] = await Promise.all([

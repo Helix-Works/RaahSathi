@@ -11,7 +11,18 @@ describe("server environment", () => {
   };
 
   it("accepts PostgreSQL development configuration", () => {
-    expect(parseEnvironment({ ...auth, NODE_ENV: "development", DATABASE_URL: "postgresql://user:pass@localhost/db" })).toMatchObject({ NODE_ENV: "development" });
+    expect(parseEnvironment({ ...auth, NODE_ENV: "development", DATABASE_URL: "postgresql://user:pass@localhost/db" })).toMatchObject({
+      NODE_ENV: "development",
+      SHOW_REVIEWER_LOGIN_HINTS: false,
+    });
+  });
+
+  it("enables reviewer login hints only from an explicit true value", () => {
+    expect(parseEnvironment({
+      ...auth,
+      DATABASE_URL: "postgresql://user:pass@localhost/db",
+      SHOW_REVIEWER_LOGIN_HINTS: "true",
+    }).SHOW_REVIEWER_LOGIN_HINTS).toBe(true);
   });
 
   it("rejects non-PostgreSQL URLs and production URLs without TLS", () => {

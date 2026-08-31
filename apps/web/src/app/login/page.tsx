@@ -8,6 +8,7 @@ import { getSafeReturnPath } from "@/features/auth/safe-return-path";
 import { getShellSession } from "@/features/auth/session";
 import { getDictionary } from "@/i18n";
 import { getRequestLocale } from "@/i18n/locale";
+import { getReviewerLoginHint } from "@/server/auth/reviewer-login-hint";
 
 type LoginPageProps = Readonly<{
   searchParams: Promise<{
@@ -16,11 +17,14 @@ type LoginPageProps = Readonly<{
 }>;
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  const locale = await getRequestLocale();
+  const [locale, session, query] = await Promise.all([
+    getRequestLocale(),
+    getShellSession(),
+    searchParams,
+  ]);
   const messages = getDictionary(locale);
-  const session = await getShellSession();
-  const query = await searchParams;
   const returnTo = getSafeReturnPath(query.returnTo);
+  const reviewerHint = getReviewerLoginHint(locale);
 
   if (session.kind === "authenticated") {
     redirect(returnTo);
@@ -62,7 +66,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </aside>
         <div className="flex p-5 sm:p-8 lg:items-center lg:p-10">
           <div className="w-full max-w-[33.5rem] lg:mx-auto">
-            <LoginFlow messages={messages} returnTo={returnTo} locale={locale} />
+            <LoginFlow messages={messages} returnTo={returnTo} locale={locale} reviewerHint={reviewerHint} />
           </div>
         </div>
       </div>

@@ -12,9 +12,8 @@ import { getRequestLocale } from "@/i18n/locale";
 import { ApiClientError } from "@/lib/api";
 
 export default async function DashboardPage() {
-  const locale = await getRequestLocale();
+  const [locale, session] = await Promise.all([getRequestLocale(), getShellSession()]);
   const messages = getDictionary(locale);
-  const session = await getShellSession();
 
   if (session.kind === "anonymous") {
     redirect("/login?returnTo=/dashboard");
